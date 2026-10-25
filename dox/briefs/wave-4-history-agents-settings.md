@@ -63,7 +63,7 @@ not a source of production data or controls.
 | Global agent summaries/history | `src/agent-library.ts`, `src/db/listing.ts`; `GET /api/agents`, `GET /api/agents/:name?page=&sort=recent|longest|issues` |
 | Pinned run agent configuration | `GET /api/meta?job=<id>`; plain `/api/meta` describes latest releases |
 | Local dispatch limit | Settings sheet, `src/local-capacity.ts`; `GET|POST /api/local/capacity`, with optimistic `expectedLimit` and environment-managed refusal |
-| Sandbox capacity/management | `components/sandboxes.tsx`; `GET|POST /api/sandboxes/capacity`, `GET /api/sandboxes`, existing stop/clean routes |
+| Sandbox capacity/management | `components/sandboxes.tsx`; `GET /api/sandboxes` for inventory/capacity, `POST /api/sandboxes/capacity`, existing stop/clean routes |
 | Theme and New run environment preferences | Web `theme/` and `use-run-environment.ts`; existing browser storage/error behavior |
 | One-run holds | `POST /api/jobs/:id/run` with `hold`; initial New run plan review remains enabled |
 | Restore without execution | CLI `restore <job>` calls `src/db/restore.ts:restoreJob`; there is no restore-only HTTP route yet |
@@ -234,8 +234,9 @@ results, viewports and evidence locations in the PR. Fix the first batched
 inspection's genuine defects together, then confirm; avoid open-ended polishing.
 
 Finish on an isolated `codex/` feature branch with coherent commits, a PR using
-the repository template, accurate docsImpact and an explicit release-label
-choice by the maintainer. Do not merge your own PR. Before claiming complete,
+the repository template, accurate docsImpact and `release:none` for this
+intermediate wave. Final minor release preparation stays in wave 5. Merge only
+with user authorization and the required checks passing. Before claiming complete,
 list every control and its route/local operation, each metric's source and
 coverage, the successful and relevant failed journeys, and any remaining work.
 Use root AGENTS.md for branch/worktree lifecycle; discover actual checkouts with

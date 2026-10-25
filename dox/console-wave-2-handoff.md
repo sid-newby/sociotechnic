@@ -103,7 +103,9 @@ Paths are relative to the repository root.
 | Behavioral authority | [CONTRACTS.md](../sociotechnic/CONTRACTS.md), [driver contract](../sociotechnic/AGENTS.md), [development map](../sociotechnic/docs/development.md#feature-to-code-map) |
 
 Settings uses `GET|POST /api/local/capacity` with `expectedLimit`,
-`GET|POST /api/sandboxes/capacity`, and browser-owned theme preferences.
+`GET /api/sandboxes` for inventory/current capacity,
+`POST /api/sandboxes/capacity` for capacity changes, and browser-owned theme
+preferences.
 Agent history uses `GET /api/agents` and
 `GET /api/agents/:name?page=<n>&sort=recent|longest|issues`.
 Read the actual response types before extending either surface.
