@@ -1,4 +1,6 @@
 {
+  "checkpointRevision": "0821a4d3469365bf64ea894fdfd741efd04a00eb",
+  "scope": "Historical combined orchestration checkpoint, including sibling agent-policy tests; not an extracted-branch file count",
   "applicationGlob": "sociotechnic/tests/*.test.ts",
   "applicationFiles": [
     "agent-catalog-db.test.ts",

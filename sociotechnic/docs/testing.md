@@ -22,8 +22,10 @@ reasons outside the checkout so recording results does not change the tested HEA
 
 `task checks` runs these six stages in order. An equivalent sequence must name
 all six results, including a failed stage that prevented later stages. The
-[complete file inventory](evidence/workflow-integration/test-files.json) lists
-67 application test files and two release-tool test files for this change. New
+[combined checkpoint inventory](evidence/workflow-integration/test-files.json)
+records 67 application files and two release-tool files at `0821a4d`, including
+the sibling agent-policy tests. `task test` expands the files present in the
+current checkout. New
 application tests stay under `tests/`; fixtures stay under `tests/fixtures/`.
 Historical release-tool and scaffold test placement is retained. No coverage
 percentage is claimed.
