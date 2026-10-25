@@ -3,6 +3,11 @@
 Release notes are committed before publication. [GitHub Releases](https://github.com/sid-newby/sociotechnic/releases) confirms which versions shipped.
 Dates on backfilled entries use America/Chicago. See the [release guide](sociotechnic/docs/releasing.md).
 
+## v0.2.1
+
+- Fix Docker Sandbox startup for standard pinned agent configurations, preserving custom-agent and nested-worker role validation.
+- Document recovery for retained VMs affected by the parser failure.
+
 ## v0.2.0
 
 - Create a new folder directly from the run wizard and remember a chosen browsing start point across browser sessions, defaulting to `~/Prog` or the user's home folder.

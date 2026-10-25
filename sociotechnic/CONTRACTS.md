@@ -47,7 +47,11 @@ The environment recipe selects published v3 workload/mixin kits. Environment-fil
 schema version 1 does not mean kit schema version 1. Snapshot the recipe at first
 provisioning and reuse it for that run; no implicit source builds or builder VMs.
 Pinned instruction-skill resources cross the worker boundary with the agent's
-configuration and retain their validation. Codex readers keep read-only tools;
+configuration and retain their validation. Standard configurations resolve their
+role from the dispatch agent when identity metadata is absent. Custom agents keep
+their explicit base role and identity; nested comment-worker configurations
+resolve against the Sicko role, independently of their coordinator. All use the
+existing role/tool and model validation. Codex readers keep read-only tools;
 ordinary Codex builders keep the scoped worktree/commit adapter inside the VM.
 The private VM repository owns a linked worktree there, keeping its Git metadata
 outside the agent's shell-writable worktree without exposing host Git metadata.
