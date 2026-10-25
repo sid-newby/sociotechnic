@@ -169,6 +169,12 @@ a reviewer that touched code would fail the round rather than pass it.
 
 ## Running agents
 
+Browser-verification skills use only the selected builder's existing Bash
+permission. Keep browser sessions, executable paths, VM setup and cleanup in the
+runner; do not attach to an operator's browser or move a Sandbox run onto the
+host. Missing tools mean missing verification, never a passing acceptance item.
+See [the browser tooling contract](docs/browser-verification.md).
+
 Jobs pinned to `docker-sandbox` use the console's sandbox runner and v3 recipe.
 Do not dispatch their agents or repository checks directly on the host. Keep
 provider adapters, guards and record ingestion intact. A sandbox error cannot

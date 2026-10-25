@@ -251,6 +251,11 @@ run. Restore and single-step controls remain in the legacy console or CLI.
 
 ### Starting a run
 
+For UI verification with a browser-enabled builder release, prepare local tools
+with `task browser:install`; Docker build dispatches prepare them in their own
+VM. See [browser tooling, isolation and smoke checks](browser-verification.md).
+These CLIs do not alter Sociotechnic's acceptance or publishing commands.
+
 The React console remembers the chosen run environment and last valid sandbox
 CPU, memory and parallel-agent settings across sessions on the same browser and
 console origin. Edits save automatically, including when canceling the dialog.

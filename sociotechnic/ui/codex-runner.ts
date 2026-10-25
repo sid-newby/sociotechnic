@@ -71,8 +71,8 @@ export function codexArgs(model: string, effort: string, dir: string, context7: 
   return args;
 }
 
-export function codexEnvironment(dir: string, context7: McpServerConfig | null = null): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = { ...process.env, TMPDIR: dir, TMPPREFIX: join(dir, "shell-") };
+export function codexEnvironment(dir: string, context7: McpServerConfig | null = null, browserEnv?: Record<string, string>): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = { ...process.env, ...browserEnv, TMPDIR: dir, TMPPREFIX: join(dir, "shell-") };
   if (context7?.type === "http") for (const [index, value] of Object.values(context7.headers ?? {}).entries()) env[`SOCIOTECHNIC_CONTEXT7_HEADER_${index}`] = value;
   delete env.SOCIOTECHNIC_DATABASE_URL;
   delete env.PGPASSWORD;
@@ -124,7 +124,7 @@ export function sandboxSubscriptionProxy(): string {
 function execute(executable: string, args: string[], prompt: string, maxTools: number, deadline: string, ctx: RunContext, dir: string, context7: McpServerConfig | null, builder: boolean): ReturnType<Runner["run"]> {
   return new Promise((resolveRun) => {
     const started = Date.now();
-    const child = spawn(executable, args, { cwd: dir, env: codexEnvironment(dir, context7), detached: process.platform !== "win32", stdio: ["pipe", "pipe", "pipe"] });
+    const child = spawn(executable, args, { cwd: dir, env: codexEnvironment(dir, context7, ctx.browserEnv), detached: process.platform !== "win32", stdio: ["pipe", "pipe", "pipe"] });
     let note: string | null = null;
     let timeout = false, completed = false, tools = 0, bytes = 0;
     let buffer = "", stderr = "";

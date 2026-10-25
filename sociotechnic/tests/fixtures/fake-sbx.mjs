@@ -26,7 +26,9 @@ else if (args[0] === "stop") {
   cpSync(source, destination, { recursive: true, dereference: false });
 } else if (args[0] === "exec") {
   const command = args.slice(2).map(mapped);
-  if (command[0] === "node" && command[1]?.endsWith("sandbox-worker.ts")) {
+  if (command[0] === "node" && command[1]?.endsWith("browser-tools.ts")) {
+    if (cfg.failBrowserTools) process.exit(4);
+  } else if (command[0] === "node" && command[1]?.endsWith("sandbox-worker.ts")) {
     if (cfg.hangWorker) {
       const child = spawn(process.execPath, ["-e", "process.title='sociotechnic-fake-sbx-remote';setInterval(()=>{},1000)"], { detached: true, stdio: "ignore" });
       cfg.remotePid = child.pid; save(); child.unref();

@@ -3,6 +3,11 @@
 Release notes are committed before publication. [GitHub Releases](https://github.com/sid-newby/sociotechnic/releases) confirms which versions shipped.
 Dates on backfilled entries use America/Chicago. See the [release guide](sociotechnic/docs/releasing.md).
 
+## v0.4.0
+
+- Add opt-in browser builder profiles with pinned agent-browser and Chrome DevTools verification skills, keeping default assignments and read-only role permissions unchanged.
+- Isolate browser sessions per dispatch, verify Chrome launch before use, clean up only owned sessions, and prepare browser tools inside selected Sandbox builds. Real-VM browser verification remains experimental pending a free Sandbox slot.
+
 ## v0.3.3
 
 - Publish the starter base branch to a private GitHub repository before planning a New repository run, with setup errors and retry guidance.
