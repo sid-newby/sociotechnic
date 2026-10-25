@@ -61,7 +61,10 @@ Neither setting affects ordinary agents running outside Docker Sandboxes.
 Provider bindings and model entitlements must work in sbx before a live agent
 run. Existing host login files are not copied. OAuth is required for these
 subscription adapters; an API-key binding does not silently become a paid API
-fallback. Codex uses Docker's host OAuth proxy through its declared sentinel;
+fallback. Standard agent configurations resolve from the dispatch agent without
+requiring custom identity fields. Custom agents retain their explicit base role;
+nested comment workers resolve against their own Sicko role and permissions.
+Codex uses Docker's host OAuth proxy through its declared sentinel;
 its isolated reader tools and disabled shell remain unchanged.
 Ordinary Codex builders retain their workspace-write tools and scoped
 `commit_changes` bridge inside the VM. Infrastructure agents' pinned skill
@@ -167,6 +170,22 @@ uninitialized VM because setup may have left useful files. Inspect it first;
 after preserving anything needed, explicitly remove that named environment with
 sbx. A missing initialized VM is not silently recreated: it could have contained
 unexported work. The database backs up records, not sandbox files or Git commits.
+
+### Recover a run affected by the v0.2.1 parser fix
+
+Earlier workers rejected standard pinned configurations before provider startup
+with `Invalid sandbox worker request`, surfaced as the generic `sbx exec failed`
+message. Upgrading the host fixes new VMs; an initialized VM retains its copied
+control runtime. Preserve that VM and its repository when recovering a failed run.
+
+For this parser-only update, stop the run's driver, preserve its old
+`/home/agent/sociotechnic/control/sociotechnic/ui/sandbox-worker.ts` with `sbx cp`,
+then copy the upgraded checkout's `sociotechnic/ui/sandbox-worker.ts` to that same
+VM path. This is an explicit operator repair, not automatic runtime replacement.
+Keep the run's pinned agent releases, authentication and repository unchanged.
+If the run reached `retry-bound:plan`, grant one `retriesPerStep` override with a
+note explaining the repair, then run with the existing `planned` hold. Original
+failed attempts remain in history; review the resulting plan before continuing.
 
 ## Verification tools
 

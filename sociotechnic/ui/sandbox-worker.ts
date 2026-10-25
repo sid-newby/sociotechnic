@@ -18,22 +18,23 @@ function fail(): never { throw new Error("Invalid sandbox worker request"); }
 const string = (v: unknown): string => typeof v === "string" ? v : fail();
 const strings = (v: unknown): string[] => Array.isArray(v) && v.every((s): s is string => typeof s === "string") ? v : fail();
 
-function configuration(value: unknown): AgentConfiguration | undefined {
+function configuration(value: unknown, fallbackRole: string): AgentConfiguration | undefined {
   if (value === undefined) return undefined;
   if (!object(value) || !isAgentVersion(value.version) || (value.revision !== null && typeof value.revision !== "string")) fail();
-  const baseRole = string(value.baseRole ?? value.agentName);
+  const baseRole = string(value.baseRole ?? value.agentName ?? fallbackRole);
   const role = versionRole(roleOf(baseRole), value);
   return { version: value.version, revision: value.revision, ...role, skills: strings(value.skills), baseRole, ...(value.skillResources === undefined ? {} : { skillResources: parseSkillResources(value.skillResources) }), ...(value.agentName === undefined ? {} : { agentName: string(value.agentName) }), ...(value.releaseDigest === undefined ? {} : { releaseDigest: string(value.releaseDigest) }), ...(value.definition === undefined ? {} : { definition: string(value.definition) }) };
 }
 
 export function parseSandboxEntry(raw: unknown): DispatchOut {
   if (!object(raw) || !/^d-[a-zA-Z0-9-]+$/.test(string(raw.id)) || !Number.isFinite(Date.parse(string(raw.deadlineAt)))) fail();
+  const agent = string(raw.agent);
   let designScope: DispatchOut["designScope"];
   if (raw.designScope !== undefined) {
     if (!object(raw.designScope)) fail();
     designScope = { record: string(raw.designScope.record), artifacts: string(raw.designScope.artifacts), receipt: string(raw.designScope.receipt), ...(raw.designScope.referenceRoot === undefined ? {} : { referenceRoot: string(raw.designScope.referenceRoot) }) };
   }
-  return { id: string(raw.id), agent: string(raw.agent), model: string(raw.model), effort: string(raw.effort), deadlineAt: string(raw.deadlineAt), record: string(raw.record), prompt: string(raw.prompt), configuration: configuration(raw.configuration), workerConfiguration: configuration(raw.workerConfiguration), ...(designScope ? { designScope } : {}) };
+  return { id: string(raw.id), agent, model: string(raw.model), effort: string(raw.effort), deadlineAt: string(raw.deadlineAt), record: string(raw.record), prompt: string(raw.prompt), configuration: configuration(raw.configuration, agent), workerConfiguration: configuration(raw.workerConfiguration, "sociotechnic-comment-sicko"), ...(designScope ? { designScope } : {}) };
 }
 
 export function workerSnapshot(repo = VM_REPO): { head: string; dirty: boolean; branch: string } {

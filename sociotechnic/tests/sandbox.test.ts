@@ -11,7 +11,8 @@ import { effectJob, mutateJob, readJob } from "../src/job-store.ts";
 import { startServer } from "../ui/server.ts";
 import { defaultConfig } from "../src/config.ts";
 import { bundledSkills, materializeSkills } from "../src/agent-skills.ts";
-import { roleOf } from "../src/roles.ts";
+import { ROLES, roleOf } from "../src/roles.ts";
+import { agentCatalogEntry } from "../src/agent-catalog.ts";
 import { merge } from "../src/engine.ts";
 import { parseExecution } from "../src/execution.ts";
 import { createJob } from "../src/job.ts";
@@ -92,6 +93,46 @@ test("path mapping is longest-first without remapping inserted paths", () => {
   assert.deepEqual(mapSandboxPaths({ prompt: "/host/dispatch/out /host/repo /host" }, [["/host/dispatch", "/host/virtual"], ["/host/repo", "/repo"], ["/host", "/control"]]), { prompt: "/host/virtual/out /repo /control" });
   assert.throws(() => parseSandboxEntry({ id: "../escape" }));
 });
+test("worker accepts standard catalog configurations without identity metadata", () => {
+  for (const role of ROLES) {
+    const configuration = agentCatalogEntry(role).configuration;
+    assert.equal(configuration.baseRole, undefined);
+    assert.equal(configuration.agentName, undefined);
+    const entry = { id: "d-standard", agent: role.name, model: role.model, effort: role.effort, deadlineAt: deadline(), record: "plan.json", prompt: "Use pinned instructions", configuration };
+    const parsed = parseSandboxEntry(JSON.parse(JSON.stringify(entry)));
+    assert.deepEqual(parsed.configuration, { ...configuration, ...role, baseRole: role.name });
+    assert.equal(parseSandboxEntry({ ...entry, configuration: undefined }).configuration, undefined);
+  }
+});
+test("worker preserves custom identity and explicit base-role permissions", () => {
+  const planner = roleOf("sociotechnic-planner");
+  const configuration = { ...agentCatalogEntry(planner).configuration, agentName: "sociotechnic-custom-planner", baseRole: planner.name, maxTurns: 7 };
+  const entry = { id: "d-custom", agent: configuration.agentName, model: planner.model, effort: planner.effort, deadlineAt: deadline(), record: "plan.json", prompt: "Use custom instructions", configuration };
+  const parsed = parseSandboxEntry(JSON.parse(JSON.stringify(entry)));
+  assert.equal(parsed.agent, configuration.agentName);
+  assert.equal(parsed.configuration?.agentName, configuration.agentName);
+  assert.equal(parsed.configuration?.baseRole, planner.name);
+  assert.equal(parsed.configuration?.maxTurns, 7);
+  assert.deepEqual(parsed.configuration?.tools, planner.tools);
+});
+test("worker resolves a nested catalog configuration against the Sicko role", () => {
+  const coordinator = roleOf("sociotechnic-comment-cleaner"), worker = roleOf("sociotechnic-comment-sicko");
+  const entry = { id: "d-nested", agent: coordinator.name, model: coordinator.model, effort: coordinator.effort, deadlineAt: deadline(), record: "round-1/build.md", prompt: "Coordinate cleanup", configuration: agentCatalogEntry(coordinator).configuration, workerConfiguration: agentCatalogEntry(worker).configuration };
+  const parsed = parseSandboxEntry(JSON.parse(JSON.stringify(entry)));
+  assert.equal(parsed.configuration?.baseRole, coordinator.name);
+  assert.equal(parsed.workerConfiguration?.baseRole, worker.name);
+  assert.deepEqual(parsed.workerConfiguration?.tools, worker.tools);
+  assert.equal(parsed.workerConfiguration?.maxTurns, worker.maxTurns);
+  assert.equal(parsed.workerConfiguration?.tools.includes("Agent"), false);
+});
+test("worker still rejects invalid configurations and reader tool escalation", () => {
+  const planner = roleOf("sociotechnic-planner"), configuration = agentCatalogEntry(planner).configuration;
+  const entry = { id: "d-invalid", agent: planner.name, model: planner.model, effort: planner.effort, deadlineAt: deadline(), record: "plan.json", prompt: "Plan", configuration };
+  for (const invalid of [null, {}, { ...configuration, version: "invalid" }, { ...configuration, baseRole: "unknown" }, { ...configuration, baseRole: 1 }, { ...configuration, tools: [...configuration.tools, "Bash"] }]) {
+    assert.throws(() => parseSandboxEntry({ ...entry, configuration: invalid }));
+  }
+  assert.throws(() => parseSandboxEntry({ ...entry, agent: "unknown" }));
+});
 test("worker transport preserves and validates pinned infrastructure skill resources", () => {
   const skills = bundledSkills(["container-technologies"]);
   const configuration = { ...roleOf("sociotechnic-builder"), baseRole: "sociotechnic-builder", version: "1.0.0", revision: null, skills: ["container-technologies"], skillResources: skills };
@@ -119,7 +160,7 @@ test("worker commits return through a bundle while the source checkout stays unc
   mkdirSync(inputs, { recursive: true }); mkdirSync(outputs);
   writeFileSync(join(inputs, "job.json"), JSON.stringify(job));
   const before = git.headCommit(repo);
-  const result = await runInSandbox({ id: "d-001", agent: "sociotechnic-builder-lite", model: "sonnet", effort: "high", deadlineAt: deadline(), record: "round-1/build.md", prompt: `Work in ${review}; write ${outputs}/round-1/build.md` }, { sociotechnicHome: home, jobId: id, repo, worktree: review, branch, execution, round: 1, recordPath: join(outputs, "round-1/build.md"), inputRoot: inputs, outputRoot: outputs, signal: new AbortController().signal, onActivity() {}, onWarn() {} });
+  const result = await runInSandbox({ id: "d-001", agent: "sociotechnic-builder-lite", model: "sonnet", effort: "high", configuration: agentCatalogEntry(roleOf("sociotechnic-builder-lite")).configuration, deadlineAt: deadline(), record: "round-1/build.md", prompt: `Work in ${review}; write ${outputs}/round-1/build.md` }, { sociotechnicHome: home, jobId: id, repo, worktree: review, branch, execution, round: 1, recordPath: join(outputs, "round-1/build.md"), inputRoot: inputs, outputRoot: outputs, signal: new AbortController().signal, onActivity() {}, onWarn() {} });
   assert.equal(result.outcome, "ok", result.note ?? "");
   assert.equal(git.headCommit(repo), before);
   assert.equal(readFileSync(join(review, "src/feature.txt"), "utf8"), "round 1 dispatch d-001\n");
