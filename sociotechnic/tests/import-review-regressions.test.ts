@@ -1,3 +1,4 @@
+import { configuredTestDatabaseUrl } from "./fixtures/postgres-environment.ts";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -64,7 +65,7 @@ for (const [name, text] of [
   assert.equal((await store.records(value.id))[0].text, original);
 });
 
-const serverUrl = process.env.SOCIOTECHNIC_TEST_DATABASE_URL?.trim();
+const serverUrl = configuredTestDatabaseUrl(process.env.SOCIOTECHNIC_TEST_DATABASE_URL);
 test("pg: legacy Unicode records migrate exactly and an old writer is fenced at cutover", { skip: serverUrl ? false : "SOCIOTECHNIC_TEST_DATABASE_URL is not set" }, async () => {
   assert.ok(serverUrl);
   const adminUrl = new URL(serverUrl); adminUrl.pathname = "/postgres";

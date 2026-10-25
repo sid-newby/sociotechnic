@@ -546,6 +546,8 @@ Overrides accumulate and never reset.
 
 `new` -> `planning` -> `researching` -> `planning` -> `planned` -> `building`
 -> `built` -> `checked` -> `reviewing` -> `reviewed` -> `approving` -> `ready`
+Red deterministic checks take `checked` -> `reviewed` directly with a failed
+gate and no review dispatches; the next round still starts through `reviewed`.
 | `needs-human` -> `merged-local` -> `accepted` -> `merged`; `stopped` from any
 non-terminal status. The human gates are `ready`, `needs-human` and
 `merged-local`: `step` returns `human` there and a driver never advances them.
@@ -563,7 +565,7 @@ remains legal for a human who tested in the worktree instead.
 | planned | plan pinned, tier known | `step` opens round 1 and dispatches the tier's builder -> building |
 | building | builder dispatched | READY with COMMIT == HEAD -> built; BLOCKED -> needs-human; malformed/stale -> retry once, then needs-human |
 | built | build record accepted | `step` runs checks itself -> checked |
-| checked | checks.json written (pass or fail) | `step` writes diff files, evaluates guards, dispatches lenses -> reviewing |
+| checked | checks.json written (pass or fail) | passing checks: write diff files, evaluate guards and dispatch lenses -> reviewing; failed checks: retain evidence and record a failed deterministic gate without reviews -> reviewed |
 | reviewing | lenses dispatched | all finished -> `step` computes the gate -> reviewed |
 | reviewed | gate computed | gate pass with no flags -> `step` dispatches approver -> approving; gate pass with flags -> needs-human; gate fail -> next round (building) if within caps, else needs-human |
 | approving | approver dispatched | APPROVE -> ready; ESCALATE -> needs-human; malformed -> retry once, then needs-human |
@@ -580,7 +582,8 @@ invents a transition.
 
 ### 7.2 Gate (`gate.ts`, deterministic)
 
-Computed by `step` when every review dispatch of the round is finished.
+Computed by `step` when every review dispatch of the round is finished, or
+directly from failed deterministic checks before any review is dispatched.
 
 ```ts
 type Gate = {
@@ -612,6 +615,50 @@ Flags (facts that need a human, not an agent):
 - `easy-tier-too-many-files` when tier is EASY or BULK and changedFiles > `easyTierMaxFiles`
 - `touches-outside-plan:<path>` for each changed file matching none of `plan.touches`
 
+#### Failed-check repair and verification ownership
+
+At `checked`, a round with a recorded failing `checks.json` closes with a failed
+gate before buying a review wave. Preserve its build, check report, diff evidence
+and gate. Its lens map and review records remain empty: unperformed review is
+neither PASS nor SKIPPED. Only a real path guard can produce an engine SKIPPED
+record. Record the failed gate through a status-guarded job transition; never
+manufacture a `reviewing` phase merely to reuse a completion function.
+
+The next `reviewed` step uses the ordinary next-round builder path. A repair
+consumes the existing effective round and dispatch budgets; malformed, stale,
+failed, timed-out or interrupted dispatches keep the existing retry budget.
+No nested repair loop, new retry count or new manager is introduced. Exhaustion
+and BLOCKED retain their existing `needs-human` behavior. The repair brief binds
+the previous report path and commit, names/commands, exit/signal/timeout facts
+and retained output tails; unknown evidence is not fabricated.
+The generated brief's existing failing-check entries carry optional
+`reportPath`, `commit` and `signal` fields alongside their existing command,
+exit code, timeout and tail. Older callers may omit them; the engine supplies
+them for a recorded prior check failure. Render this evidence once, without a
+second copy of the failure tails or a new persistence protocol.
+
+Every repaired passing HEAD still receives all applicable reviewers,
+conformance, gate checks and approval/human gates. Missing/empty configured
+checks retain the existing `no-checks-configured` flag. Comment structural proof,
+plan digest, clean tree and commit binding remain mandatory. Holds at checked
+or reviewed stop before the next transition. Stop/reopen, retained uncommitted
+work, overrides, ownership/input/completion digests and idempotent replay retain
+their existing protections; preserve evidence rather than discard it.
+
+The engine owns the full configured canonical repository suite at the committed
+build HEAD. One independent integration owner owns the complete
+required-suite inventory, test documentation and final combined-revision proof.
+New application tests belong under `tests/`, never beside source; historical
+release-tooling/scaffold placement is not relocated by this change. Prefer real
+behavior with temporary Git and isolated storage; mock external providers and
+Sandbox boundaries rather than the behavior under test.
+
+Pins do not freeze the engine binary: after an operator-controlled upgrade, the
+new routing applies to an eligible unreviewed checked round. Already-issued
+review waves finish normally and saved dispatch envelopes are never rewritten.
+Existing holds stay in force. No live catalog mutation is part of development.
+
+
 ### 7.3 Approver hard rules
 
 The approver receives only records. It must ESCALATE when any of these hold,
@@ -623,7 +670,7 @@ Otherwise APPROVE. It never edits code and never reruns checks.
 
 ### 7.4 Loop bounds and retries
 
-- A **round** is one build + checks + reviews (+ approver). `round` increments
+- A **round** is one build + checks and, when checks pass, reviews (+ approver). `round` increments
   when the gate fails and `step` opens the next round. Past the effective
   `rounds` cap -> needs-human, reason `loop-bound:rounds`.
 - A **dispatch** is one agent spawn. All dispatches in a round (build, lenses,

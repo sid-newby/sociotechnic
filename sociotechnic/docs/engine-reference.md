@@ -72,7 +72,8 @@ stateDiagram-v2
   planned --> building
   building --> built: READY and COMMIT == HEAD
   built --> checked: engine runs checks
-  checked --> reviewing: lenses dispatched
+  checked --> reviewing: checks pass, lenses dispatched
+  checked --> reviewed: checks fail, failed gate without reviews
   reviewing --> reviewed: gate computed
   reviewed --> building: blockers, within caps
   reviewed --> approving: pass, no flags
@@ -320,7 +321,19 @@ source of truth. Publishing stores the PR URL, number and head in the job docume
 
 ## Gate
 
-The gate is deterministic (`sociotechnic/src/gate.ts`). `step` computes it when every review dispatch of the round has finished. All blockers and flags are reported.
+The gate is deterministic (`sociotechnic/src/gate.ts`). `step` computes it directly
+at `checked` when deterministic checks fail, or after all issued reviews finish.
+All blockers and flags are reported. A red-check round retains build/check/diff
+evidence, with empty lens and review maps; no PASS or SKIPPED review is invented.
+Its next round uses the ordinary fresh builder and effective round, dispatch,
+retry and deadline bounds. The repair prompt names the previous report, checked
+commit, command, exit code, signal, timeout and retained output tail once.
+Passing repaired commits still receive every applicable review and normal gates.
+
+The engine independently runs the full configured suite at
+committed build HEAD. Missing checks retain `no-checks-configured`. Checked and
+reviewed holds, stop/reopen, retained edits, stale-input/commit rejection,
+completion replay and ownership guards continue to apply.
 
 ### Blockers
 
@@ -386,7 +399,7 @@ Every bound is enforced by the engine. Past a bound the job moves to `needs-huma
 
 | Bound | Default | Counts | Reason when hit |
 | --- | --- | --- | --- |
-| `rounds` | 3 | build + checks + reviews (+ approver) cycles | `loop-bound:rounds` |
+| `rounds` | 3 | build + checks and, when passing, reviews (+ approver) cycles | `loop-bound:rounds` |
 | `dispatchesPerRound` | 10 | every agent spawn in a round, including retries. Plan and research count in round 0 | `loop-bound:dispatchesPerRound` |
 | `retriesPerStep` | 1 | re-dispatches of one step after a malformed, stale, failed, timed-out or interrupted record | `retry-bound:<step>` |
 

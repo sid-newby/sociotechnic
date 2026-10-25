@@ -147,7 +147,7 @@ export const TRANSITIONS: Readonly<Record<Status, readonly Status[]>> = {
   planned: ["building", "needs-human", "stopped"],
   building: ["built", "needs-human", "stopped"],
   built: ["checked", "stopped"],
-  checked: ["reviewing", "needs-human", "stopped"],
+  checked: ["reviewing", "reviewed", "needs-human", "stopped"],
   reviewing: ["reviewed", "needs-human", "stopped"],
   reviewed: ["approving", "building", "needs-human", "stopped"],
   approving: ["ready", "needs-human", "stopped"],
@@ -334,6 +334,15 @@ export function recordGate(job: Job, reviews: Record<string, Parsed>, gate: Gate
   assertStatus(job, ["reviewing"], "recordGate");
   const round = requireRound(job);
   Object.assign(round.reviews, reviews);
+  round.gate = gate;
+  transition(job, "reviewed", "", now);
+}
+
+export function recordFailedChecksGate(job: Job, gate: Gate, now: string): void {
+  assertStatus(job, ["checked"], "recordFailedChecksGate");
+  const round = requireRound(job);
+  if (round.checks?.pass !== false || gate.pass || !gate.blockers.includes("checks-failed")) throw new IllegalTransition("Failed-check gate requires failing checks and gate");
+  if (Object.keys(round.lenses).length > 0 || Object.keys(round.reviews).length > 0 || job.dispatches.some((d) => d.round === round.n && d.step === "review")) throw new IllegalTransition("Failed-check gate cannot close a round with reviews");
   round.gate = gate;
   transition(job, "reviewed", "", now);
 }

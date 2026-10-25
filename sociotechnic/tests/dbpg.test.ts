@@ -1,3 +1,4 @@
+import { configuredTestDatabaseUrl } from "./fixtures/postgres-environment.ts";
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -11,7 +12,7 @@ import { releaseContentDigest } from "../src/agent-version-data.ts";
 import { initializeAgentVersions, latestAgentVersion, publishAgentVersion, readAgentVersion, restoreAgentVersions } from "../src/agent-versions.ts";
 import { roleOf } from "../src/roles.ts";
 type Json=Record<string,unknown>;
-const server=process.env.SOCIOTECHNIC_TEST_DATABASE_URL?.trim()??"",name=`sociotechnic_test_${process.pid}`,root=mkdtempSync(join(tmpdir(),"sociotechnic-dbpg-")),home=join(root,"home"),bin=join(dirname(fileURLToPath(import.meta.url)),"../bin/sociotechnic"),skip=server===""?"SOCIOTECHNIC_TEST_DATABASE_URL is not set":false;
+const server=configuredTestDatabaseUrl(process.env.SOCIOTECHNIC_TEST_DATABASE_URL)??"",name=`sociotechnic_test_${process.pid}`,root=mkdtempSync(join(tmpdir(),"sociotechnic-dbpg-")),home=join(root,"home"),bin=join(dirname(fileURLToPath(import.meta.url)),"../bin/sociotechnic"),skip=server===""?"SOCIOTECHNIC_TEST_DATABASE_URL is not set":false;
 mkdirSync(home);const url=server===""?"":withDatabase(server,name);
 function withDatabase(connection:string,database:string){const parsed=new URL(connection);parsed.pathname=`/${database}`;return parsed.toString();}
 after(async()=>{setStore(undefined);rmSync(root,{recursive:true,force:true});if(!server)return;const admin=await connectClient(withDatabase(server,"postgres"));try{await admin.query(`drop database if exists "${name}" with (force)`);}finally{await admin.end();}});
