@@ -1,0 +1,1206 @@
+{
+  "checkout": "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/sociotechnic-console-finish",
+  "output": "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page",
+  "smoke": false,
+  "startedAt": "2026-10-25T19:26:01.984Z",
+  "isolation": {
+    "store": "memory",
+    "database": "off",
+    "dispatchCalls": 0,
+    "rejectedMutations": [],
+    "interceptedActions": [
+      {
+        "route": "stop",
+        "job": "20261025-wave2-planned",
+        "body": {
+          "note": "  Stop after preserving this exact note.  "
+        }
+      },
+      {
+        "route": "accept",
+        "job": "20261025-wave2-ready",
+        "body": {
+          "note": "Tested farewell locally"
+        }
+      },
+      {
+        "route": "rework",
+        "job": "20261025-wave2-needs-human",
+        "body": {
+          "note": "Fix the failing farewell expectation"
+        }
+      },
+      {
+        "route": "reopen",
+        "job": "20261025-wave2-stopped",
+        "body": {
+          "discard": true
+        }
+      }
+    ]
+  },
+  "checks": [
+    {
+      "name": "memory fixtures and real HTTP routes",
+      "category": "harness",
+      "ok": true,
+      "ms": 149,
+      "details": {
+        "moments": [
+          "planned",
+          "working",
+          "needs-human",
+          "ready"
+        ],
+        "url": "http://127.0.0.1:57089/",
+        "seed": "committed demo-job and status variations; browser GET fixture explicitly supplies active-driver metadata for working; no real driver"
+      }
+    },
+    {
+      "name": "1440 planned: page and PNG",
+      "category": "ui",
+      "ok": true,
+      "ms": 1576
+    },
+    {
+      "name": "1440 planned: no page overflow",
+      "category": "ui",
+      "ok": true,
+      "ms": 6,
+      "details": {
+        "width": 1440,
+        "scroll": 1440,
+        "body": 1440,
+        "offenders": []
+      }
+    },
+    {
+      "name": "1440 planned: dashboard cards and tabs",
+      "category": "ui",
+      "ok": true,
+      "ms": 39
+    },
+    {
+      "name": "1440 planned: token card reflects fixture measurements",
+      "category": "ui",
+      "ok": true,
+      "ms": 13,
+      "details": {
+        "expectedRecordedTokens": 28079,
+        "actualCardValue": "28,079"
+      }
+    },
+    {
+      "name": "1440 planned: chart range controls",
+      "category": "ui",
+      "ok": true,
+      "ms": 187
+    },
+    {
+      "name": "1440 planned: command palette, Escape and focus return",
+      "category": "ui",
+      "ok": true,
+      "ms": 261
+    },
+    {
+      "name": "1440 planned: record sheet, raw view and download",
+      "category": "ui",
+      "ok": true,
+      "ms": 422
+    },
+    {
+      "name": "1440 planned: dispatch detail sheet",
+      "category": "ui",
+      "ok": true,
+      "ms": 359
+    },
+    {
+      "name": "1440 planned: Log and Decisions empty states",
+      "category": "ui",
+      "ok": true,
+      "ms": 99
+    },
+    {
+      "name": "1440 planned: human decision Read sheet",
+      "category": "ui",
+      "ok": true,
+      "ms": 615
+    },
+    {
+      "name": "1440 working: page and PNG",
+      "category": "ui",
+      "ok": true,
+      "ms": 242
+    },
+    {
+      "name": "1440 working: no page overflow",
+      "category": "ui",
+      "ok": true,
+      "ms": 3,
+      "details": {
+        "width": 1440,
+        "scroll": 1440,
+        "body": 1440,
+        "offenders": []
+      }
+    },
+    {
+      "name": "1440 working: dashboard cards and tabs",
+      "category": "ui",
+      "ok": true,
+      "ms": 24
+    },
+    {
+      "name": "1440 working: token card reflects fixture measurements",
+      "category": "ui",
+      "ok": true,
+      "ms": 6,
+      "details": {
+        "expectedRecordedTokens": 28079,
+        "actualCardValue": "28,079"
+      }
+    },
+    {
+      "name": "1440 working: chart range controls",
+      "category": "ui",
+      "ok": true,
+      "ms": 100
+    },
+    {
+      "name": "1440 working: command palette, Escape and focus return",
+      "category": "ui",
+      "ok": true,
+      "ms": 187
+    },
+    {
+      "name": "1440 working: record sheet, raw view and download",
+      "category": "ui",
+      "ok": true,
+      "ms": 293
+    },
+    {
+      "name": "1440 working: dispatch detail sheet",
+      "category": "ui",
+      "ok": true,
+      "ms": 235
+    },
+    {
+      "name": "1440 working: Log and Decisions empty states",
+      "category": "ui",
+      "ok": true,
+      "ms": 122
+    },
+    {
+      "name": "1440 working: unreported usage is explicit",
+      "category": "ui",
+      "ok": true,
+      "ms": 2
+    },
+    {
+      "name": "1440 needs-human: page and PNG",
+      "category": "ui",
+      "ok": true,
+      "ms": 209
+    },
+    {
+      "name": "1440 needs-human: no page overflow",
+      "category": "ui",
+      "ok": true,
+      "ms": 6,
+      "details": {
+        "width": 1440,
+        "scroll": 1440,
+        "body": 1440,
+        "offenders": []
+      }
+    },
+    {
+      "name": "1440 needs-human: dashboard cards and tabs",
+      "category": "ui",
+      "ok": true,
+      "ms": 55
+    },
+    {
+      "name": "1440 needs-human: token card reflects fixture measurements",
+      "category": "ui",
+      "ok": true,
+      "ms": 3,
+      "details": {
+        "expectedRecordedTokens": 136334,
+        "actualCardValue": "136,334"
+      }
+    },
+    {
+      "name": "1440 needs-human: chart range controls",
+      "category": "ui",
+      "ok": true,
+      "ms": 135
+    },
+    {
+      "name": "1440 needs-human: command palette, Escape and focus return",
+      "category": "ui",
+      "ok": true,
+      "ms": 228
+    },
+    {
+      "name": "1440 needs-human: record sheet, raw view and download",
+      "category": "ui",
+      "ok": true,
+      "ms": 343
+    },
+    {
+      "name": "1440 needs-human: dispatch detail sheet",
+      "category": "ui",
+      "ok": true,
+      "ms": 235
+    },
+    {
+      "name": "1440 needs-human: Log and Decisions empty states",
+      "category": "ui",
+      "ok": true,
+      "ms": 92
+    },
+    {
+      "name": "1440 needs-human: human decision Read sheet",
+      "category": "ui",
+      "ok": true,
+      "ms": 157
+    },
+    {
+      "name": "1440 ready: page and PNG",
+      "category": "ui",
+      "ok": true,
+      "ms": 161
+    },
+    {
+      "name": "1440 ready: no page overflow",
+      "category": "ui",
+      "ok": true,
+      "ms": 2,
+      "details": {
+        "width": 1440,
+        "scroll": 1440,
+        "body": 1440,
+        "offenders": []
+      }
+    },
+    {
+      "name": "1440 ready: dashboard cards and tabs",
+      "category": "ui",
+      "ok": true,
+      "ms": 31
+    },
+    {
+      "name": "1440 ready: token card reflects fixture measurements",
+      "category": "ui",
+      "ok": true,
+      "ms": 2,
+      "details": {
+        "expectedRecordedTokens": 136334,
+        "actualCardValue": "136,334"
+      }
+    },
+    {
+      "name": "1440 ready: chart range controls",
+      "category": "ui",
+      "ok": true,
+      "ms": 144
+    },
+    {
+      "name": "1440 ready: command palette, Escape and focus return",
+      "category": "ui",
+      "ok": true,
+      "ms": 257
+    },
+    {
+      "name": "1440 ready: record sheet, raw view and download",
+      "category": "ui",
+      "ok": true,
+      "ms": 344
+    },
+    {
+      "name": "1440 ready: dispatch detail sheet",
+      "category": "ui",
+      "ok": true,
+      "ms": 245
+    },
+    {
+      "name": "1440: metric to dispatch to record close and focus chain",
+      "category": "ui",
+      "ok": true,
+      "ms": 643
+    },
+    {
+      "name": "1440: chart usage links open dispatch evidence and return focus",
+      "category": "ui",
+      "ok": true,
+      "ms": 136
+    },
+    {
+      "name": "1440: column customization and filtered CSV export are functional",
+      "category": "ui",
+      "ok": true,
+      "ms": 545,
+      "details": {
+        "csvPath": "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/1440-filtered-dispatches.csv",
+        "firstOrder": [
+          "d-001",
+          "d-006",
+          "d-005",
+          "d-004",
+          "d-003",
+          "d-002"
+        ],
+        "secondOrder": [
+          "d-002",
+          "d-003",
+          "d-004",
+          "d-005",
+          "d-006",
+          "d-001"
+        ],
+        "filteredOrder": [
+          "d-003",
+          "d-004"
+        ]
+      }
+    },
+    {
+      "name": "1440 ready: Log and Decisions empty states",
+      "category": "ui",
+      "ok": true,
+      "ms": 95
+    },
+    {
+      "name": "control dialogs enforce gates and send exact intercepted request bodies",
+      "category": "ui",
+      "ok": true,
+      "ms": 1862,
+      "details": {
+        "captured": [
+          {
+            "route": "stop",
+            "job": "20261025-wave2-planned",
+            "body": {
+              "note": "  Stop after preserving this exact note.  "
+            }
+          },
+          {
+            "route": "accept",
+            "job": "20261025-wave2-ready",
+            "body": {
+              "note": "Tested farewell locally"
+            }
+          },
+          {
+            "route": "rework",
+            "job": "20261025-wave2-needs-human",
+            "body": {
+              "note": "Fix the failing farewell expectation"
+            }
+          },
+          {
+            "route": "reopen",
+            "job": "20261025-wave2-stopped",
+            "body": {
+              "discard": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "1440: failed log catch-up stays actionable after live SSE and Retry recovers",
+      "category": "ui",
+      "ok": true,
+      "ms": 286
+    },
+    {
+      "name": "1440: list loading skeleton",
+      "category": "ui",
+      "ok": true,
+      "ms": 859
+    },
+    {
+      "name": "1440: empty inbox",
+      "category": "ui",
+      "ok": true,
+      "ms": 870
+    },
+    {
+      "name": "1440: job-list error and Retry recovery",
+      "category": "ui",
+      "ok": true,
+      "ms": 1126
+    },
+    {
+      "name": "1440: detail error and Retry recovery",
+      "category": "ui",
+      "ok": true,
+      "ms": 231
+    },
+    {
+      "name": "390 planned: page and PNG",
+      "category": "ui",
+      "ok": true,
+      "ms": 972
+    },
+    {
+      "name": "390 planned: no page overflow",
+      "category": "ui",
+      "ok": true,
+      "ms": 2,
+      "details": {
+        "width": 390,
+        "scroll": 390,
+        "body": 390,
+        "offenders": [
+          {
+            "tag": "TABLE",
+            "role": null,
+            "text": "DispatchRoleStatusRoundTokensElapsedModel / effortRecordd-001PlannerDo",
+            "left": 17,
+            "right": 793
+          },
+          {
+            "tag": "THEAD",
+            "role": null,
+            "text": "DispatchRoleStatusRoundTokensElapsedModel / effortRecord",
+            "left": 17,
+            "right": 793
+          },
+          {
+            "tag": "TR",
+            "role": null,
+            "text": "DispatchRoleStatusRoundTokensElapsedModel / effortRecord",
+            "left": 17,
+            "right": 793
+          },
+          {
+            "tag": "TH",
+            "role": null,
+            "text": "Tokens",
+            "left": 369,
+            "right": 456
+          },
+          {
+            "tag": "BUTTON",
+            "role": null,
+            "text": "Tokens",
+            "left": 369,
+            "right": 448
+          },
+          {
+            "tag": "svg",
+            "role": null,
+            "text": "",
+            "left": 425,
+            "right": 439
+          },
+          {
+            "tag": "path",
+            "role": null,
+            "text": "",
+            "left": 432,
+            "right": 437
+          },
+          {
+            "tag": "path",
+            "role": null,
+            "text": "",
+            "left": 427,
+            "right": 431
+          },
+          {
+            "tag": "TH",
+            "role": null,
+            "text": "Elapsed",
+            "left": 456,
+            "right": 549
+          },
+          {
+            "tag": "BUTTON",
+            "role": null,
+            "text": "Elapsed",
+            "left": 456,
+            "right": 541
+          },
+          {
+            "tag": "svg",
+            "role": null,
+            "text": "",
+            "left": 518,
+            "right": 532
+          },
+          {
+            "tag": "path",
+            "role": null,
+            "text": "",
+            "left": 525,
+            "right": 530
+          }
+        ]
+      }
+    },
+    {
+      "name": "390 planned: dashboard cards and tabs",
+      "category": "ui",
+      "ok": true,
+      "ms": 21
+    },
+    {
+      "name": "390 planned: token card reflects fixture measurements",
+      "category": "ui",
+      "ok": true,
+      "ms": 2,
+      "details": {
+        "expectedRecordedTokens": 28079,
+        "actualCardValue": "28,079"
+      }
+    },
+    {
+      "name": "390 planned: chart range controls",
+      "category": "ui",
+      "ok": true,
+      "ms": 104
+    },
+    {
+      "name": "390 planned: command palette, Escape and focus return",
+      "category": "ui",
+      "ok": true,
+      "ms": 124
+    },
+    {
+      "name": "390 planned: record sheet, raw view and download",
+      "category": "ui",
+      "ok": true,
+      "ms": 248
+    },
+    {
+      "name": "390 planned: dispatch detail sheet",
+      "category": "ui",
+      "ok": true,
+      "ms": 151
+    },
+    {
+      "name": "390 planned: Log and Decisions empty states",
+      "category": "ui",
+      "ok": true,
+      "ms": 70
+    },
+    {
+      "name": "390 planned: human decision Read sheet",
+      "category": "ui",
+      "ok": true,
+      "ms": 104
+    },
+    {
+      "name": "390 working: page and PNG",
+      "category": "ui",
+      "ok": true,
+      "ms": 94
+    },
+    {
+      "name": "390 working: no page overflow",
+      "category": "ui",
+      "ok": true,
+      "ms": 2,
+      "details": {
+        "width": 390,
+        "scroll": 390,
+        "body": 390,
+        "offenders": [
+          {
+            "tag": "TABLE",
+            "role": null,
+            "text": "DispatchRoleStatusRoundTokensElapsedModel / effortRecordd-001PlannerDo",
+            "left": 17,
+            "right": 909
+          },
+          {
+            "tag": "THEAD",
+            "role": null,
+            "text": "DispatchRoleStatusRoundTokensElapsedModel / effortRecord",
+            "left": 17,
+            "right": 909
+          },
+          {
+            "tag": "TR",
+            "role": null,
+            "text": "DispatchRoleStatusRoundTokensElapsedModel / effortRecord",
+            "left": 17,
+            "right": 909
+          },
+          {
+            "tag": "TH",
+            "role": null,
+            "text": "Round",
+            "left": 335,
+            "right": 418
+          },
+          {
+            "tag": "BUTTON",
+            "role": null,
+            "text": "Round",
+            "left": 335,
+            "right": 410
+          },
+          {
+            "tag": "svg",
+            "role": null,
+            "text": "",
+            "left": 387,
+            "right": 401
+          },
+          {
+            "tag": "path",
+            "role": null,
+            "text": "",
+            "left": 395,
+            "right": 400
+          },
+          {
+            "tag": "path",
+            "role": null,
+            "text": "",
+            "left": 389,
+            "right": 394
+          },
+          {
+            "tag": "TH",
+            "role": null,
+            "text": "Tokens",
+            "left": 418,
+            "right": 523
+          },
+          {
+            "tag": "BUTTON",
+            "role": null,
+            "text": "Tokens",
+            "left": 418,
+            "right": 497
+          },
+          {
+            "tag": "svg",
+            "role": null,
+            "text": "",
+            "left": 474,
+            "right": 488
+          },
+          {
+            "tag": "path",
+            "role": null,
+            "text": "",
+            "left": 482,
+            "right": 487
+          }
+        ]
+      }
+    },
+    {
+      "name": "390 working: dashboard cards and tabs",
+      "category": "ui",
+      "ok": true,
+      "ms": 11
+    },
+    {
+      "name": "390 working: token card reflects fixture measurements",
+      "category": "ui",
+      "ok": true,
+      "ms": 4,
+      "details": {
+        "expectedRecordedTokens": 28079,
+        "actualCardValue": "28,079"
+      }
+    },
+    {
+      "name": "390 working: chart range controls",
+      "category": "ui",
+      "ok": true,
+      "ms": 99
+    },
+    {
+      "name": "390 working: command palette, Escape and focus return",
+      "category": "ui",
+      "ok": true,
+      "ms": 117
+    },
+    {
+      "name": "390 working: record sheet, raw view and download",
+      "category": "ui",
+      "ok": true,
+      "ms": 189
+    },
+    {
+      "name": "390 working: dispatch detail sheet",
+      "category": "ui",
+      "ok": true,
+      "ms": 142
+    },
+    {
+      "name": "390 working: Log and Decisions empty states",
+      "category": "ui",
+      "ok": true,
+      "ms": 70
+    },
+    {
+      "name": "390 working: unreported usage is explicit",
+      "category": "ui",
+      "ok": true,
+      "ms": 1
+    },
+    {
+      "name": "390 needs-human: page and PNG",
+      "category": "ui",
+      "ok": true,
+      "ms": 183
+    },
+    {
+      "name": "390 needs-human: no page overflow",
+      "category": "ui",
+      "ok": true,
+      "ms": 3,
+      "details": {
+        "width": 390,
+        "scroll": 390,
+        "body": 390,
+        "offenders": [
+          {
+            "tag": "TABLE",
+            "role": null,
+            "text": "DispatchRoleStatusRoundTokensElapsedModel / effortRecordd-001PlannerDo",
+            "left": 17,
+            "right": 965
+          },
+          {
+            "tag": "THEAD",
+            "role": null,
+            "text": "DispatchRoleStatusRoundTokensElapsedModel / effortRecord",
+            "left": 17,
+            "right": 965
+          },
+          {
+            "tag": "TR",
+            "role": null,
+            "text": "DispatchRoleStatusRoundTokensElapsedModel / effortRecord",
+            "left": 17,
+            "right": 965
+          },
+          {
+            "tag": "TH",
+            "role": null,
+            "text": "Round",
+            "left": 345,
+            "right": 428
+          },
+          {
+            "tag": "BUTTON",
+            "role": null,
+            "text": "Round",
+            "left": 345,
+            "right": 420
+          },
+          {
+            "tag": "svg",
+            "role": null,
+            "text": "",
+            "left": 397,
+            "right": 411
+          },
+          {
+            "tag": "path",
+            "role": null,
+            "text": "",
+            "left": 405,
+            "right": 409
+          },
+          {
+            "tag": "path",
+            "role": null,
+            "text": "",
+            "left": 399,
+            "right": 404
+          },
+          {
+            "tag": "TH",
+            "role": null,
+            "text": "Tokens",
+            "left": 428,
+            "right": 515
+          },
+          {
+            "tag": "BUTTON",
+            "role": null,
+            "text": "Tokens",
+            "left": 428,
+            "right": 507
+          },
+          {
+            "tag": "svg",
+            "role": null,
+            "text": "",
+            "left": 484,
+            "right": 498
+          },
+          {
+            "tag": "path",
+            "role": null,
+            "text": "",
+            "left": 492,
+            "right": 496
+          }
+        ]
+      }
+    },
+    {
+      "name": "390 needs-human: dashboard cards and tabs",
+      "category": "ui",
+      "ok": true,
+      "ms": 13
+    },
+    {
+      "name": "390 needs-human: token card reflects fixture measurements",
+      "category": "ui",
+      "ok": true,
+      "ms": 1,
+      "details": {
+        "expectedRecordedTokens": 136334,
+        "actualCardValue": "136,334"
+      }
+    },
+    {
+      "name": "390 needs-human: chart range controls",
+      "category": "ui",
+      "ok": true,
+      "ms": 132
+    },
+    {
+      "name": "390 needs-human: command palette, Escape and focus return",
+      "category": "ui",
+      "ok": true,
+      "ms": 118
+    },
+    {
+      "name": "390 needs-human: record sheet, raw view and download",
+      "category": "ui",
+      "ok": true,
+      "ms": 225
+    },
+    {
+      "name": "390 needs-human: dispatch detail sheet",
+      "category": "ui",
+      "ok": true,
+      "ms": 159
+    },
+    {
+      "name": "390 needs-human: Log and Decisions empty states",
+      "category": "ui",
+      "ok": true,
+      "ms": 230
+    },
+    {
+      "name": "390 needs-human: human decision Read sheet",
+      "category": "ui",
+      "ok": true,
+      "ms": 110
+    },
+    {
+      "name": "390 ready: page and PNG",
+      "category": "ui",
+      "ok": true,
+      "ms": 131
+    },
+    {
+      "name": "390 ready: no page overflow",
+      "category": "ui",
+      "ok": true,
+      "ms": 2,
+      "details": {
+        "width": 390,
+        "scroll": 390,
+        "body": 390,
+        "offenders": [
+          {
+            "tag": "TABLE",
+            "role": null,
+            "text": "DispatchRoleStatusRoundTokensElapsedModel / effortRecordd-001PlannerDo",
+            "left": 17,
+            "right": 965
+          },
+          {
+            "tag": "THEAD",
+            "role": null,
+            "text": "DispatchRoleStatusRoundTokensElapsedModel / effortRecord",
+            "left": 17,
+            "right": 965
+          },
+          {
+            "tag": "TR",
+            "role": null,
+            "text": "DispatchRoleStatusRoundTokensElapsedModel / effortRecord",
+            "left": 17,
+            "right": 965
+          },
+          {
+            "tag": "TH",
+            "role": null,
+            "text": "Round",
+            "left": 345,
+            "right": 428
+          },
+          {
+            "tag": "BUTTON",
+            "role": null,
+            "text": "Round",
+            "left": 345,
+            "right": 420
+          },
+          {
+            "tag": "svg",
+            "role": null,
+            "text": "",
+            "left": 397,
+            "right": 411
+          },
+          {
+            "tag": "path",
+            "role": null,
+            "text": "",
+            "left": 405,
+            "right": 409
+          },
+          {
+            "tag": "path",
+            "role": null,
+            "text": "",
+            "left": 399,
+            "right": 404
+          },
+          {
+            "tag": "TH",
+            "role": null,
+            "text": "Tokens",
+            "left": 428,
+            "right": 515
+          },
+          {
+            "tag": "BUTTON",
+            "role": null,
+            "text": "Tokens",
+            "left": 428,
+            "right": 507
+          },
+          {
+            "tag": "svg",
+            "role": null,
+            "text": "",
+            "left": 484,
+            "right": 498
+          },
+          {
+            "tag": "path",
+            "role": null,
+            "text": "",
+            "left": 492,
+            "right": 496
+          }
+        ]
+      }
+    },
+    {
+      "name": "390 ready: dashboard cards and tabs",
+      "category": "ui",
+      "ok": true,
+      "ms": 10
+    },
+    {
+      "name": "390 ready: token card reflects fixture measurements",
+      "category": "ui",
+      "ok": true,
+      "ms": 2,
+      "details": {
+        "expectedRecordedTokens": 136334,
+        "actualCardValue": "136,334"
+      }
+    },
+    {
+      "name": "390 ready: chart range controls",
+      "category": "ui",
+      "ok": true,
+      "ms": 102
+    },
+    {
+      "name": "390 ready: command palette, Escape and focus return",
+      "category": "ui",
+      "ok": true,
+      "ms": 158
+    },
+    {
+      "name": "390 ready: record sheet, raw view and download",
+      "category": "ui",
+      "ok": true,
+      "ms": 215
+    },
+    {
+      "name": "390 ready: dispatch detail sheet",
+      "category": "ui",
+      "ok": true,
+      "ms": 140
+    },
+    {
+      "name": "390: metric to dispatch to record close and focus chain",
+      "category": "ui",
+      "ok": true,
+      "ms": 306
+    },
+    {
+      "name": "390: chart usage links open dispatch evidence and return focus",
+      "category": "ui",
+      "ok": true,
+      "ms": 84
+    },
+    {
+      "name": "390: column customization and filtered CSV export are functional",
+      "category": "ui",
+      "ok": true,
+      "ms": 385,
+      "details": {
+        "csvPath": "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/390-filtered-dispatches.csv",
+        "firstOrder": [
+          "d-001",
+          "d-006",
+          "d-005",
+          "d-004",
+          "d-003",
+          "d-002"
+        ],
+        "secondOrder": [
+          "d-002",
+          "d-003",
+          "d-004",
+          "d-005",
+          "d-006",
+          "d-001"
+        ],
+        "filteredOrder": [
+          "d-003",
+          "d-004"
+        ]
+      }
+    },
+    {
+      "name": "390 ready: Log and Decisions empty states",
+      "category": "ui",
+      "ok": true,
+      "ms": 96
+    },
+    {
+      "name": "390: failed log catch-up stays actionable after live SSE and Retry recovers",
+      "category": "ui",
+      "ok": true,
+      "ms": 236
+    },
+    {
+      "name": "390: list loading skeleton",
+      "category": "ui",
+      "ok": true,
+      "ms": 801
+    },
+    {
+      "name": "390: empty inbox",
+      "category": "ui",
+      "ok": true,
+      "ms": 800
+    },
+    {
+      "name": "390: job-list error and Retry recovery",
+      "category": "ui",
+      "ok": true,
+      "ms": 825
+    },
+    {
+      "name": "390: detail error and Retry recovery",
+      "category": "ui",
+      "ok": true,
+      "ms": 185
+    },
+    {
+      "name": "browser runtime errors",
+      "category": "runtime",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "name": "unexpected HTTP failures",
+      "category": "runtime",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "name": "no model dispatch or unhandled mutation",
+      "category": "harness",
+      "ok": true,
+      "ms": 0
+    }
+  ],
+  "screenshots": [
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/1440-planned.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/1440-planned-commands.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/1440-planned-record.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/1440-planned-dispatch.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/1440-planned-read.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/1440-working.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/1440-working-commands.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/1440-working-record.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/1440-working-dispatch.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/1440-needs-human.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/1440-needs-human-commands.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/1440-needs-human-record.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/1440-needs-human-dispatch.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/1440-needs-human-read.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/1440-ready.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/1440-ready-commands.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/1440-ready-record.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/1440-ready-dispatch.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/1440-metric-dispatch-record-chain.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/1440-log-error-after-sse.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/1440-log-recovered.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/1440-list-loading.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/1440-empty.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/1440-list-error.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/1440-detail-error.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/390-planned.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/390-planned-commands.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/390-planned-record.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/390-planned-dispatch.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/390-planned-read.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/390-working.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/390-working-commands.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/390-working-record.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/390-working-dispatch.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/390-needs-human.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/390-needs-human-commands.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/390-needs-human-record.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/390-needs-human-dispatch.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/390-needs-human-read.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/390-ready.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/390-ready-commands.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/390-ready-record.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/390-ready-dispatch.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/390-metric-dispatch-record-chain.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/390-log-error-after-sse.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/390-log-recovered.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/390-list-loading.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/390-empty.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/390-list-error.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/usage-visual/run-page/390-detail-error.png"
+  ],
+  "runtimeErrors": [],
+  "httpErrors": [],
+  "finishedAt": "2026-10-25T19:26:35.781Z",
+  "summary": {
+    "passed": 99,
+    "failed": 0,
+    "failures": []
+  }
+}

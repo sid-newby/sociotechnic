@@ -2,7 +2,7 @@
 version: 1
 slug: "sociotechnic-ui-web-src-app-tsx"
 primary_target: "sociotechnic/ui/web/src/App.tsx"
-related_targets: ["sociotechnic/ui/web/src/index.css","sociotechnic/ui/web/src/components/actions.tsx","sociotechnic/ui/web/src/components/experience.tsx","sociotechnic/ui/web/src/components/technical.tsx"]
+related_targets: ["sociotechnic/ui/web/src/index.css","sociotechnic/ui/web/src/components/run/decision-bar.tsx","sociotechnic/ui/web/src/components/run/section-cards.tsx","sociotechnic/ui/web/src/components/run/run-table.tsx","sociotechnic/ui/web/src/components/design.tsx"]
 ---
 
 # Run console

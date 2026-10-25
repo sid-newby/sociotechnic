@@ -201,3 +201,23 @@ test("run metadata never invents legacy snapshots and resolves explicit custom i
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("provider breakdown covers the full cohort before paging without mixing scopes or subsets", () => {
+  const data = job("20261024-usage-projection", { dispatches: [
+    dispatch({ id: "d-main", usage: { usage: { input_tokens: 10, output_tokens: 8, cache_read_input_tokens: 20, cache_creation_input_tokens: 2, output_tokens_details: { thinking_tokens: 3 } }, modelUsage: { duplicate: { inputTokens: 999, outputTokens: 999, cacheReadInputTokens: 999, cacheCreationInputTokens: 999 } } } }),
+    dispatch({ id: "d-zero", usage: { total_tokens: 0 } }),
+    dispatch({ id: "d-codex", usage: { provider: "codex", usage: { input_tokens: 1, output_tokens: 2, cache_read_input_tokens: 3, cache_creation_input_tokens: 0, total_tokens: 6 } } }),
+  ] });
+  const before = JSON.stringify(data);
+  const result = parseHistoryResponse(projectHistory([data], query("limit=1")));
+  assert.equal(result.rows.length, 1);
+  assert.equal(result.total, 3);
+  assert.deepEqual(result.summary.tokenBreakdown, { total: 46, input: 11, output: 10, cacheRead: 23, cacheWrite: 2, reasoning: 3, imageInput: null, imageOutput: null });
+  assert.deepEqual(result.summary.tokenCoverage, { total: 3, input: 2, output: 2, cacheRead: 2, cacheWrite: 1, reasoning: 1, imageInput: 0, imageOutput: 0 });
+  assert.equal(result.summary.usageScopes["Main-agent loop; excludes auxiliary calls"], 1);
+  assert.equal(result.summary.usageScopes["Recorded Codex dispatch report"], 1);
+  const cache = projectHistory([data], query("metric=cacheRead"));
+  assert.equal(cache.total, 2);
+  assert.equal(cache.query.metric, "cacheRead");
+  assert.equal(JSON.stringify(data), before, "Reporting must not rewrite stored usage");
+});

@@ -29,6 +29,7 @@ export type Plan = {
 
 export type PlanParse =
   | { kind: "plan"; plan: Plan; digest: string }
+  | { kind: "needs-input"; questions: string[] }
   | { kind: "needs-design"; reason: string }
   | { kind: "needs-research"; questions: string[]; advisors?: (string | null)[] }
   | { kind: "malformed"; errors: string[] };
@@ -164,6 +165,16 @@ export function parsePlanText(text: string | null, researchUsed: boolean, _desig
     raw = JSON.parse(text) as unknown;
   } catch {
     return { kind: "malformed", errors: ["plan.json is not valid JSON"] };
+  }
+  if (isObj(raw) && raw.status === "needs-input") {
+    const questions = raw.questions;
+    if (!Array.isArray(questions) || questions.length < 1 || questions.length > 6) return { kind: "malformed", errors: ["questions: needs 1..6 questions"] };
+    const parsed: string[] = [];
+    for (const question of questions) {
+      if (typeof question !== "string" || !question.trim() || question.length > 4000) return { kind: "malformed", errors: ["questions: each must be a nonempty string of at most 4000 characters"] };
+      parsed.push(question.trim());
+    }
+    return { kind: "needs-input", questions: parsed };
   }
   if (isObj(raw) && raw.status === "needs-design") {
     if (typeof raw.reason !== "string" || !raw.reason.trim() || raw.reason.length > 4000) return { kind: "malformed", errors: ["needs-design requires a specific assignment reason"] };

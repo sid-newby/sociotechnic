@@ -1,0 +1,130 @@
+{
+  "capturedAt": "2026-10-25T22:25:03.805Z",
+  "baseCommit": "bc09db86f346939b1a8ddb697d984b08241eedc0",
+  "sourceSha256": "ad1c16099756f323c9df6b94c3d7e3243d171efa6af15f3f723174cf0f9ff5e1",
+  "buildSha256": "4cf4dea7a433708145ec76e5fb358a818eeb2408fca8a624c1c15d4bbf5fbb90",
+  "scriptSha256": "c0dc8e0a4c812e858a5210f7b02d3f8204113d707ef25bc95c41c1e60597a997",
+  "fixture": "sociotechnic/ui/seed/demo-job",
+  "viewport": {
+    "width": 1600,
+    "height": 1000
+  },
+  "deviceScaleFactor": 1,
+  "scheme": "dark",
+  "preset": "shadcn-neutral",
+  "locale": "en-US",
+  "timezone": "UTC",
+  "reducedMotion": true,
+  "dispatchCalls": 0,
+  "images": [
+    {
+      "file": "overview.png",
+      "sha256": "0920c75fb4cab6d728a549d43ecb7b6d4d693a47034b3f11b5e136a9bea53cb5"
+    },
+    {
+      "file": "start-a-run.png",
+      "sha256": "4447fc8011982785ef5455dd725f6bf54d2637a009df3f8d37b7c08a165398ea"
+    },
+    {
+      "file": "activity.png",
+      "sha256": "c3e44a6429a0a9f416696f31e4c3a853d36a2ac4d77f8b065b4efdda011f2f60"
+    },
+    {
+      "file": "round.png",
+      "sha256": "5940fdea4d26a5bec066ee36f192875d60c948006ecbd8a18f0a7509f3cd49ab"
+    },
+    {
+      "file": "analysis.png",
+      "sha256": "dfa1d29dce81542fa01d83b9470e25e9f3e9df8ff3563f5d5a3c9fb47dfc900d"
+    },
+    {
+      "file": "agent-library.png",
+      "sha256": "9e1ca954021ebe867076ab799ac5bb299baf7a0e169ca91139aa2e4f010a2b52"
+    },
+    {
+      "file": "agent-creation.png",
+      "sha256": "8628df10a9946d73de0d94c6a2c0e0700297abc6fe7809b76dac19b416a99f20"
+    },
+    {
+      "file": "records.png",
+      "sha256": "cf95578426622cf65a756182348be723bc8c6ecf386ffe4e8aa4819f7275b91c"
+    }
+  ],
+  "styleProof": [
+    {
+      "name": "overview",
+      "minButtonFontPx": 13,
+      "textareaResize": [],
+      "scrollbarColor": "oklch(1 0 0 / 0.1) rgba(0, 0, 0, 0)"
+    },
+    {
+      "name": "start-a-run",
+      "minButtonFontPx": 13,
+      "textareaResize": [
+        "none"
+      ],
+      "scrollbarColor": "oklch(1 0 0 / 0.1) rgba(0, 0, 0, 0)"
+    },
+    {
+      "name": "activity",
+      "minButtonFontPx": 13,
+      "textareaResize": [],
+      "scrollbarColor": "oklch(1 0 0 / 0.1) rgba(0, 0, 0, 0)"
+    },
+    {
+      "name": "round",
+      "minButtonFontPx": 13,
+      "textareaResize": [],
+      "scrollbarColor": "oklch(1 0 0 / 0.1) rgba(0, 0, 0, 0)"
+    },
+    {
+      "name": "analysis",
+      "minButtonFontPx": 13,
+      "textareaResize": [],
+      "scrollbarColor": "oklch(1 0 0 / 0.1) rgba(0, 0, 0, 0)"
+    },
+    {
+      "name": "agent-library",
+      "minButtonFontPx": 14,
+      "textareaResize": [],
+      "scrollbarColor": "oklch(1 0 0 / 0.1) rgba(0, 0, 0, 0)"
+    },
+    {
+      "name": "agent-creation",
+      "minButtonFontPx": 14,
+      "textareaResize": [
+        "none",
+        "none",
+        "none"
+      ],
+      "scrollbarColor": "oklch(1 0 0 / 0.1) rgba(0, 0, 0, 0)"
+    },
+    {
+      "name": "records",
+      "minButtonFontPx": 13,
+      "textareaResize": [],
+      "scrollbarColor": "oklch(1 0 0 / 0.1) rgba(0, 0, 0, 0)"
+    }
+  ],
+  "popupProof": [
+    {
+      "width": 1600,
+      "triggerWidth": 624,
+      "popupWidth": 624,
+      "keyboardEscapeFocus": true
+    },
+    {
+      "width": 390,
+      "triggerWidth": 310,
+      "popupWidth": 310,
+      "keyboardEscapeFocus": true
+    }
+  ],
+  "sandboxProof": {
+    "browserInterceptedInventory": true,
+    "invalidResponseRecovery": true,
+    "empty": true,
+    "removalConfirmationCancelled": true,
+    "realSandboxOperations": 0
+  }
+}

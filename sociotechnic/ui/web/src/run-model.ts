@@ -11,7 +11,7 @@ export const isBound = (value: string): value is Bound => (BOUNDS as readonly st
 export { CONSOLE_HOLDABLE as HOLDABLE } from "../../../src/console-preferences.ts";
 
 const TERMINAL: readonly Status[] = ["merged", "stopped"];
-const GATES: readonly Status[] = ["design-input", "planned", "ready", "needs-human", "merged-local", "accepted", "stopped", "merged"];
+const GATES: readonly Status[] = ["planning-input", "design-input", "planned", "ready", "needs-human", "merged-local", "accepted", "stopped", "merged"];
 const STEPPABLE: readonly Status[] = ["new", "planning", "researching", "designing", "planned", "building", "built", "checked", "reviewing", "reviewed", "approving"];
 const STEP_NAMES: Record<string, string> = { plan: "planning", research: "research", design: "design", build: "build", review: "review", approve: "approval" };
 
@@ -90,6 +90,7 @@ export function decisionFor(detail: Detail): Decision | null {
   };
   switch (job.status) {
     case "design-input": return null;
+    case "planning-input": return { waiting: true, sentence: "The planner has questions for you.", line: "Answer below so the planner can finish the plan. You will review the plan before building.", read: null };
     case "planned": {
       const steps = detail.plan?.stages?.length ?? 0;
       return { waiting: true, sentence: detail.plan ? `The planner pinned a plan with ${plural(steps, "step")}.` : "The plan is pinned.", line: reason.kind === "text" ? sentence(reason.text) : "Read the plan before building.", read: { kind: "plan", label: "Read the plan" } };
@@ -126,7 +127,7 @@ function parkedCopy(detail: Detail, reason: Reason): { sentence: string; line: s
   }
 }
 
-export type ActionId = "restore" | "continue" | "step" | "hold" | "pause" | "stop" | "merge" | "accept" | "rework" | "retry-planning" | "override" | "pr-push" | "pr-text" | "merge-remote" | "reopen" | "clean" | "sandboxes" | "open-owner" | "refresh";
+export type ActionId = "answer-planning" | "restore" | "continue" | "step" | "hold" | "pause" | "stop" | "merge" | "accept" | "rework" | "retry-planning" | "override" | "pr-push" | "pr-text" | "merge-remote" | "reopen" | "clean" | "sandboxes" | "open-owner" | "refresh";
 export type Placement = "bar" | "controls" | "palette";
 export type RunAction = { id: ActionId; label: string; cli: string | null; emphasis: "primary" | "secondary" | "quiet" | "danger"; placement: Placement[]; blocked: boolean };
 
@@ -147,6 +148,7 @@ export function runActions(detail: Detail): RunAction[] {
   const bounded = status === "needs-human" && !planningFailure && (reason.kind === "retry-bound" || reason.kind === "loop-bound");
   const continueLabel = !detail.worktreePresent ? "Recover worktree and continue" : status === "planned" ? "Continue build" : "Continue run";
   const gate = GATES.includes(status);
+  if (status === "planning-input") add({ id: "answer-planning", label: "Answer planner", cli: cli(`answer <job> ${job.planningInput?.dispatch ?? "<dispatch>"} <answer>`), emphasis: "primary", placement: ["bar", "palette"] });
   if (status === "planned") add({ id: "continue", label: continueLabel, cli: cli("run <job>"), emphasis: "primary", placement: ["bar", "controls", "palette"] });
   if (planningFailure) add({ id: "retry-planning", label: "Retry planning with feedback", cli: cli("rework <job> <note>"), emphasis: "primary", placement: ["bar", "palette"] });
   if (bounded) add({ id: "override", label: overrideLabel(detail, reason), cli: cli("override <job> <bound> <note>"), emphasis: "primary", placement: ["bar", "palette"] });
@@ -181,7 +183,7 @@ export function runActions(detail: Detail): RunAction[] {
     add({ id: "hold", label: "Continue and hold after a status", cli: cli("run <job> --hold <status>"), emphasis: "secondary", placement: ["controls", "palette"] }, false);
   }
   if (!TERMINAL.includes(status) && status !== "needs-human") add({ id: "override", label: "Raise a bound", cli: cli("override <job> <bound> <note>"), emphasis: "secondary", placement: ["controls", "palette"] }, false);
-  if (!TERMINAL.includes(status)) add({ id: "stop", label: "Stop run", cli: cli("stop <job>"), emphasis: "danger", placement: status === "planned" || status === "needs-human" ? ["bar", "controls", "palette"] : ["controls", "palette"] }, false);
+  if (!TERMINAL.includes(status)) add({ id: "stop", label: "Stop run", cli: cli("stop <job>"), emphasis: "danger", placement: status === "planning-input" || status === "planned" || status === "needs-human" ? ["bar", "controls", "palette"] : ["controls", "palette"] }, false);
   return out;
 }
 
@@ -221,16 +223,15 @@ export function dispatchElapsed(dispatch: Dispatch, now: number, driver: Dispatc
   return !isLive(dispatch) || isRunningDispatch(dispatch, driver) ? elapsed(dispatch, now) : null;
 }
 
-export type Totals = { agentMs: number | null; timeReported: number; timeMissing: number; live: Dispatch[]; unfinished: Dispatch[]; tokens: number | null; tokensReported: number; cost: number | null; costReported: number; cacheRead: number | null; cacheReported: number; cacheShare: number | null; finished: number };
+export type Totals = { agentMs: number | null; timeReported: number; timeMissing: number; live: Dispatch[]; unfinished: Dispatch[]; tokens: number | null; tokensReported: number; cost: number | null; costReported: number; cacheRead: number | null; cacheReported: number; finished: number };
 
 export function runTotals(dispatches: readonly Dispatch[], now: number, driver: DispatchDriver): Totals {
   const finished = dispatches.filter((dispatch) => !isLive(dispatch));
   const times = dispatches.flatMap((dispatch) => { const value = dispatchElapsed(dispatch, now, driver); return value === null ? [] : [value]; });
   const tokens = finished.map((dispatch) => dispatch.usage.tokens);
   const costs = finished.map((dispatch) => dispatch.usage.cost);
-  const cached = finished.filter((dispatch) => dispatch.usage.breakdown?.cacheRead != null && dispatch.usage.tokens !== null);
+  const cached = finished.filter((dispatch) => dispatch.usage.breakdown?.cacheRead != null);
   const cacheRead = sumTokens(cached.map((dispatch) => dispatch.usage.breakdown?.cacheRead ?? null));
-  const cachedTotal = sumTokens(cached.map((dispatch) => dispatch.usage.tokens));
   return {
     agentMs: times.length ? times.reduce((a, b) => a + b, 0) : null,
     timeReported: times.length,
@@ -243,7 +244,6 @@ export function runTotals(dispatches: readonly Dispatch[], now: number, driver: 
     costReported: costs.filter((value) => value !== null).length,
     cacheRead,
     cacheReported: cached.length,
-    cacheShare: cached.length === finished.length && cacheRead !== null && cachedTotal ? cacheRead / cachedTotal : null,
     finished: finished.length,
   };
 }

@@ -431,6 +431,8 @@ export async function run(argv: readonly string[]): Promise<unknown> {
       throw new SociotechnicError("bad-design", "The packet response command is retired. Continue the interactive design conversation in the console.");
     case "rework":
       return mutate(need(args, 0, "<job>"), (job) => engine.rework(job, rest(args, 1)));
+    case "answer":
+      return mutate(need(args, 0, "<job>"), (job) => engine.answerPlanning(job, need(args, 1, "<dispatch>"), rest(args, 2)));
     case "accept":
       return mutate(need(args, 0, "<job>"), (job) => engine.accept(job, rest(args, 1)));
     case "pr": {
@@ -474,7 +476,7 @@ export async function run(argv: readonly string[]): Promise<unknown> {
       return parseRecord(text, role.record);
     }
     case undefined:
-      return usageError("usage: sociotechnic <init|new|inventory|verify-comments|step|finish|status|override|rework|accept|pr|merge|stop|reopen|clean|usage|agents|roster|verdict|ui|db|jobs|projects|restore|resume|run|pause|interrupt|design-respond> [args]");
+      return usageError("usage: sociotechnic <init|new|inventory|verify-comments|step|finish|status|override|rework|answer|accept|pr|merge|stop|reopen|clean|usage|agents|roster|verdict|ui|db|jobs|projects|restore|resume|run|pause|interrupt|design-respond> [args]");
     default:
       return usageError(`unknown command: ${command}`);
   }

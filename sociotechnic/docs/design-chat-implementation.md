@@ -106,3 +106,15 @@ authorized committing, synchronizing, opening and merging a PR, a version bump
 and completed-branch/worktree cleanup. Release preparation reserves v0.6.0 with
 the accumulated console, History, Settings and designer-chat notes. Final design
 documentation and committed screenshot refresh remain with wave 5.
+
+## Finish continuation — October 25, 2026
+
+The subsequent console finish pass added root DESIGN.md and console-ui.md,
+refreshed the screenshot set and reran the designer fixture/native-preview
+journey against the integrated build. Four fake SDK conversations, native preview,
+images, IME, retry, anchoring, streaming/history reading, themes and 1440/390px
+passed with zero model calls and the normal planned hold. The scoped chat axe
+scan reported zero violations, zero incomplete checks and 30 passing rules.
+[Current finish evidence](evidence/console-finish/finish-review.md) separates these
+results from historical proof and live provider/model verification. No designer
+release, catalog pin, model option, engine policy or provider behavior changed.

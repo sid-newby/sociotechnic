@@ -6,14 +6,14 @@ import { loadJobHistory } from "./db/listing.ts";
 import { SociotechnicError } from "./errors.ts";
 import type { Job } from "./job.ts";
 import { assertJobId } from "./paths.ts";
-import { sumTokens, tokenUsage } from "./token-usage.ts";
-import type { TokenUsage } from "./token-usage.ts";
+import { sumTokens, tokenBreakdown, tokenReportScope, aggregateTokenBreakdowns } from "./token-usage.ts";
+import type { TokenBreakdown, TokenCoverage } from "./token-usage.ts";
 
 export const HISTORY_SCAN_LIMIT = 100;
-export type HistoryQuery = { job?: string; project?: string; role?: string; round?: number; day?: string; metric?: AgentHistoryMetric | "cost"; category?: ObservationCategory; archive: "include" | "exclude" | "only"; page: number; limit: number };
+export type HistoryQuery = { job?: string; project?: string; role?: string; round?: number; day?: string; metric?: AgentHistoryMetric | "cost" | "cacheRead"; category?: ObservationCategory; archive: "include" | "exclude" | "only"; page: number; limit: number };
 export type HistoryConfiguration = Pick<AgentConfiguration, "version" | "revision" | "provider" | "model" | "effort" | "tools" | "timeoutMinutes" | "maxTurns" | "skills" | "agentName" | "baseRole" | "releaseDigest">;
-export type HistoryRow = Deployment & { agent: string; role: string; step: string; finishedAt: string | null; commit: string | null; cost: number | null; tokenBreakdown: TokenUsage; configuration: HistoryConfiguration | null };
-export type HistorySummary = { metrics: AgentMetrics; cost: number | null; measuredCost: number; finished: number; cacheRead: number | null; measuredCache: number };
+export type HistoryRow = Deployment & { usageScope: string; agent: string; role: string; step: string; finishedAt: string | null; commit: string | null; cost: number | null; tokenBreakdown: TokenBreakdown; configuration: HistoryConfiguration | null };
+export type HistorySummary = { usageScopes: Record<string, number>; tokenBreakdown: TokenBreakdown; tokenCoverage: TokenCoverage; metrics: AgentMetrics; cost: number | null; measuredCost: number; finished: number; cacheRead: number | null; measuredCache: number };
 export type HistoryPoint = { at: string; dispatches: number; tokens: number | null; measuredTokens: number; cost: number | null; measuredCost: number; durationMs: number | null; measuredTimes: number };
 export type HistoryGroup = { agent: string; role: string; round: number; summary: HistorySummary };
 export type HistoryScan = { jobs: number; limit: number; incomplete: boolean };
@@ -36,7 +36,7 @@ export function parseHistoryQuery(params: URLSearchParams): HistoryQuery {
   if (project && project.length > 4096) return invalid("Project is too long");
   if (day && (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !Number.isFinite(Date.parse(`${day}T00:00:00Z`)) || new Date(`${day}T00:00:00Z`).toISOString().slice(0, 10) !== day)) return invalid("day must be a valid UTC date (YYYY-MM-DD)");
   const rawMetric = params.get("metric"), rawCategory = params.get("category");
-  const metric = rawMetric === "cost" ? "cost" : rawMetric === null ? undefined : AGENT_HISTORY_METRICS.find((entry) => entry === rawMetric);
+  const metric = rawMetric === "cost" || rawMetric === "cacheRead" ? rawMetric : rawMetric === null ? undefined : AGENT_HISTORY_METRICS.find((entry) => entry === rawMetric);
   const category = rawCategory === null ? undefined : OBSERVATION_CATEGORIES.find((entry) => entry === rawCategory);
   if (rawMetric !== null && metric === undefined) return invalid("Unknown history metric");
   if (rawCategory !== null && category === undefined) return invalid("Unknown observation category");
@@ -57,7 +57,10 @@ function configurationOf(configuration: AgentConfiguration | undefined): History
   return { version, revision, provider, model, effort, tools, timeoutMinutes, maxTurns, skills, ...(agentName ? { agentName } : {}), ...(baseRole ? { baseRole } : {}), ...(releaseDigest ? { releaseDigest } : {}) };
 }
 function summary(rows: readonly HistoryRow[]): HistorySummary {
-  return { metrics: deploymentMetrics(rows), cost: sumTokens(rows.map((row) => row.cost)), measuredCost: rows.filter((row) => row.cost !== null).length, finished: rows.filter((row) => row.finishedAt !== null || row.outcome !== null).length, cacheRead: sumTokens(rows.map((row) => row.tokenBreakdown.cacheRead)), measuredCache: rows.filter((row) => row.tokenBreakdown.cacheRead !== null).length };
+  const aggregate = aggregateTokenBreakdowns(rows.map((row) => row.tokenBreakdown));
+  const usageScopes: Record<string, number> = {};
+  for (const row of rows) usageScopes[row.usageScope] = (usageScopes[row.usageScope] ?? 0) + 1;
+  return { usageScopes, tokenBreakdown: aggregate.breakdown, tokenCoverage: aggregate.coverage, metrics: deploymentMetrics(rows), cost: sumTokens(rows.map((row) => row.cost)), measuredCost: rows.filter((row) => row.cost !== null).length, finished: rows.filter((row) => row.finishedAt !== null || row.outcome !== null).length, cacheRead: sumTokens(rows.map((row) => row.tokenBreakdown.cacheRead)), measuredCache: rows.filter((row) => row.tokenBreakdown.cacheRead !== null).length };
 }
 function matchingJob(job: Job, query: HistoryQuery): boolean {
   if (query.job && job.id !== query.job) return false;
@@ -77,11 +80,13 @@ export function projectHistory(input: readonly Job[], query: HistoryQuery, scan?
     const byId = new Map(job.dispatches.map((dispatch) => [dispatch.id, dispatch]));
     return deployments([job]).flatMap((deployment): HistoryRow[] => {
       const dispatch = byId.get(deployment.id);
-      if (!dispatch || !matchesAgentHistory(deployment, { metric: query.metric === "cost" ? undefined : query.metric, category: query.category }) || query.role && dispatch.agent !== query.role && dispatch.configuration?.baseRole !== query.role || query.round !== undefined && dispatch.round !== query.round || query.day && completionDay(dispatch.finishedAt) !== query.day) return [];
+      if (!dispatch || !matchesAgentHistory(deployment, { metric: query.metric === "cost" || query.metric === "cacheRead" ? undefined : query.metric, category: query.category }) || query.role && dispatch.agent !== query.role && dispatch.configuration?.baseRole !== query.role || query.round !== undefined && dispatch.round !== query.round || query.day && completionDay(dispatch.finishedAt) !== query.day) return [];
       const finished = dispatch.finishedAt !== null || dispatch.outcome !== null;
       const cost = finished ? costOf(dispatch.usage) : null;
       if (query.metric === "cost" && cost === null) return [];
-      return [{ ...deployment, agent: dispatch.agent, role: dispatch.configuration?.baseRole ?? dispatch.agent, step: dispatch.step, finishedAt: dispatch.finishedAt, commit: dispatch.parsed?.commit ?? null, cost, tokenBreakdown: tokenUsage(finished ? dispatch.usage : null), configuration: configurationOf(dispatch.configuration) }];
+      const breakdown = tokenBreakdown(finished ? dispatch.usage : null, dispatch.configuration?.provider);
+      if (query.metric === "cacheRead" && breakdown.cacheRead === null) return [];
+      return [{ ...deployment, usageScope: tokenReportScope(dispatch.usage, dispatch.configuration?.provider), agent: dispatch.agent, role: dispatch.configuration?.baseRole ?? dispatch.agent, step: dispatch.step, finishedAt: dispatch.finishedAt, commit: dispatch.parsed?.commit ?? null, cost, tokenBreakdown: breakdown, configuration: configurationOf(dispatch.configuration) }];
     });
   });
   rows.sort((a, b) => (b.finishedAt ?? b.startedAt).localeCompare(a.finishedAt ?? a.startedAt) || b.job.localeCompare(a.job) || b.id.localeCompare(a.id));

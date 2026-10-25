@@ -1,0 +1,185 @@
+{
+  "findings": [
+    {
+      "category": "violation",
+      "file": "sociotechnic/ui/web/src/components/add-agent.tsx",
+      "line": 29,
+      "message": "Enabled literal button has no detectable action or submit behavior.",
+      "remediation": "Connect the button to a real action, make it a submit button, or disable/remove it.",
+      "ruleId": "affordance.actionless-button",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "sociotechnic/ui/web/src/components/agent-versions.tsx",
+      "line": 42,
+      "message": "Enabled literal button has no detectable action or submit behavior.",
+      "remediation": "Connect the button to a real action, make it a submit button, or disable/remove it.",
+      "ruleId": "affordance.actionless-button",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "sociotechnic/ui/web/src/components/hint.tsx",
+      "line": 7,
+      "message": "Enabled literal button has no detectable action or submit behavior.",
+      "remediation": "Connect the button to a real action, make it a submit button, or disable/remove it.",
+      "ruleId": "affordance.actionless-button",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "sociotechnic/ui/web/src/components/run/decision-bar.tsx",
+      "line": 20,
+      "message": "Enabled literal button has no detectable action or submit behavior.",
+      "remediation": "Connect the button to a real action, make it a submit button, or disable/remove it.",
+      "ruleId": "affordance.actionless-button",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "sociotechnic/ui/web/src/components/run/decision-bar.tsx",
+      "line": 21,
+      "message": "Enabled literal button has no detectable action or submit behavior.",
+      "remediation": "Connect the button to a real action, make it a submit button, or disable/remove it.",
+      "ruleId": "affordance.actionless-button",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "sociotechnic/ui/web/src/components/run/evidence-sheet.tsx",
+      "line": 33,
+      "message": "Enabled literal button has no detectable action or submit behavior.",
+      "remediation": "Connect the button to a real action, make it a submit button, or disable/remove it.",
+      "ruleId": "affordance.actionless-button",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "sociotechnic/ui/web/src/components/run/run-table.tsx",
+      "line": 40,
+      "message": "Enabled literal button has no detectable action or submit behavior.",
+      "remediation": "Connect the button to a real action, make it a submit button, or disable/remove it.",
+      "ruleId": "affordance.actionless-button",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "sociotechnic/ui/web/src/components/run/run-table.tsx",
+      "line": 52,
+      "message": "Enabled literal button has no detectable action or submit behavior.",
+      "remediation": "Connect the button to a real action, make it a submit button, or disable/remove it.",
+      "ruleId": "affordance.actionless-button",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "sociotechnic/ui/web/src/components/shell/run-controls.tsx",
+      "line": 12,
+      "message": "Enabled literal button has no detectable action or submit behavior.",
+      "remediation": "Connect the button to a real action, make it a submit button, or disable/remove it.",
+      "ruleId": "affordance.actionless-button",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "sociotechnic/ui/web/src/components/ui/dialog.tsx",
+      "line": 72,
+      "message": "Enabled literal button has no detectable action or submit behavior.",
+      "remediation": "Connect the button to a real action, make it a submit button, or disable/remove it.",
+      "ruleId": "affordance.actionless-button",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "sociotechnic/ui/web/src/components/ui/dialog.tsx",
+      "line": 118,
+      "message": "Enabled literal button has no detectable action or submit behavior.",
+      "remediation": "Connect the button to a real action, make it a submit button, or disable/remove it.",
+      "ruleId": "affordance.actionless-button",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "sociotechnic/ui/web/src/components/ui/input-group.tsx",
+      "line": 93,
+      "message": "Enabled literal button has no detectable action or submit behavior.",
+      "remediation": "Connect the button to a real action, make it a submit button, or disable/remove it.",
+      "ruleId": "affordance.actionless-button",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "sociotechnic/ui/web/src/components/ui/sheet.tsx",
+      "line": 71,
+      "message": "Enabled literal button has no detectable action or submit behavior.",
+      "remediation": "Connect the button to a real action, make it a submit button, or disable/remove it.",
+      "ruleId": "affordance.actionless-button",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "sociotechnic/ui/web/src/components/form-select.tsx",
+      "line": 12,
+      "message": "Native select conflicts with recorded Select/Listbox ownership: authored.",
+      "remediation": "Record Select/Listbox as native or reuse the authored canonical owner.",
+      "ruleId": "ownership.native-select-conflict",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "sociotechnic/ui/web/src/components/run/evidence-sheet.tsx",
+      "line": 25,
+      "message": "Native select conflicts with recorded Select/Listbox ownership: authored.",
+      "remediation": "Record Select/Listbox as native or reuse the authored canonical owner.",
+      "ruleId": "ownership.native-select-conflict",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "sociotechnic/ui/web/src/components/run/log-panel.tsx",
+      "line": 15,
+      "message": "Native select conflicts with recorded Select/Listbox ownership: authored.",
+      "remediation": "Record Select/Listbox as native or reuse the authored canonical owner.",
+      "ruleId": "ownership.native-select-conflict",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "sociotechnic/ui/web/src/components/run/use-run-actions.tsx",
+      "line": 103,
+      "message": "Native select conflicts with recorded Select/Listbox ownership: authored.",
+      "remediation": "Record Select/Listbox as native or reuse the authored canonical owner.",
+      "ruleId": "ownership.native-select-conflict",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "sociotechnic/ui/web/src/components/shell/app-sidebar.tsx",
+      "line": 37,
+      "message": "Native select conflicts with recorded Select/Listbox ownership: authored.",
+      "remediation": "Record Select/Listbox as native or reuse the authored canonical owner.",
+      "ruleId": "ownership.native-select-conflict",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "sociotechnic/ui/web/src/theme/theme-switcher.tsx",
+      "line": 10,
+      "message": "Native select conflicts with recorded Select/Listbox ownership: authored.",
+      "remediation": "Record Select/Listbox as native or reuse the authored canonical owner.",
+      "ruleId": "ownership.native-select-conflict",
+      "severity": "error"
+    }
+  ],
+  "mode": "strict",
+  "projectRoot": "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/sociotechnic-ui-combined",
+  "schemaVersion": 1,
+  "summary": {
+    "errors": 19,
+    "total": 19,
+    "unresolved": 0,
+    "violations": 19,
+    "warnings": 0
+  }
+}

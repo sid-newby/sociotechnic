@@ -159,6 +159,21 @@ base separately. Plain `merge <job>` continues to perform the local merge.
 
 In the React console, the `ready` panel offers Merge locally first (behind a confirm that names your checkout), then Accept, Request rework and Stop run. The `merged-local` panel says the change is merged into your checkout to test there and offers Accept, Request rework and Stop run. The `accepted` panel offers Push and open PR (behind a confirm that names the branch and base), Finish locally (or Merge locally when no local merge is recorded, behind a confirm) and Stop run, then Merge PR on GitHub and the pull request link once `pr` is recorded. Choose Prepare PR text in the React command palette (also beside Push and open PR after acceptance). Generate `pr.md` without pushing with `pr <job>`, `POST /api/jobs/:id/pr` with `{ "push": false }`, or Generate PR text in `/legacy`, which offers it in the `ready`, `merged-local`, `accepted` and `merged` panels. The skill pushes only when you typed `--push`, never on the suggestion of an agent or a record.
 
+## Planner questions
+
+A planner can ask for a human decision before or after research. The run enters
+`planning-input`; `status <job>` includes `planningInput` with the questions and
+originating dispatch ID. No plan is pinned and no builder runs at this gate.
+Choose **Answer planner** in the console to reply; planning resumes and holds
+for plan review before building. Failed sends retain the answer draft.
+
+For the CLI, use `answer <job> <dispatch> <answer...>`, then
+`run <job> --hold planned`. The equivalent HTTP mutation is
+`POST /api/jobs/:id/answer` with `{ "dispatch": "d-001", "answer": "..." }`.
+Replies must contain 1..16000 characters and match the exact pending dispatch;
+stale or duplicate replies fail without changes. Further questions retain the
+existing dispatch cap and agent pins. Stop/reopen retains pending questions.
+
 ## Checks-first repair and dispatch evidence
 
 After a READY build, `step` runs every configured canonical check at the committed
@@ -211,7 +226,7 @@ acceptance counts. Engine check results and the `no-checks-configured` human
 flag remain separate. No command or HTTP route changes are required.
 
 
-Analysis reports recorded tokens with uncached input, output, cache read and cache write, plus dispatch counts and median durations. Missing measurements stay unreported. SDK dollar estimates in historical records are not a statement of subscription billing.
+Dashboard metric sheets and History report recorded tokens with uncached input, output, cache reads and cache creation, plus dispatch counts and timing. Thinking is a reported output subset; image detail is unavailable without verified retained fields. Missing measurements stay unreported. Historical SDK cost fields remain API-compatible but dollar estimates are not displayed in usage reports.
 
 
 ### Keeping the console up
@@ -257,11 +272,11 @@ scroll independently from the detail pane, with the rail filters fixed above.
 | Surface | Content |
 | --- | --- |
 | Decision bar and evidence sheets | Current human decision, plan, checks, reviews, gate blockers, approval and diff; round selection and original request/worktree detail |
-| Summary cards and chart | Cumulative agent time, reported tokens and estimated cost, moment evidence; completion-step usage by dispatch with cache-read subset overlay |
+| Summary cards and chart | Cumulative agent time, reported tokens and cache reads, moment evidence; completion-step usage by dispatch with cache-read subset overlay |
 | Dispatches | Role/status, model/effort, tokens, elapsed, record and details; column customization and filtered visible-column CSV download |
 | Records | Name, kind, attribution, timestamp, size and original-byte download; formatted/raw sheets |
 | Log and Decisions | Buffered driver log with dispatch filter and SSE catch-up; human actions and notes |
-| History | Run/project/archive filters, completion-day cost reports, tokens by role/round, separate outcomes and feedback, paged exact source evidence |
+| History | Run/project/archive filters, completion-day token reports, tokens by role/round, separate outcomes and feedback, paged exact source evidence |
 | Agents | Global search and comparisons; In run uses pinned assignments, releases, tools and budgets; metric/category/cohort counts open contributing deployments |
 | Settings | Local dispatch limit, sandbox capacity, theme and saved new-run holds in this browser |
 
@@ -564,6 +579,7 @@ Engine commands run as `sociotechnic/bin/sociotechnic <command> [args]`. Command
 | `/sociotechnic status [job]` | `status [<job>]` | `{ job, status, statusReason, round, pending, overdue, nextAction }` or `{ jobs: [...] }`. With no job it lists database jobs; missing staging does not change the result |
 | `/sociotechnic override <job> <bound> <note>` | `override <job> <bound> <note...>` | `{ job, bound, effective }` |
 | `/sociotechnic rework <job> <note>` | `rework <job> <note...>` | `{ job, round }` |
+| `/sociotechnic answer <job> <dispatch> <answer>` | `answer <job> <dispatch> <answer...>` | Answer the pending planner questions; returns `{ job, status: "planning" }`. Run with `--hold planned` to resume planning and review the plan before building |
 | `/sociotechnic accept <job> [note]` | `accept <job> [note...]` | `{ job, status }` |
 | `/sociotechnic pr <job>` | `pr <job>` | `{ record: "pr.md", title, pushed: false }` |
 | `/sociotechnic pr <job> --push` | `pr <job> --push` | `{ record: "pr.md", title, pushed: true, url, number }`. From `accepted` only. Errors: `illegal-transition` before accept, `no-github-remote`, `gh-unavailable`, `no-branch` |
@@ -726,7 +742,7 @@ installation, session persistence, preview lifecycle and verification limits.
 | `round` | Whole number from 0 through 1,000,000 |
 | `day` | Valid UTC completion date, `YYYY-MM-DD` |
 | `archive` | `include` (default), `exclude` or `only` |
-| `metric` | `deployments`, `errors`, `ok`, `failed`, `timeout`, `interrupted`, `pending`, `malformed`, `negative`, `retries`, `timing`, `tokens` or `cost` |
+| `metric` | `deployments`, `errors`, `ok`, `failed`, `timeout`, `interrupted`, `pending`, `malformed`, `negative`, `retries`, `timing`, `tokens`, `cacheRead` or legacy `cost` |
 | `category` | `execution`, `timeout`, `interrupted`, `record`, `retry`, `typecheck`, `test`, `lint`, `build`, `checks`, `review` or `rework` |
 | `page` | Positive integer; default 1, clamped to the last result page |
 | `limit` | Dispatches per page, 1–100; default 25 |
@@ -736,7 +752,7 @@ filters apply in the database before a scan of at most 100 runs, ordered by
 `updatedAt` and ID descending. One additional row detects truncation. Metric
 and observation filters select dispatches within that cohort before paging.
 `errors` means failed or timed-out calls; `negative` means valid CHANGES, BLOCKED
-or ESCALATE results. Timing, tokens and cost filters require that measurement.
+or ESCALATE results. Timing, tokens, cacheRead and legacy cost filters require that measurement; recorded zero is retained.
 
 The response contains `{ source: "db", warnings, query, scan, page, pages,
 total, summary, rows, series, groups, feats }`. `scan` is `{ jobs, limit,
@@ -749,7 +765,9 @@ build dispatch remains in the filtered cohort.
 
 Rows retain job, dispatch, round, commit, source record, model/effort/release,
 recorded configuration and token breakdown. Summary counters expose timing,
-token, cost and cache-read coverage. Missing values remain `null`; measured
+token, legacy cost and cache-read coverage. `tokenBreakdown` and per-field
+`tokenCoverage` cover the entire filtered cohort before paging; `usageScopes`
+counts main-agent, per-model, Codex and legacy report scopes. Missing values remain `null`; measured
 subtotals can be partial. Cache reads are included in total tokens. Live logs
 and unfinished calls are not durable completed measurements. Record bodies
 are fetched only through the existing per-record API. Archived runs are included
@@ -794,7 +812,7 @@ It never labels the latest catalog configuration as a run pin.
 `GET /api/agents/:name?page=1&sort=recent|longest|issues` returns ten deployments
 per page, a clamped page/range and up to three checked-build feats. Optional
 `job`, `metric`, `category` and `cohort` filters apply before paging. `metric`
-uses the History API values except `cost`; `category` uses its observation
+uses the History API values except `cost` and `cacheRead`; `category` uses its observation
 categories. `cohort` is a URL-encoded JSON tuple
 `[workflow,tier,model,effort,version,revision]`, matched exactly. Workflow is
 `feature`, `design` or `comments`; tier is `COMPLEX`, `EASY`, `BULK`, `COMMENTS`

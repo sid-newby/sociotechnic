@@ -159,7 +159,8 @@ try {
       await check(`${width} ${moment}: no page overflow`, overflow);
       if (smoke) continue;
       await check(`${width} ${moment}: dashboard cards and tabs`, async () => {
-        for (const text of ['Agent time', 'Tokens', 'Estimated cost']) await page.getByText(text, { exact: true }).first().waitFor();
+        for (const text of ['Agent time', 'Tokens', 'Cache reads']) await page.getByText(text, { exact: true }).first().waitFor();
+        assert.doesNotMatch(await page.locator('body').innerText(), /Estimated cost|\$[0-9]/, 'No dollar translations in the run dashboard');
         for (const name of ['Dispatches', 'Records', 'Log', 'Decisions']) await page.getByRole('tab', { name: new RegExp(`^${name}`) }).waitFor();
       });
       await check(`${width} ${moment}: token card reflects fixture measurements`, async () => {

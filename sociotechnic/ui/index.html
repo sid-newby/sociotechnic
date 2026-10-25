@@ -333,7 +333,7 @@ const STAGES = ["plan", "build", "checks", "review", "gate", "approve", "human"]
 const STATUS_GROUP = {
   new: "neutral", planning: "neutral", researching: "neutral", planned: "neutral",
   building: "blue", built: "blue", checked: "blue", reviewing: "blue", reviewed: "blue", approving: "blue",
-  ready: "green", "merged-local": "green", accepted: "green", "needs-human": "amber", merged: "purple", stopped: "grey",
+  ready: "green", "merged-local": "green", accepted: "green", "planning-input": "amber", "needs-human": "amber", merged: "purple", stopped: "grey",
 };
 const TERMINAL = new Set(["merged", "stopped"]);
 const PRE_PLAN = new Set(["new", "planning", "researching"]);
@@ -903,7 +903,18 @@ function gateActions(job, stale) {
       if (planningFailure) { S.driver = await post("/run", { mode: "run", hold: ["planned"] }); await after(); }
     })));
 
-  if (st === "planned") {
+  if (st === "planning-input") {
+    const input = obj(job.planningInput);
+    out.push(h("div", { class: "action" },
+      h("p", { text: "Answer the planner so it can finish the plan. Building waits for your plan review." }),
+      h("ol", {}, arr(input.questions).map((question) => h("li", { text: str(question) }))),
+      ...draftArea("d-plan-answer", "Your answer", "Answer the questions above", 4),
+      h("div", { class: "row" }, btn("Answer planner", "answer", "gate", async () => {
+        const answer = draft("d-plan-answer"); if (!answer) throw new Error("An answer is required.");
+        await post("/answer", { dispatch: str(input.dispatch), answer }); S.drafts["d-plan-answer"] = ""; await after();
+        S.driver = await post("/run", { mode: "run", hold: ["planned"] }); await after();
+      }, { cls: "primary", disabled: running }), stopBtn())));
+  } else if (st === "planned") {
     out.push(h("div", { class: "action" },
       h("p", { class: "small muted", style: "margin:0", text: "Continue runs the build with no hold. To change the plan, stop this job and start a new one with a better prompt." }),
       h("div", { class: "row" },

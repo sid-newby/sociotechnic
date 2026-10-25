@@ -462,6 +462,21 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
     },
     {
       method: "POST",
+      pattern: /^\/api\/jobs\/([^/]+)\/answer$/,
+      handler: ({ params, body }) => {
+        const id = jobIdParam(params[0]);
+        const dispatch = str(body, "dispatch", true) ?? "";
+        const answer = str(body, "answer", true) ?? "";
+        return mutateJob(id, async (job) => {
+          if (drivers.isRunning(id)) throw new HttpError(409, "driver-active", "Wait for the planner to stop before answering");
+          await assertNoForeignDriver(id, process.pid);
+          session().commitGuards = [() => assertNoForeignDriver(id, process.pid)];
+          return engine.answerPlanning(job, dispatch, answer);
+        });
+      },
+    },
+    {
+      method: "POST",
       pattern: /^\/api\/jobs\/([^/]+)\/accept$/,
       handler: ({ params, body }) => {
         const id = jobIdParam(params[0]);

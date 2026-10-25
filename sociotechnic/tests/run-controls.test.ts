@@ -213,9 +213,9 @@ test("partial cache counters retain measured reads without implying a whole-run 
   assert.equal(partial.tokens, 1000);
   assert.equal(partial.cacheRead, 80);
   assert.equal(partial.cacheReported, 1);
-  assert.equal(partial.cacheShare, null);
+  assert.equal(partial.cacheReported, 1);
   const measured = runTotals([rows[0]], Date.parse(NOW), detail().driver);
-  assert.equal(measured.cacheShare, 0.8);
+  assert.equal(measured.cacheRead, 80);
 });
 
 test("only confirmed local active dispatches accrue in-flight runtime", () => {

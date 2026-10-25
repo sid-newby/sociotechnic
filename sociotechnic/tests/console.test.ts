@@ -199,3 +199,19 @@ test("run listings distinguish archives from unavailable worktrees", () => {
   assert.equal(jobs[1].archived, true);
   assert.equal(jobs[1].running, true);
 });
+
+test("planner questions parse and expose only answer/stop decisions at the clarification gate", async () => {
+  const { decisionFor, runActions } = await import("../ui/web/src/run-model.ts");
+  const detail = fixture();
+  detail.job.status = "planning-input"; detail.job.round = 0; detail.plan = null;
+  detail.job.planningInput = { state: "pending", dispatch: "d-001", questions: ["Who is this report for?"] };
+  assert.match(decisionFor(detail)?.sentence ?? "", /planner has questions/);
+  const actions = runActions(detail);
+  assert.deepEqual(actions.filter((a) => a.placement.includes("bar")).map((a) => a.id), ["answer-planning", "stop"]);
+  assert.ok(!actions.some((a) => ["continue", "step", "accept", "merge", "rework"].includes(a.id)));
+  assert.ok(actions.find((a) => a.id === "answer-planning")?.cli?.includes("d-001"));
+  const parsed = parseDetail({ job: { ...detail.job, rounds: [] }, records: [], driver: null });
+  assert.deepEqual(parsed.job.planningInput, detail.job.planningInput);
+  assert.equal(parsed.job.status, "planning-input");
+  assert.throws(() => parseDetail({ job: { ...detail.job, rounds: [], planningInput: { state: "pending", dispatch: "d-001", questions: [42] } }, records: [] }), /Invalid planner question/);
+});

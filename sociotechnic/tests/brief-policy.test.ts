@@ -97,7 +97,7 @@ test("lean planner guidance keeps tier, docs/testing and bounded research/design
   assert.equal(parsePlanText(JSON.stringify({ status: "needs-design", reason: "" }), false).kind, "malformed");
   const resumed = planBrief({ ...planner, allowResearch: false, design: "Approved composition", researchFiles: ["/job/research-1.md"] });
   assert.match(resumed, /research-1.md/);
-  assert.match(resumed, /The research escape has been used. Write a full plan/);
+  assert.match(resumed, /The research escape has been used. Write an actionable plan, or use needs-input/);
   assert.match(resumed, /Do not restart design just because this is UI work/);
   assert.doesNotMatch(resumed, /## Research escape/);
 });

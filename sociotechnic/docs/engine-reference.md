@@ -66,6 +66,9 @@ stateDiagram-v2
   designing --> design_input: Claude awaits human input
   design_input --> designing: reply or resume session
   design_input --> planning: approve design artifacts
+  state "planning-input" as planning_input
+  planning --> planning_input: needs-input
+  planning_input --> planning: human answer
   planning --> researching: needs-research (once)
   researching --> planning
   planning --> planned: valid plan pinned
@@ -520,6 +523,22 @@ change visibility only: records, workflow status and active execution are kept.
 The HTTP listing includes archived runs, and Show archived controls rail
 visibility. Archive state survives staging loss and database backup/restore.
 
+## Planning questions
+
+When a human decision prevents an actionable plan, the planner can return
+`{"status":"needs-input","questions":["..."]}` before or after research. The
+engine enters `planning-input` with no pinned plan and no build round. The
+console shows the questions and an Answer planner action. Your reply is saved
+with its questions and dispatch ID in PostgreSQL, then a fresh planner runs to
+the plan-review hold. Stale replies fail, and failed sends keep the draft.
+
+The CLI exposes the pending questions and dispatch in `status <job>`. Reply with
+`answer <job> <dispatch> <answer...>`, then `run <job> --hold planned`. Answers
+do not lift bounds or change frozen agent releases. Follow-up questions count
+toward the existing dispatch cap. Stop/reopen preserves pending questions.
+Previously pinned plans are unaffected. Requested reviews may plan a written
+report; an empty repository is not itself a reason to invent an integration.
+
 ## State store
 
 PostgreSQL owns jobs, records, history, archive state, immutable agent releases
@@ -665,8 +684,11 @@ exact source references; narrowing the filters can produce a complete cohort.
 [The API reference](cli-reference.md#history-api) defines the filters and limits.
 Daily series use actual completion dates; there is no usage interpolation or
 unfinished-dispatch agent timer. Cache reads are a subset of total tokens.
-Provider cost remains an estimate reported by completed calls, not subscription
-billing. Empty measurements remain null, and partial totals retain coverage.
+Historical provider cost fields remain stored for compatibility; console usage
+reports display recorded token categories and per-field coverage instead. Main
+`usage` counters and per-model `modelUsage` pipeline totals are never added
+together. Resumable snapshots may be cumulative; their sums are not deduplicated
+session usage. Empty measurements remain null, and partial totals retain coverage.
 
 New engine dispatches include optional `configuration` metadata: SHA-256 revision
 of the role settings and definition bytes, plus observed provider/model/effort,

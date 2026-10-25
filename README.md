@@ -11,9 +11,9 @@ The console is the intended main interface. The engine and semantically versione
 
 [Start a run](#start-a-run) · [Agent library](#agent-library) · [Follow the work](#follow-the-work) · [History](#history) · [Review and decide](#review-and-decide) · [How it works](#how-it-works) · [Technical documentation](#technical-documentation)
 
-![Run console with the run list, a pinned plan awaiting review, agent time, token totals and token burn chart.](assets/fog8.png)
+![Run dashboard with a recorded approval, agent time, token totals, cache-read reporting coverage and the token burn chart.](assets/console/overview.png)
 
-Screenshots show demonstration runs. The console is evolving, so some views show earlier layouts.
+Screenshots show isolated demonstration data from the current console. [Capture provenance and verification](assets/console/README.md) distinguish the committed demo run from synthetic test scenarios.
 
 ## Start a run
 
@@ -71,25 +71,27 @@ feature planning can also request design, including another specific assignment.
 Docker design sessions are not yet supported.
 [Interactive design details](sociotechnic/docs/design-ceremony.md).
 
+![Designer conversation with a fixed composer, streamed Markdown and a separate preview link, using fake SDK messages.](assets/console/designer-chat.png)
+
 ## Follow the work
 
 The inbox groups runs into **Needs you**, **Working** and **Done**. Search or filter by project, and use **Show archived** to restore hidden runs. Archiving preserves records and does not stop active work.
 
-The run dashboard puts the next decision above four cards: **Agent time**, **Tokens**, **Estimated cost**, and the current plan, checks or approval. Open a card for its recorded evidence. The token chart shows completed dispatch reports in role colors; select a dispatch to inspect its measurements, model, effort, deadline and log. Missing usage stays unreported, and provider cost is an estimate.
+The run dashboard puts the next decision above four cards: **Agent time**, **Tokens**, **Cache reads**, and the current plan, checks or approval. Open a card for its recorded evidence. The token chart shows completed dispatch reports in role colors; select a dispatch to inspect its measurements, model, effort, deadline and log. Missing usage stays unreported. Metric sheets distinguish uncached input, output, cache reads and cache creation, with thinking as a reported output subset. Image and per-turn details remain unavailable where the retained record has no verified fields.
 
-![Dispatch history showing completed agents, rounds, token usage, elapsed time, models and linked records.](assets/fog7.png)
+![Dispatch ledger showing completed agents, rounds, elapsed time, models, token usage and linked records.](assets/console/activity.png)
 
 Use **Dispatches**, **Records**, **Log** and **Decisions** below the chart. Customize dispatch columns or download the filtered visible columns as CSV. Records open in a right-hand sheet with Formatted, Raw and Download controls. Earlier rounds remain available through Records and the round selector in the evidence sheet.
 
-![Run record viewer displaying a highlighted diff, with Formatted, Raw and Download controls.](assets/fog1.png)
+![Formatted Markdown plan in the record sheet, with Raw and original-record Download controls.](assets/console/records.png)
 
 **Controls** offers Pause, Step once, hold after a chosen transition and raise a bound before it trips. The dispatch sheet can **Interrupt dispatch** with a note while its siblings continue. **Settings** holds local concurrency, sandbox capacity, theme and the default transition holds for new runs in this browser. **Commands** (⌘K or Ctrl+K) lists the actions legal now and their CLI equivalents; ⌘B or Ctrl+B toggles the sidebar.
 
-![Run evidence showing a blocked gate after a fixture test failure, the build commit, skipped UI and UX reviews, and passing code, security and conformance reviews.](assets/fog5.png)
+![Round evidence sheet showing the demo run’s passing gate and recorded reviews bound to their commits.](assets/console/round.png)
 
 Checks and reviews retain their commit binding. Stale evidence never becomes a passing headline, skipped lenses remain **SKIPPED**, and missing measurements are never a reported zero.
 
-![Run metrics showing agent time, reported tokens, unavailable cost, a failing check and token burn by dispatch.](assets/fog6.png)
+If the planner needs a decision from you, its questions appear at the top of the run. Choose **Answer planner** and send your reply. Planning resumes and stops for your plan review before building.
 
 For an externally owned run, **Open owning console** takes you to its controls. Records stay readable here; **Refresh status** checks ownership again. Continue uses the normal recovery checks when a previous driver stopped or a runnable run lost its worktree. For an eligible missing worktree, **Controls → Restore worktree** recovers it and keeps the current run status without starting agents. **Recover worktree and continue** recovers it and starts the driver.
 
@@ -100,20 +102,26 @@ you continue them; changing the defaults leaves existing runs unchanged. A
 one-run hold in Controls applies only to that start. Storage failures appear
 beside the setting and leave the previously saved defaults in place.
 
+![Settings with browser-owned New run hold defaults and shared theme controls.](assets/console/settings.png)
+
 ## History
 
 Choose **History** in the sidebar for recorded work across projects, or **Run
 history** on a run for its own measurements. Filter by run, project and archive
 state. Open a total, completion day, feedback category or role/round to inspect
-the contributing dispatches. The page shows reported tokens, estimated cost,
+the contributing dispatches. The page shows reported tokens, cache reads,
 agent time, separate outcomes and checked builds, with measurement coverage.
 If the cohort is limited, narrow the filters to inspect a complete view.
 
 Open a dispatch or source record to read the evidence in the run's existing
 sheets. The selected run, dispatch and record survive reload through the page
-address. Missing data stays unknown; partial totals stay labelled. Provider
-cost reports are estimates, cache reads are part of total tokens, and human
+address. Missing data stays unknown; partial totals stay labelled. Cache reads are part of total tokens; thinking is an output subset, never an
+extra total. Main-agent and per-model report scopes stay distinct. Sums of
+recorded dispatch reports are not deduplicated session usage or per-turn events.
+No cache-hit percentage, expiry or warm status is inferred, and human
 acceptance is context rather than an accuracy score.
+
+![History showing the demo cohort’s reported tokens and time, explicit missing cache-read measurements and recorded outcomes.](assets/console/analysis.png)
 
 ## Agent library
 
@@ -234,7 +242,7 @@ The decision bar names the current hold and its primary action. Choose **Read** 
 | **Accepted** | Choose **Push and open PR**, then separately **Merge PR on GitHub**; or finish the run locally |
 | **Stopped** | Choose **Reopen run** to continue with existing changes, or remove the worktree |
 
-![Command menu for a run needing attention, offering a retry increase, local merge, acceptance, rework and PR text preparation.](assets/fog2.png)
+![Commands for a synthetic run needing attention, with actions constrained by its current state.](assets/console/commands.png)
 
 Acceptance confirms that you tested the change. Publishing and GitHub merging have separate confirmation steps; a passing gate alone triggers neither. A remote merge checks the published PR identity and commit, follows GitHub's merge requirements, and records confirmed success.
 
@@ -284,6 +292,8 @@ PostgreSQL owns jobs, records, design previews, archive state and immutable agen
 | Document | Read it for |
 | --- | --- |
 | [Local setup and development](sociotechnic/docs/development.md) | Installation, running the console, development mode, tasks, checks, dependency policy and historical demo evidence |
+| [Console UI builder guide](sociotechnic/docs/console-ui.md) | Stack, theme/token ownership, shared components, adding a view and verification |
+| [Design system](DESIGN.md) | The approved visual direction, token mapping and component guidance |
 | [CLI and driver reference](sociotechnic/docs/cli-reference.md) | Session and engine commands, the global skill, console lifecycle, publishing, HTTP API and driver handoff |
 | [Engine and state reference](sociotechnic/docs/engine-reference.md) | All roles and tiers, records, gate rules, bounds, configuration, database migration and recovery |
 | [Comment cleanup](sociotechnic/docs/comment-cleanup.md) | Starting a cleanup run, worker scope, bounded waves, proof requirements and limitations |

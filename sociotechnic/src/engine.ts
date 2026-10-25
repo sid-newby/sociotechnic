@@ -225,6 +225,7 @@ function planPrompt(job: Job, retryReason: string | null): string {
   return planBrief({
     feature: job.feature,
     feedback: job.human.filter((entry) => entry.action === "rework").map((entry) => entry.note),
+    answers: job.human.filter((entry) => entry.action === "plan-answer").map((entry) => entry.note),
     repo: job.repo,
     design: approvedDesignBrief(job),
     allowDesign: job.design === undefined,
@@ -246,12 +247,18 @@ function dispatchPlanner(job: Job, now: string): StepResult {
 
 async function stepPlanning(job: Job, now: string): Promise<StepResult | null> {
   const latest = latestDispatch(job, (d) => d.step === "plan");
+  if (latest && job.planningInput?.state === "answered" && job.planningInput.dispatch === latest.id) return dispatchPlanner(job, now);
   if (latest === null || job.designSession?.approval && latest.parsed?.value === "needs-design" || (job.design?.state === "approved" && job.dispatches.indexOf(latest) < job.dispatches.indexOf(latestDispatch(job, (d) => d.step === "design") ?? latest))) return dispatchPlanner(job, now);
   const retry = (reason: string): StepResult => retryAll(job, [{ latest, reason, prompt: (r) => planPrompt(job, r) }], now);
   const failure = failureOf(latest);
   if (failure !== null) return retry(failure);
   const parsed: PlanParse = parsePlanText(readText(abs(job, "plan.json")), job.research.done, job.design !== undefined || job.designSession !== undefined);
   if (parsed.kind === "malformed") return retry(`plan.json is malformed: ${parsed.errors.join("; ")}`);
+  if (parsed.kind === "needs-input") {
+    job.planningInput = { state: "pending", dispatch: latest.id, questions: parsed.questions };
+    transition(job, "planning-input", "The planner needs your answer before it can finish the plan", now);
+    return human(job);
+  }
   if (parsed.kind === "needs-design") {
     startDesign(job, parsed.reason, now);
     return stepDesigning(job, now);
@@ -809,6 +816,7 @@ export async function newCommentJob(repoArg: string, feature: string, baseArg: s
 }
 
 export type StatusLine = {
+  planningInput?: Job["planningInput"];
   job: string;
   status: Status;
   statusReason: string;
@@ -828,6 +836,7 @@ export function statusLine(job: Job, now = nowIso()): StatusLine {
   else if (overdue.length > 0) nextAction = "stop";
   else if (pending.length > 0) nextAction = "wait";
   const line: StatusLine = { job: job.id, status: job.status, statusReason: job.statusReason, round: job.round, pending, overdue, nextAction };
+  if (job.status === "planning-input") line.planningInput = job.planningInput;
 
   return line;
 }
@@ -854,6 +863,17 @@ export function humanReviewText(note: string, commit: string): string {
     "Written by the sociotechnic engine on `sociotechnic rework`: a human asked for changes.",
     "",
   ].join("\n");
+}
+
+export function answerPlanning(job: Job, dispatch: string, answer: string, now = nowIso()): { job: string; status: Status } {
+  jobfns.assertStatus(job, ["planning-input"], "answer planner");
+  const input = job.planningInput;
+  if (!input || input.state !== "pending" || input.dispatch !== dispatch || job.plan !== null || job.round !== 0) throw new IllegalTransition("This planning question is no longer awaiting an answer. Refresh before replying.");
+  if (!answer.trim() || answer.length > 16000) throw new SociotechnicError("usage", "Answer must contain 1 to 16000 characters");
+  job.planningInput = { ...input, state: "answered", answer: answer.trim() };
+  job.human.push({ at: now, action: "plan-answer", note: JSON.stringify({ dispatch, questions: input.questions, answer: answer.trim() }) });
+  transition(job, "planning", "Planning answer recorded", now);
+  return { job: job.id, status: job.status };
 }
 
 export function rework(job: Job, note: string, now = nowIso()): { job: string; round: number } {

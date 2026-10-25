@@ -83,6 +83,7 @@ function findingsContract(): string[] {
 }
 
 export type PlanBriefInput = {
+  answers?: readonly string[];
   feature: string;
   feedback?: readonly string[];
   repo: string;
@@ -109,6 +110,7 @@ export function planBrief(i: PlanBriefInput): string {
     `- Repository (main checkout, read-only): ${i.repo}`,
   ];
   if (i.feedback?.length) lines.push("", "## Human planning feedback", "", ...i.feedback.map((note) => JSON.stringify(note)), "Apply this feedback to the original request and existing evidence. Write a complete plan; no build is authorized yet.");
+  if (i.answers?.length) lines.push("", "## Human answers to planning questions", "", ...i.answers, "Use these recorded questions and human answers to resolve scope. They do not authorize a build before the plan is validated and reviewed.");
   if (i.design) lines.push("", "## Returned design work", i.design);
   if (i.allowDesign && i.design) lines.push("The design agent has returned a Markdown work product. Assess it and decide whether to plan implementation or request a concrete follow-up with needs-design. Do not restart design just because this is UI work.");
   if (i.allowDesign && !i.design) lines.push("", "## Major UI changes", 'Decide whether design help is required before elaborating implementation details. For new or substantial UI work, write {"status":"needs-design","reason":"the specific design assignment"} immediately. The design agent runs the actual impeccable command in a conversation with the human and returns Markdown with any samples or prototypes. You decide what to do with that result. Small local fixes and comment cleanup retain normal planning.');
@@ -138,6 +140,10 @@ export function planBrief(i: PlanBriefInput): string {
     TIER_RUBRIC(i.easyTierMaxFiles),
     "",
     "Pick the cheapest tier that honestly fits; the approver and the gate check it.",
+    "",
+    "## Human clarification",
+    'When a missing human decision prevents an actionable plan, write `{"status":"needs-input","questions":["What outcome do you want?"]}` instead. Ask 1 to 6 specific questions of at most 4000 characters each. This pauses planning and shows the questions to the human; their answer returns to you. It is available even after research has been used and takes precedence over any instruction to always write a full plan.',
+    "Keep the user's requested deliverable: review/evaluation requests can produce a written report. An empty repository does not require an integration or a new app. Resolve facts with the available readers/network tools. Ask the human only for decisions you cannot reasonably infer. Never make asking the human a builder stage, and never emit a plan dependent on unanswered questions.",
   );
   if (i.allowResearch) {
     lines.push(
@@ -148,7 +154,7 @@ export function planBrief(i: PlanBriefInput): string {
       'You may add "advisors": ["sociotechnic-registered-advisor", null] with one entry per question. Use only research-template agents from the frozen team roster; null keeps the configured researcher. Respect an explicitly locked researcher. Advisors answer bounded questions and cannot delegate onward. A planning-only specialist can be recommended in agentRecommendations or selected by the orchestrator before a new run, not called as a research role.',
     );
   } else {
-    lines.push("", "The research escape has been used. Write a full plan.");
+    lines.push("", "The research escape has been used. Write an actionable plan, or use needs-input if a human decision is still required.");
   }
   lines.push(...retryBlock(i.retryReason));
   return lines.join("\n");
