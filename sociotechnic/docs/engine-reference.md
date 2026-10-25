@@ -330,7 +330,10 @@ retry and deadline bounds. The repair prompt names the previous report, checked
 commit, command, exit code, signal, timeout and retained output tail once.
 Passing repaired commits still receive every applicable review and normal gates.
 
-The engine independently runs the full configured suite at
+New builder releases default to focused development and acceptance verification;
+pinned-definition, repository and approved-plan obligations are cumulative.
+Explicit legacy/custom full-suite requirements remain. READY reports actual
+builder evidence; the engine independently runs the full configured suite at
 committed build HEAD. Missing checks retain `no-checks-configured`. Checked and
 reviewed holds, stop/reopen, retained edits, stale-input/commit rejection,
 completion replay and ownership guards continue to apply.
@@ -829,3 +832,34 @@ Both providers materialize them per dispatch and remove the copies afterward.
 Reader tools can read those exact reference roots even when the target is another
 repository. Skill snapshots do not grant shell, network, MCP servers or privileges.
 Catalog export/import includes the snapshots and preserves existing run pins.
+
+
+### Verification-policy release compatibility
+
+The additive [candidate bundle](../seeds/agent-release-candidates/20261025-focused-verification.json)
+contains eleven new releases alongside 32 immutable historical releases in the
+bundle union. [The inventory](evidence/workflow-integration/candidate-releases.json)
+records exact versions and definition/content/bundle digests. Candidates are kept
+outside `seeds/agent-releases/`, so console startup and `db init` do not import
+them. Development has not imported them into a live catalog. Before promotion,
+compare all candidate identities/versions with the target database. Publish
+colliding improvements under fresh versions; preserve existing releases and pins.
+
+| Run or operation | Instruction/configuration behavior | Engine behavior |
+| --- | --- | --- |
+| New run before candidate import | Current catalog latest | Installed engine |
+| New/default or specialist run after authorized import | Candidate latest for the selected eligible identity | Installed engine |
+| Explicit legacy version | Exact selected historical definition and its full-suite obligations | Installed engine |
+| Existing or custom pinned run | Original definition, skills, budgets and configuration stay frozen | Next eligible unreviewed checked round uses installed routing |
+| Review wave already issued | Saved dispatch envelopes and frozen definitions finish normally | Wait for every started sibling and compute normal gate |
+
+Upgrading engine code is an operator-controlled action distinct from catalog
+import. Hold/stop active drivers before changing binaries, back up the complete
+PostgreSQL catalog and jobs plus Git repositories, and retain the previous binary.
+Import candidates only through the normal authorized initialization/migration
+flow; identical imports are no-ops, conflicts abort. Do not edit/delete immutable
+history to roll back a release. New runs can explicitly select an older version;
+existing pins remain. To roll back engine code, stop drivers and restore the prior
+binary before resuming; do not rewrite already-issued envelopes or failed-round
+evidence. Old code may buy reviews for a failed checked round, so review the saved
+status before continuing. No live rollback, import or publication occurred here.
