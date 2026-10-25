@@ -44,5 +44,5 @@ export function AgentIcon({ name, size = 20, step }: { name: string; size?: numb
   return <Icon className="shrink-0" style={{ color: roleColor(template, step) }} size={size} aria-hidden="true" />;
 }
 export function AgentName({ name, version = "1.0.0" }: { name: string; version?: string | null }) {
-  return <span className="font-medium">{agentLabel(name)} <span className="text-[0.75em] font-normal whitespace-nowrap text-muted-foreground">{version ? `v${version}` : "version unrecorded"}</span></span>;
+  return <span className="font-medium">{agentLabel(name)} <span className="text-[13px] font-normal whitespace-nowrap text-muted-foreground">{version ? `v${version}` : "version unrecorded"}</span></span>;
 }
