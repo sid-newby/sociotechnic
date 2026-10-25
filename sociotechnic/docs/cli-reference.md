@@ -408,6 +408,11 @@ For older UI owners without a URL, discovery checks only ports 4747 and 4748,
 requiring both the health PID and active-driver start time to match. Other hosts,
 CLI owners and unverified locations never receive a guessed link.
 
+Background updates keep loaded Agent library profiles and History results in
+place while revalidating. A failed refresh retains the readable result with an
+error and retry. Run assignments are immutable: the library loads them when
+selecting a run or explicitly retrying, and shares the console's run list.
+
 ### Interrupting one dispatch
 
 Stop ends every agent in a run. To end one agent and keep the run in place,

@@ -4,7 +4,8 @@ import { ArrowLeft, ArrowRight, Search, X } from "lucide-react";
 import type { AgentSummary, HistorySort, ObservationCategory, AgentMetrics } from "../../../../src/agent-library.ts";
 import { request } from "../api";
 import { parseAgentHistory, parseLibrary, parsePinnedProfiles } from "../library-model";
-import { agentTools, errorMessage, parseJobs, shortSha } from "../model";
+import { agentTools, errorMessage, shortSha } from "../model";
+import type { JobItem } from "../model";
 import { duration, tokens } from "../telemetry";
 import type { Load } from "../use-console";
 import { AddAgent } from "./add-agent";
@@ -21,33 +22,26 @@ import { Button } from "./ui/button";
 const feedbackLabels: Record<ObservationCategory, string> = { interrupted: "Interrupted calls", execution: "Execution errors", timeout: "Timeouts", record: "Malformed records", retry: "Re-asks", typecheck: "Type checks", test: "Tests", lint: "Lint", build: "Build checks", checks: "Other checks", review: "Review findings", rework: "Human rework" };
 const feedbackLabel = (category: ObservationCategory) => feedbackLabels[category];
 type Navigation = { params: URLSearchParams; update: (values: Record<string, string | null>) => void };
-type Props = Navigation & { revision: number; openRun: (id: string, selection?: { dispatch?: string; record?: string }) => void };
-export function AgentLibrary({ params, update, revision, openRun }: Props) {
+type Props = Navigation & { revision: number; runs: Load<JobItem[]>; refreshRuns: () => void; openRun: (id: string, selection?: { dispatch?: string; record?: string }) => void };
+export function AgentLibrary({ params, update, revision, runs, refreshRuns, openRun }: Props) {
   const [library, setLibrary] = useState<Load<ReturnType<typeof parseLibrary>>>({ kind: "loading" });
   const [retry, setRetry] = useState(0);
   const [created, setCreated] = useState("");
   const search = useRef<HTMLInputElement>(null);
   const libraryKey = useRef("");
   const [loadedRun, setLoadedRun] = useState<string | null>(null);
-  const [pinnedRun, setPinnedRun] = useState<string | null>(null);
   const run = params.get("agentRun") ?? "";
-  const [runs, setRuns] = useState<Load<ReturnType<typeof parseJobs>>>({ kind: "loading" });
-  const [pinned, setPinned] = useState<Load<ReturnType<typeof parsePinnedProfiles>>>({ kind: "loading" });
+  const [pinned, setPinned] = useState<Load<{ run: string; profiles: ReturnType<typeof parsePinnedProfiles> }>>({ kind: "loading" });
   useEffect(() => {
     const abort = new AbortController();
-    request("/api/jobs", abort.signal).then(parseJobs).then((value) => {
-      if (!abort.signal.aborted) setRuns({ kind: "ready", value, error: null });
-    }).catch((error: unknown) => { if (!abort.signal.aborted) setRuns({ kind: "error", message: errorMessage(error) }); });
-    return () => abort.abort();
-  }, [revision, retry]);
-  useEffect(() => {
-    const abort = new AbortController();
-    setPinned({ kind: "loading" });
+    setPinned((previous) => previous.kind === "ready" && previous.value.run === run ? previous : { kind: "loading" });
     if (run) request(`/api/meta?job=${encodeURIComponent(run)}`, abort.signal).then(parsePinnedProfiles).then((value) => {
-      if (!abort.signal.aborted) { setPinnedRun(run); setPinned({ kind: "ready", value, error: null }); }
-    }).catch((error: unknown) => { if (!abort.signal.aborted) setPinned({ kind: "error", message: errorMessage(error) }); });
+      if (!abort.signal.aborted) setPinned({ kind: "ready", value: { run, profiles: value }, error: null });
+    }).catch((error: unknown) => {
+      if (!abort.signal.aborted) setPinned((previous) => previous.kind === "ready" && previous.value.run === run ? { ...previous, error: errorMessage(error) } : { kind: "error", message: errorMessage(error) });
+    });
     return () => abort.abort();
-  }, [run, revision, retry]);
+  }, [run, retry]);
   useEffect(() => {
     const abort = new AbortController();
     if (libraryKey.current !== run) setLibrary({ kind: "loading" });
@@ -63,7 +57,7 @@ export function AgentLibrary({ params, update, revision, openRun }: Props) {
   if (library.kind === "loading" || library.kind === "ready" && loadedRun !== run) return <div className="space-y-4 p-6" role="status"><span className="sr-only">Loading agent library…</span><Skeleton className="h-9 w-64" /><Skeleton className="h-64 w-full" /></div>;
   if (library.kind === "error") return <div className="grid gap-3 rounded-xl border border-destructive/30 p-6 text-sm" role="alert"><h1 className="text-2xl font-semibold">Could not load the agent library</h1><p>{library.message}</p><Button variant="outline" onClick={() => setRetry((v) => v + 1)}>Retry library</Button></div>;
   const data = library.value;
-  const pinnedProfiles = run && pinnedRun === run && pinned.kind === "ready" ? pinned.value : [];
+  const pinnedProfiles = run && pinned.kind === "ready" && pinned.value.run === run ? pinned.value.profiles : [];
   const agents = run ? data.agents.filter((agent) => agent.metrics.deployments > 0 || pinnedProfiles.some((profile) => profile.name === agent.name)).map((agent) => ({ ...agent, profile: pinnedProfiles.find((profile) => profile.name === agent.name) ?? null })) : data.agents;
   for (const profile of pinnedProfiles) if (!agents.some((agent) => agent.name === profile.name)) agents.push({ name: profile.name, profile, metrics: emptyMetrics(), cohorts: [] });
   const query = params.get("agentQuery") ?? "";
@@ -71,7 +65,7 @@ export function AgentLibrary({ params, update, revision, openRun }: Props) {
   const selected = visible.find((a) => a.name === (params.get("agent") || "sociotechnic-planner")) ?? visible[0];
   return <div className="grid min-w-0 gap-6 p-4 md:p-6">
     <header className="grid gap-3"><div className="flex flex-wrap items-center justify-between gap-3"><h1 className="text-2xl font-semibold">Agent library</h1><AddAgent onCreated={(name) => { setCreated(`${name} v1.0.0 created. Assign it in New run.`); update({ agent: name, agentQuery: null, agentRun: null, agentPage: null, agentMetric: null, agentCategory: null, agentCohort: null }); setRetry((v) => v + 1); }} /></div><span className="text-sm leading-relaxed text-muted-foreground">{agents.length} agents · {run ? "Selected run" : `${data.runs} runs · archived runs included`}</span></header>
-    <div className="grid min-w-0 gap-2 sm:max-w-xl"><Label htmlFor="agent-run">In run</Label><FormSelect id="agent-run" value={run} onValueChange={(value) => update({ agentRun: value || null, agentPage: null, agentMetric: null, agentCategory: null, agentCohort: null })} options={[{ value: "", label: "All runs" }, ...(runs.kind === "ready" ? runs.value.map((job) => ({ value: job.id, label: `${job.feature} · ${job.id}${job.archived ? " · Archived" : ""}` })) : []), ...(run && (runs.kind !== "ready" || !runs.value.some((job) => job.id === run)) ? [{ value: run, label: run }] : [])]} />{runs.kind === "error" ? <p role="alert" className="text-sm text-destructive">Run list unavailable. {runs.message} <Button variant="link" onClick={() => setRetry((v) => v + 1)}>Retry</Button></p> : runs.kind === "loading" ? <p role="status" className="text-sm text-muted-foreground">Loading runs…</p> : null}{run && pinned.kind === "loading" ? <p role="status" className="text-sm text-muted-foreground">Loading pinned assignments…</p> : run && pinned.kind === "error" ? <p role="alert" className="text-sm text-destructive">Pinned configuration unavailable. {pinned.message} <Button variant="link" onClick={() => setRetry((v) => v + 1)}>Retry</Button></p> : null}</div>
+    <div className="grid min-w-0 gap-2 sm:max-w-xl"><Label htmlFor="agent-run">In run</Label><FormSelect id="agent-run" value={run} onValueChange={(value) => update({ agentRun: value || null, agentPage: null, agentMetric: null, agentCategory: null, agentCohort: null })} options={[{ value: "", label: "All runs" }, ...(runs.kind === "ready" ? runs.value.map((job) => ({ value: job.id, label: `${job.feature} · ${job.id}${job.archived ? " · Archived" : ""}` })) : []), ...(run && (runs.kind !== "ready" || !runs.value.some((job) => job.id === run)) ? [{ value: run, label: run }] : [])]} />{runs.kind === "error" ? <p role="alert" className="text-sm text-destructive">Run list unavailable. {runs.message} <Button variant="link" onClick={refreshRuns}>Retry</Button></p> : runs.kind === "loading" ? <p role="status" className="text-sm text-muted-foreground">Loading runs…</p> : null}{runs.kind === "ready" && runs.error ? <p role="alert" className="text-sm text-destructive">Showing the last loaded run list. {runs.error} <Button variant="link" onClick={refreshRuns}>Retry runs</Button></p> : null}{run && pinned.kind === "ready" && pinned.error ? <p role="alert" className="text-sm text-destructive">Showing the last loaded pinned assignments. {pinned.error} <Button variant="link" onClick={() => setRetry((v) => v + 1)}>Retry assignments</Button></p> : null}{run && pinned.kind === "loading" ? <p role="status" className="text-sm text-muted-foreground">Loading pinned assignments…</p> : run && pinned.kind === "error" ? <p role="alert" className="text-sm text-destructive">Pinned configuration unavailable. {pinned.message} <Button variant="link" onClick={() => setRetry((v) => v + 1)}>Retry</Button></p> : null}</div>
     {created ? <p role="status">{created}</p> : null}
     {library.error ? <div className="flex flex-wrap items-center gap-3 rounded-xl border p-4 text-sm" role="alert">Showing the last loaded library. {library.error} <Button variant="outline" onClick={() => setRetry((v) => v + 1)}>Retry library</Button></div> : null}
     {data.warnings.map((warning) => <p className="break-words text-sm text-destructive" role="alert" key={warning}>{warning}</p>)}

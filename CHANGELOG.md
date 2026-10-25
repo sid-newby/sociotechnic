@@ -5,6 +5,11 @@ Dates on backfilled entries use America/Chicago. See the [release guide](sociote
 
 ## Unreleased
 
+## v0.6.1
+
+- Keep Agent library profiles, roster selection, open disclosures and version drafts stable while live run updates arrive. Reuse the console run list and avoid refetching immutable run assignments on each event.
+- Preserve loaded History results during background refreshes and keep readable data with explicit retry after refresh failures. Add browser regression coverage for irregular SSE updates, slow responses, failures and scope changes.
+
 ## v0.6.0
 
 - Rebuild the run console around an inbox sidebar, decision bar, evidence sheets, live summary cards, recorded token chart and Dispatches/Records/Log/Decisions table, with column customization, CSV export and exact record drill-down.
