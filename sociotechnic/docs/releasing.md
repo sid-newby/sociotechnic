@@ -98,6 +98,9 @@ storage or migration safety. Run `task test:pg` against disposable databases for
 storage changes before merging. UI changes still need browser verification,
 operator-authored catalog changes need `task db:catalog:check`, and fake-agent
 tests do not prove live model behavior. Review this evidence in the PR.
+The fake sandbox fixture uses a 1 GiB test reserve so it can run on hosted
+runners; real sandbox provisioning keeps its 15 GiB default and its admission
+failure remains tested.
 
 The implementation and safety tests live in
 [release.cjs](../../.github/scripts/release.cjs) and
