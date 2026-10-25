@@ -2,6 +2,7 @@ import { spawn, execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statfsSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { writeJsonAtomic } from "./jsonio.ts";
 import { dirname, join } from "node:path";
 import { requireStore } from "./db/store.ts";
 import { SociotechnicError } from "./errors.ts";
@@ -86,6 +87,36 @@ export async function ownedSandboxes(): Promise<string[]> {
   const names = (await sbx(["ls", "--quiet"])).split(/\r?\n/).filter(Boolean);
   return names.filter((name) => name.startsWith(ownerPrefix()));
 }
+export type SandboxInventory = { limit: number; configurable: boolean; sandboxes: { name: string; initialized: boolean; job: { id: string; feature: string; status: Job["status"] } | null }[] };
+export async function sandboxInventory(): Promise<SandboxInventory> {
+  const names = await ownedSandboxes();
+  const jobs = (await requireStore().listJobs({})).map((row) => row.job).filter((job) => job.execution?.kind === "docker-sandbox");
+  return { limit: sandboxLimit(), configurable: process.env.SOCIOTECHNIC_SANDBOX_MAX_RETAINED === undefined, sandboxes: names.map((name) => {
+    const job = jobs.find((job) => sandboxName(job.id) === name);
+    return { name, initialized: job ? manifest(job.id).initialized : false, job: job ? { id: job.id, feature: job.feature, status: job.status } : null };
+  }) };
+}
+function parseSandboxLimit(value: unknown): number {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1 || value > 32) error("Sandbox slots must be an integer from 1 to 32");
+  return value;
+}
+function sandboxLimit(): number {
+  if (process.env.SOCIOTECHNIC_SANDBOX_MAX_RETAINED !== undefined) return setting("SOCIOTECHNIC_SANDBOX_MAX_RETAINED", 1, 1);
+  const path = join(sociotechnicHome(), ".sociotechnic/sandbox-settings.json");
+  if (!existsSync(path)) return 1;
+  const raw: unknown = JSON.parse(readFileSync(path, "utf8"));
+  return parseSandboxLimit(object(raw) ? raw.maxRetained : undefined);
+}
+export async function setSandboxLimit(value: unknown, expectedLimit: unknown): Promise<{ limit: number }> {
+  const limit = parseSandboxLimit(value);
+  const lock = await requireStore().lock(`sandbox-capacity:${ownerPrefix()}`);
+  try {
+    if (process.env.SOCIOTECHNIC_SANDBOX_MAX_RETAINED !== undefined) error("Sandbox slots are managed by SOCIOTECHNIC_SANDBOX_MAX_RETAINED");
+    if (expectedLimit !== sandboxLimit()) throw new SociotechnicError("stale-sandbox-settings", "Sandbox capacity changed. Refresh before saving again.");
+    writeJsonAtomic(join(sociotechnicHome(), ".sociotechnic/sandbox-settings.json"), { maxRetained: limit });
+    return { limit };
+  } finally { await lock.release(); }
+}
 function setting(name: string, fallback: number, min: number): number {
   const value = process.env[name] === undefined ? fallback : Number(process.env[name]);
   if (!Number.isSafeInteger(value) || value < min) error(`${name} must be an integer >= ${min}`);
@@ -126,7 +157,7 @@ export async function ensureSandbox(job: SandboxJob, signal?: AbortSignal): Prom
     if (!names.includes(name) && state.initialized) error("The run's sandbox is missing. It may contain unexported work; explicit recovery is required.");
     checkSandboxDisk();
     if (!names.includes(name)) {
-      if (names.length >= setting("SOCIOTECHNIC_SANDBOX_MAX_RETAINED", 1, 1)) error("Sandbox capacity reached. Finish or remove a retained Sociotechnic sandbox before starting another; stopped sandboxes also count.");
+      if (names.length >= sandboxLimit()) error("Sandbox capacity reached. Finish or remove a retained Sociotechnic sandbox before starting another; stopped sandboxes also count.");
       writeManifest(job.id, false);
       if (!existsSync(recipePath(job.id))) writeFileSync(recipePath(job.id), readFileSync(join(sociotechnicHome(), "sociotechnic/sandbox-kit/sbxenv.yaml")), { mode: 0o600 });
       const args = ["env", "create", ...environmentArgs(job), "--force"];

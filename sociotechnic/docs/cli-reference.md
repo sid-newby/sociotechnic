@@ -112,7 +112,8 @@ The standard order is: merge locally, test in your own checkout, accept, then pu
 
 - `merge` from `ready` or `needs-human` is local. Your checkout must have a clean tree and be on the base branch. Sociotechnic runs `git merge --no-ff` there, records `localMerge` in `job.json` and moves the job to `merged-local`. The worktree and job branch are kept so `rework` and `pr --push` still work. Nothing is pushed.
 - `accept` moves the job to `accepted`. It is your signature that you tested the change: in your checkout after a local merge, or in the worktree if you skipped the merge.
-- `rework` writes your note as a `[high]` finding in `round-N/review-human.md`, grants one `rounds` override and opens the next round on the next `run`. After a local merge, the next `merge` from `ready` brings only the new commits.
+- Before a plan exists, `rework` at a `retry-bound:plan` hold records planner feedback, grants one `retriesPerStep` override and returns to planning (`round: 0`). The console retries with a `planned` hold. A pinned plan is not changed this way.
+- After a build round exists, `rework` writes your note as a `[high]` finding in `round-N/review-human.md`, grants one `rounds` override and opens the next round on the next `run`. After a local merge, the next `merge` from `ready` brings only the new commits.
 - `override` raises one loop bound by one and resumes the job where it parked on the next `run`.
 - `pr` generates `pr.md` from the records. It never touches a remote.
 - `pr --push` runs only from `accepted`, only when you type `--push`. It pushes the job branch and opens the pull request with `gh`.
@@ -482,6 +483,8 @@ The console's server exposes these routes on its loopback port. API responses ar
 | `GET /assets/:name` | | Built JavaScript, CSS and local fonts |
 | `GET /api/health` | | `{ ok, sociotechnicHome, pid, startedAt }` |
 | `GET /api/meta` | | `{ sociotechnicHome, roles, agents: { ok, problems }, agentsMd }` |
+| `GET /api/sandboxes` | | This installation’s retained sandbox names, owning run/status, initialization state, slot limit and whether capacity is configurable |
+| `POST /api/sandboxes/capacity` | `{ limit: 1..32, expectedLimit }` | Persist the installation slot limit under the admission lock; stale values return 409; explicit environment settings remain authoritative |
 | `GET /api/jobs?project=<name\|path>&status=<s>` | | `{ source: "db", jobs: [ StatusLine & { feature, repo, branch, tier, updatedAt, driver, archived, worktreePresent } ] }`; both filters optional |
 | `GET /api/projects` | | `{ projects: [...] }`, same as the `projects` command |
 | `GET /api/db` | | the `db status` object |

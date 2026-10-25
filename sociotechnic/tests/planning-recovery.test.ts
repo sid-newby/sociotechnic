@@ -1,0 +1,61 @@
+import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { after, before, test } from "node:test";
+import { createMemoryStore, setStore } from "../src/db/store.ts";
+import { initializeAgentVersions } from "../src/agent-versions.ts";
+import { readJob } from "../src/job-store.ts";
+import { fakeRunner } from "../ui/runner.ts";
+import { startServer } from "../ui/server.ts";
+
+const root = mkdtempSync(join(tmpdir(), "sociotechnic-planning-recovery-"));
+const store = createMemoryStore();
+const oldHome = process.env.SOCIOTECHNIC_HOME;
+let server: Awaited<ReturnType<typeof startServer>>;
+let failures = 2;
+const calls: string[] = [];
+before(async () => {
+  process.env.SOCIOTECHNIC_HOME = join(root, "home"); mkdirSync(process.env.SOCIOTECHNIC_HOME);
+  setStore(store); await initializeAgentVersions(store, [], []);
+  const fake = fakeRunner(new URL("./fixtures/fake-agent.mjs", import.meta.url).pathname);
+  server = await startServer({ port: 0, runner: () => ({ name: "fake", async run(entry, role, ctx) {
+    calls.push(entry.agent);
+    if (failures-- > 0) return { outcome: "failed", usage: null, note: "Planner transport failed" };
+    return fake.run(entry, role, ctx);
+  } }) });
+});
+after(async () => { await server?.close(); await store.close(); setStore(null); if (oldHome === undefined) delete process.env.SOCIOTECHNIC_HOME; else process.env.SOCIOTECHNIC_HOME = oldHome; rmSync(root, { recursive: true, force: true }); });
+
+test("planning rework preserves history and pins, adds context, retries only the planner and holds before build", async () => {
+  const repo = join(root, "repo"); mkdirSync(repo);
+  const git = (...args: string[]) => execFileSync("git", args, { cwd: repo, stdio: "pipe" });
+  git("init", "-q", "-b", "main"); writeFileSync(join(repo, "README.md"), "# target\n");
+  git("add", "."); git("-c", "user.name=test", "-c", "user.email=test@example.invalid", "-c", "commit.gpgsign=false", "commit", "-qm", "seed");
+  const post = async (path: string, body: Record<string, unknown>) => fetch(new URL(path, server.url), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  const created = await post("/api/jobs", { repo, feature: "Keep the original planning request" });
+  assert.equal(created.status, 200); const { job: id } = await created.json();
+  assert.equal((await post(`/api/jobs/${id}/run`, { mode: "run", hold: ["planned"] })).status, 200);
+  await server.drivers.settled(id);
+  const before = await readJob(id, (job) => structuredClone(job));
+  assert.equal(before.status, "needs-human"); assert.equal(before.round, 0); assert.equal(before.dispatches.length, 2);
+  assert.equal((await post(`/api/jobs/${id}/accept`, {})).status, 409);
+  assert.equal((await post(`/api/jobs/${id}/rework`, { note: "  " })).status, 400);
+  const feedback = "Include runnable examples and keep the scope small.";
+  const revised = await post(`/api/jobs/${id}/rework`, { note: feedback });
+  assert.equal(revised.status, 200, await revised.clone().text()); assert.equal((await revised.json()).round, 0);
+  const pending = await readJob(id, (job) => structuredClone(job));
+  assert.equal(pending.status, "planning"); assert.equal(pending.rounds.length, 0); assert.equal(pending.plan, null);
+  assert.deepEqual(pending.agentConfigurations, before.agentConfigurations);
+  assert.deepEqual(pending.dispatches, before.dispatches);
+  assert.equal(pending.overrides.at(-1)?.bound, "retriesPerStep"); assert.equal(pending.human.at(-1)?.note, feedback);
+  assert.equal((await post(`/api/jobs/${id}/run`, { mode: "run", hold: ["planned"] })).status, 200);
+  await server.drivers.settled(id);
+  const result = await readJob(id, (job) => structuredClone(job));
+  assert.equal(result.status, "planned"); assert.equal(result.round, 0); assert.equal(result.rounds.length, 0);
+  assert.equal(result.dispatches.length, 3); assert.deepEqual(calls, Array(3).fill("sociotechnic-planner"));
+  const prompt = result.dispatches.at(-1)?.execution?.envelope?.prompt ?? "";
+  assert.match(prompt, /Keep the original planning request/); assert.ok(prompt.includes(feedback)); assert.match(prompt, /Planner transport failed/);
+  assert.equal((await post(`/api/jobs/${id}/rework`, { note: "Do not unpin a finished plan" })).status, 409);
+});

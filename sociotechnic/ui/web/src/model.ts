@@ -2,6 +2,7 @@ import { parseDesignPacket } from "../../../src/design-packet.ts";
 import type { DesignPacket } from "../../../src/design-packet.ts";
 import { tokenUsage } from "./token-usage.ts";
 import type { TokenUsage } from "./token-usage.ts";
+import type { SandboxInventory } from "../../../src/sandbox.ts";
 import type { Stage } from "../../../src/plan.ts";
 import type { Job, Status } from "../../../src/job.ts";
 import { sectionLines } from "../../../src/verdict.ts";
@@ -204,4 +205,18 @@ export function runTitle(feature: string, plan: { title: string } | null): strin
   const cut = flat.slice(0, 80);
   const space = cut.lastIndexOf(" ");
   return `${(space >= 24 ? cut.slice(0, space) : cut).replace(/[\s,:;(-]+$/, "")}…`;
+}
+
+export function parseSandboxInventory(value: unknown): SandboxInventory {
+  const raw = object(value);
+  if (typeof raw.limit !== "number" || !Number.isSafeInteger(raw.limit) || raw.limit < 1) throw new Error("Invalid sandbox capacity. Refresh to try again.");
+  if (typeof raw.configurable !== "boolean") throw new Error("Invalid sandbox capacity settings. Refresh to try again.");
+  return { limit: raw.limit, configurable: raw.configurable, sandboxes: list(raw.sandboxes).map((value) => {
+    const row = object(value);
+    if (typeof row.name !== "string" || typeof row.initialized !== "boolean") throw new Error("Invalid sandbox entry. Refresh to try again.");
+    if (row.job === null) return { name: row.name, initialized: row.initialized, job: null };
+    const job = object(row.job);
+    if (typeof job.id !== "string" || typeof job.feature !== "string") throw new Error("Invalid sandbox run. Refresh to try again.");
+    return { name: row.name, initialized: row.initialized, job: { id: job.id, feature: job.feature, status: status(job.status) } };
+  }) };
 }

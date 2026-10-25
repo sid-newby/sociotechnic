@@ -6,6 +6,7 @@ import { errorMessage, object, text } from "../model";
 import type { Detail } from "../model";
 import { VersionOverrides } from "./version-overrides";
 import { Button } from "./ui/button";
+import { SandboxCapacity, SandboxManager } from "./sandboxes";
 import { RepositoryBrowser } from "./repository-browser";
 import { parseExecution } from "../../../../src/execution.ts";
 
@@ -25,11 +26,12 @@ const gateCopy: Record<string, string> = {
 export function Actions({ detail, refresh, disabled }: { detail: Detail; refresh: () => void; disabled: boolean }) {
   const { job, driver } = detail;
   const sandboxed = job.execution?.kind === "docker-sandbox";
-  const actionLabel = (value: Action): string => value === "clean" && sandboxed ? "Remove sandbox and worktree" : labels[value];
+  const planningFailure = job.status === "needs-human" && job.round === 0 && !detail.plan && job.statusReason.startsWith("retry-bound:plan");
+  const actionLabel = (value: Action): string => value === "rework" && planningFailure ? "Retry planning with feedback" : value === "clean" && sandboxed ? "Remove sandbox and worktree" : labels[value];
   const [action, setAction] = useState<Action | null>(null);
   const [note, setNote] = useState("");
   const [tested, setTested] = useState(false);
-  const [bound, setBound] = useState("rounds");
+  const [bound, setBound] = useState(job.round === 0 ? "retriesPerStep" : "rounds");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState("");
@@ -57,7 +59,7 @@ export function Actions({ detail, refresh, disabled }: { detail: Detail; refresh
     if (action === "accept" && !tested) { setError(detail.localMerge ? "Confirm that you tested the merged change in your checkout before accepting." : "Confirm that you tested this worktree locally before accepting."); return; }
     if (action === "merge-remote" && !confirmedPr) { setError("Publish a pull request before merging on GitHub."); return; }
     const body = action === "merge-remote" ? { confirm: true, ...confirmedPr, method } : action === "pr" ? { push: true } : action === "merge" ? { confirm: true } : action === "override" ? { bound, note: note.trim() } : { note: note.trim() };
-    void run(action, body, action === "rework" ? "Rework recorded. Continue the run when you are ready." : `${actionLabel(action)} completed.`, action === "override" ? async () => { await request(`${jobUrl(job.id)}/run`, undefined, { mode: "run" }); } : undefined);
+    void run(action, body, action === "rework" ? (planningFailure ? "Planning feedback recorded. The planner will retry and stop for plan review." : "Rework recorded. Continue the run when you are ready.") : `${actionLabel(action)} completed.`, (action === "override" || (action === "rework" && planningFailure)) ? async () => { await request(`${jobUrl(job.id)}/run`, undefined, { mode: "run", ...(job.round === 0 ? { hold: ["planned"] } : {}) }); } : undefined);
   };
   const status = job.status;
   const blocked = disabled || busy || driver.running;
@@ -65,11 +67,13 @@ export function Actions({ detail, refresh, disabled }: { detail: Detail; refresh
   const continueRoute = detail.worktreePresent ? "run" : "resume";
   const recoveryLabel = "Recover worktree and continue";
   return <section className="human-actions" aria-labelledby="decision-title">
-    <div className="section-heading"><div><h2 id="decision-title">{human ? "Your next decision" : "Run controls"}</h2><p>{detail.pullRequest?.merge ? `Merged on GitHub at ${detail.pullRequest.merge.commit}. Your local checkout has not been synchronized by Sociotechnic.` : gateCopy[status] ?? (driver.running ? "Agents are working. You can pause after in-flight work finishes." : "Continue the workflow. Sociotechnic stops when it needs your decision.")}</p></div></div>
+    <div className="section-heading"><div><h2 id="decision-title">{human ? "Your next decision" : "Run controls"}</h2><p>{detail.pullRequest?.merge ? (sandboxed ? job.statusReason : `Merged on GitHub at ${detail.pullRequest.merge.commit}. Your local checkout has not been synchronized by Sociotechnic.`) : (planningFailure ? "Planning has not completed. Retry the planner with feedback, or stop this run. A validated plan must be reviewed before building." : gateCopy[status]) ?? (driver.running ? "Agents are working. You can pause after in-flight work finishes." : "Continue the workflow. Sociotechnic stops when it needs your decision.")}</p></div></div>
     <div className="action-row">
       {status === "planned" ? <Button disabled={blocked} onClick={() => void run(continueRoute, { mode: "run" }, "Run continued.")}>{detail.worktreePresent ? "Continue build" : recoveryLabel} <ArrowRight /></Button> : null}
-      {status === "ready" || (status === "needs-human" && (!detail.design || job.round > 0)) ? <><Button disabled={blocked} onClick={() => open("merge")}>Merge locally <ArrowRight /></Button><Button variant="outline" disabled={blocked} onClick={() => open("accept")}><Check /> Accept</Button><Button variant="outline" disabled={blocked} onClick={() => open("rework")}>Request rework</Button></> : null}
+      {status === "ready" || (status === "needs-human" && job.round > 0) ? <><Button disabled={blocked} onClick={() => open("merge")}>Merge locally <ArrowRight /></Button><Button variant="outline" disabled={blocked} onClick={() => open("accept")}><Check /> Accept</Button><Button variant="outline" disabled={blocked} onClick={() => open("rework")}>Request rework</Button></> : null}
       {status === "merged-local" ? <><Button disabled={blocked} onClick={() => open("accept")}><Check /> Accept</Button><Button variant="outline" disabled={blocked} onClick={() => open("rework")}>Request rework</Button></> : null}
+      {planningFailure ? <Button disabled={blocked} onClick={() => open("rework")}>Retry planning with feedback</Button> : null}
+      {sandboxed && ["needs-human", "stopped"].includes(status) ? <SandboxManager refresh={refresh} label="Manage sandboxes" disabled={blocked} /> : null}
       {status === "needs-human" ? <Button variant="outline" disabled={blocked} onClick={() => open("override")}>Override bound</Button> : null}
       {status === "accepted" ? <><Button disabled={blocked} onClick={() => open("pr")}>Push and open PR <ArrowRight /></Button><Button variant="outline" disabled={blocked} onClick={() => open("merge")}>{detail.localMerge ? "Finish locally" : "Merge locally"}</Button></> : null}
       {["accepted", "merged"].includes(status) && detail.pullRequest && !detail.pullRequest.merge ? <Button disabled={blocked} onClick={() => open("merge-remote")}>Merge PR on GitHub</Button> : null}
@@ -87,13 +91,13 @@ export function Actions({ detail, refresh, disabled }: { detail: Detail; refresh
         <Dialog.Title>{action === "merge" && detail.localMerge ? "Finish locally" : actionLabel(action)}</Dialog.Title>
         <Dialog.Description className="dialog-description">
           {action === "accept" ? (detail.localMerge ? `Accepting signs off on your testing of the merged change in ${job.repo}. Nothing is pushed until you publish or merge on GitHub.` : "Accepting signs off on your local testing. The branch stays local until you choose to publish or merge.") :
-            action === "merge-remote" ? `Merge the published PR into ${job.base.branch} on GitHub. This changes the remote repository. GitHub must permit the merge at the published commit. Local branches and worktrees are kept.` :
+            action === "merge-remote" ? `Merge the published PR into ${job.base.branch} on GitHub. This changes the remote repository. GitHub must permit the merge at the published commit. Local branches and worktrees are kept.${sandboxed ? " Its sandbox is removed after its clean commit is verified on the host." : ""}` :
             action === "pr" ? `Push ${job.branch} to origin and open a pull request into ${job.base.branch}. Nothing is merged.` :
               action === "merge" ? (status === "accepted" ? (detail.localMerge ? `${job.branch} is already merged into ${job.base.branch} in ${job.repo}. Finishing removes the worktree and job branch and closes the run. Nothing is pushed.` : `Merge ${job.branch} into ${job.base.branch} in ${job.repo}. The worktree and job branch are removed. Nothing is pushed.`) : `Merge ${job.branch} into ${job.base.branch} in ${job.repo} so you can test it in your own checkout. The worktree and job branch are kept for rework and publishing. Nothing is pushed.`) :
                 action === "clean" ? `Remove the worktree at ${job.worktree}.${sandboxed ? " Its Docker Sandbox will also be removed after verifying that its clean commit is preserved here. Uncommitted sandbox work blocks removal." : " Inspect any uncommitted work before continuing."}` :
                   action === "stop" ? "Stop this run and its active driver. Its plan, records, branch, and worktree are kept so you can reopen it." :
                     action === "reopen" ? "Reopen at the interrupted stage. Uncommitted changes are kept. You can then continue the run." :
-                      action === "override" ? "Raise one bound by one and continue the run. This decision and your note remain in its history." : "Your note becomes a blocking finding for the next builder. Be specific about what must change."}
+                      action === "override" ? "Raise one bound by one and continue the run. This decision and your note remain in its history." : (planningFailure ? "Send your note to a fresh planner with the original request and existing evidence. This grants one planning retry and stops at plan review. Earlier attempts and pinned agent settings are kept." : "Your note becomes a blocking finding for the next builder. Be specific about what must change.")}
         </Dialog.Description>
         {sandboxed && action === "stop" ? <p className="dialog-description">The sandbox will stop when the driver settles. Its files are kept for reopening.</p> : null}
         {sandboxed && action === "merge" && status === "accepted" ? <p className="dialog-description">Finishing also removes this run’s Docker Sandbox after verifying that its work is preserved locally.</p> : null}
@@ -181,7 +185,7 @@ export function NewRun({ onCreated, disabled = false }: { onCreated: (id: string
         {executionKind === "docker-sandbox" ? <div className="form-stack" role="group" aria-label="Sandbox resources">
           <div><label htmlFor="sandbox-cpus">CPUs</label><input ref={cpuRef} id="sandbox-cpus" type="number" min={1} max={32} step={1} value={cpus} disabled={busy} onChange={(event) => { setCpus(event.target.value); setError(null); }} aria-invalid={!!error && (!Number.isInteger(Number(cpus)) || Number(cpus) < 1 || Number(cpus) > 32)} aria-describedby={error ? "new-error" : undefined} /></div>
           <div><label htmlFor="sandbox-memory">Memory (GiB)</label><input ref={memoryRef} id="sandbox-memory" type="number" min={1} max={64} step={1} value={memoryGiB} disabled={busy} onChange={(event) => { setMemoryGiB(event.target.value); setError(null); }} aria-invalid={!!error && (!Number.isInteger(Number(memoryGiB)) || Number(memoryGiB) < 1 || Number(memoryGiB) > 64)} aria-describedby={error ? "new-error" : undefined} /></div>
-          <div><label htmlFor="sandbox-parallel">Agents running at once</label><input ref={parallelRef} id="sandbox-parallel" type="number" min={1} max={4} step={1} value={parallelAgents} disabled={busy} onChange={(event) => { setParallelAgents(event.target.value); setError(null); }} aria-invalid={!!error && (!Number.isInteger(Number(parallelAgents)) || Number(parallelAgents) < 1 || Number(parallelAgents) > 4)} aria-describedby={error ? "new-error" : "sandbox-retention"} /><p id="sandbox-retention" className="technical-description">Choose 1 to run agents in turn, or allow parallel reviews. Nested workers share these resources. Pausing keeps files; finishing locally removes the sandbox. Retained sandboxes count toward the installation’s capacity limit.</p></div>
+          <div><label htmlFor="sandbox-parallel">Agents running at once</label><input ref={parallelRef} id="sandbox-parallel" type="number" min={1} max={4} step={1} value={parallelAgents} disabled={busy} onChange={(event) => { setParallelAgents(event.target.value); setError(null); }} aria-invalid={!!error && (!Number.isInteger(Number(parallelAgents)) || Number(parallelAgents) < 1 || Number(parallelAgents) > 4)} aria-describedby={error ? "new-error" : "sandbox-retention"} /><p id="sandbox-retention" className="technical-description">Choose 1 to run agents in turn, or allow parallel reviews. Nested workers share these resources. Pausing keeps files; finishing locally removes the sandbox. Retained sandboxes count toward the installation’s capacity limit.</p><SandboxManager refresh={() => {}} label="Manage sandboxes" disabled={busy} /></div><div className="sandbox-capacity-field"><SandboxCapacity disabled={busy} /></div>
         </div> : null}
         {workflow === "comments" ? <div><label htmlFor="scope">Files or directories</label><textarea id="scope" disabled={busy} className="resize-none" ref={scopeRef} rows={3} value={scope} onChange={(event) => { setScope(event.target.value); setError(null); }} placeholder={"src/\nui/"} autoComplete="off" spellCheck={false} aria-invalid={!!error && !scope.trim()} aria-describedby={error ? "scope-help new-error" : "scope-help"} /><p id="scope-help" className="technical-description">One repository-relative path per line, or . for the whole repository. Tracked files only. Review exclusions and work packets before continuing.</p></div> : null}
         <div><label htmlFor="feature">{workflow === "comments" ? "Cleanup goal (optional)" : workflow === "repository" ? "What do you want to build?" : "What should change?"}</label><textarea className="resize-none" id="feature" disabled={busy} ref={featureRef} value={feature} onChange={(event) => { setFeature(event.target.value); setError(null); }} rows={workflow === "comments" ? 3 : 6} placeholder={workflow === "comments" ? "Remove narration and qualify retained docblocks against the code." : "Describe the change and how you will know it worked."} aria-invalid={!!error && workflow !== "comments" && !feature.trim()} aria-describedby={error ? "new-error" : undefined} /></div>

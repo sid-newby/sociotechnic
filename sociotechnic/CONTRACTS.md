@@ -72,6 +72,32 @@ are not a hard disk quota. Local execution and all historical jobs are unchanged
 
 See [Docker Sandbox setup and recovery](docs/docker-sandboxes.md).
 
+### Planning failure recovery and retained sandbox management
+
+A round-zero `retry-bound:plan` hold with no pinned plan can accept rework as
+planning feedback. Rework appends the human note, grants one `retriesPerStep`
+override, and returns to planning. A fresh planner receives the original feature,
+existing research and all planning feedback. Prior attempts and agent pins remain.
+No build/review round is created; pinned plans are not revised through this path.
+The console runs planning retries with a `planned` hold. Merge and acceptance
+require an existing build round; design/research failures retain their own bounds.
+
+`GET /api/sandboxes` lists only this Sociotechnic home's retained sandboxes,
+including runs from earlier sessions and archived runs, and the configured limit.
+Unknown ownership and interrupted initialization are visible but not removable by
+the console. The shared Sandboxes dialog uses the existing job stop and clean
+routes. Stop settles the driver; remove is available for stopped or merged runs
+and rechecks ownership, clean VM state and host commit preservation. Capacity is
+freed only after confirmed removal. Slot limits are installation preferences,
+separate from per-run worker limits.
+`POST /api/sandboxes/capacity` accepts an integer 1..32 and expected current limit,
+uses the admission lock and atomically writes `.sociotechnic/sandbox-settings.json`.
+Explicit environment configuration wins and is read-only in the UI. Lowering a
+limit never deletes existing VMs. Confirmed GitHub merges also remove their VM;
+cleanup errors preserve the merge record and expose a retry. No global pruning,
+silent discard, automatic capacity increase or deletion of another home's
+sandbox is permitted. Records remain in PostgreSQL. Failures stay visible with a retry path and no false success.
+
 ## 1. Layout
 
 ```
@@ -595,7 +621,7 @@ is what lets the driver skill read a result without reasoning about prose.
 | `finish <job> <dispatch-id> [--outcome ok\|failed\|timeout] [--usage <json>] [--note <text>]` | mark a dispatch finished, parse its record | `{ dispatch, outcome, parsed }` |
 | `status [<job>]` | one job's one-line truth, or all jobs | `{ job, status, statusReason, round, pending, overdue, nextAction }` or `{ jobs: [...] }` |
 | `override <job> <bound> <note...>` | append an override for `rounds\|dispatchesPerRound\|retriesPerStep`; needs-human -> the status before parking | `{ job, bound, effective }` |
-| `rework <job> <note...>` | from ready, needs-human or merged-local: write `round-N/review-human.md`, grant one `rounds` override, status building (next round opened on step) | `{ job, round }` |
+| `rework <job> <note...>` | failed planning with no pinned plan: record feedback, grant one retry, status planning and return round 0; after a build from ready, needs-human or merged-local: write `round-N/review-human.md`, grant one `rounds` override, status building | `{ job, round }` |
 | `accept <job> [note...]` | from merged-local (the standard order), ready or needs-human -> accepted | `{ job, status }` |
 | `pr <job> [--push]` | from ready, needs-human, merged-local, accepted or merged: generate `pr.md` from records (section 9). `--push`, from accepted only: push the job branch to the repo's GitHub remote and open the pull request with `gh` (section 18) | `{ record: "pr.md", title, pushed: false }` or `{ record: "pr.md", title, pushed: true, url, number }` |
 | `merge <job>` | from ready or needs-human: in the main checkout require a clean tree (tracked files) and current branch == base; `git merge --no-ff` with message `sociotechnic: <plan title> (<id>)`; record `localMerge`; keep the worktree and branch; status merged-local. Refused with `already-merged` when the branch head is already in the base. From accepted: merge the same way when no local merge is recorded, then remove the worktree, delete the branch, status merged. Never pushes. | `{ job, status, mergeCommit, merged, warnings? }` (`merged` is false when the accepted branch was already in the base; warnings when cleanup after a successful merge failed) |

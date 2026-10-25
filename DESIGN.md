@@ -464,3 +464,14 @@ data with an empty-state invitation or local snapshot. After reconnect, refresh
 committed state and resume the event stream. A surviving staged output is not
 shown as a completed record until the server commits it. Existing typography,
 layout, controls and human-gate meanings remain.
+
+### Sandbox capacity and planning recovery
+
+The shared Sandboxes dialog in `components/sandboxes.tsx` owns inventory and
+capacity editing for the header, New run and run controls. Reuse the existing
+Radix dialog, Button, error and live-status patterns. Total sandbox slots are an
+installation setting; workers, CPU and memory are per run. Removal names its run,
+focuses Cancel and stays open on failure. Retained rows are never an empty-state
+claim after a failed refresh. Planning feedback retries a fresh planner and holds
+at the resulting plan; build-only decisions require a build round. Existing
+CSS tokens remain canonical and no theme values change.

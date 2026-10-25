@@ -128,7 +128,13 @@ Model providers can receive repository content through ordinary model requests.
 ## Capacity, storage and cleanup
 
 The default admission limit is **one retained sandbox per Sociotechnic home**,
-including stopped VMs. A database lock serializes provisioning. Names include a
+including stopped VMs. **Sandbox slots** in New run or **Sandboxes** changes this
+installation-wide limit from 1 to 32; save it before launching a run. Workers per
+sandbox remains a separate per-run setting. The preference is stored atomically
+in `.sociotechnic/sandbox-settings.json`; an explicit server environment value
+overrides it and makes the UI setting read-only. Lowering the limit preserves
+existing VMs and blocks new admission until enough slots are available. A database
+lock serializes capacity changes and provisioning. Names include a
 hash of the canonical home and the job ID; unrelated sandboxes are not removed.
 New provisioning requires at least **15 GiB** of host free space. Operator knobs:
 
@@ -148,8 +154,28 @@ When the driver settles at a plan hold, pause, human gate or failure, it stops i
 owned VM to release compute. Stopping retains files. **Finish locally** after
 acceptance removes the VM, worktree and job branch. **Remove sandbox and worktree**
 on a stopped run verifies that the clean VM HEAD is preserved on the host before
-removal. Failed removal is reported and can be retried. Remote merging preserves
-local resources; clean them explicitly after verifying their disposition.
+removal. A GitHub merge confirmed through Sociotechnic also removes its VM after
+verifying that the clean VM commit is preserved locally. The main checkout and
+review worktree are kept; use the stopped/merged run cleanup for the worktree.
+If VM cleanup fails, the confirmed merge stays recorded and the cleanup failure
+remains visible. Retry removal through **Sandboxes** after preserving the work.
+Cached base images may remain; no global prune runs.
+
+## Manage retained sandboxes
+
+Open **Sandboxes** from the console header, New run or a sandbox run's decision
+panel. The dialog includes retained runs from previous sessions and archived runs,
+shows occupied slots and the configured limit, and offers Refresh after a failure.
+An active or unfinished run must be stopped before removal. Confirm **Stop run**,
+then **Remove sandbox and worktree** to free its slot. History stays in PostgreSQL.
+Dirty/unexported work blocks removal. Missing ownership or interrupted setup stays
+visible for manual inspection; the dialog never deletes another installation's VM.
+
+A failed plan has no build to accept or merge. **Retry planning with feedback**
+sends your note, the original request and existing evidence to a fresh planner,
+grants one recorded planning retry and stops at plan review. It preserves earlier
+attempts and pinned agent settings. An unsuitable pinned model or turn budget
+requires a new run with the intended release; feedback does not rewrite those pins.
 
 ## Recovery
 
@@ -205,3 +231,8 @@ access verification. The [trial verification](docker-sandbox-plan.md#verificatio
 records a successful Claude subscription build and Codex subscription read against
 the same real VM commit. This feature remains experimental; that trial does not
 establish enterprise isolation, portability to every machine or every MCP setup.
+
+Browser proof uses fixture data: [desktop removal refusal](../../assets/sandbox-recovery/desktop.png)
+and [narrow recovery dialog](../../assets/sandbox-recovery/narrow.png). Reproduce
+with `scripts/verify-sandbox-recovery.mjs` after building the console. These
+illustrate UI behavior; they do not establish live provider or VM execution.

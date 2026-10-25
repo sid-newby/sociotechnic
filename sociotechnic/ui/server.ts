@@ -19,6 +19,7 @@ import { session, readText, readJson, hasRecord } from "../src/record-store.ts";
 import * as engine from "../src/engine.ts";
 import { assertNoForeignDriver } from "../src/driverlock.ts";
 import { SociotechnicError } from "../src/errors.ts";
+import { sandboxInventory, setSandboxLimit } from "../src/sandbox.ts";
 import { parseExecution } from "../src/execution.ts";
 import type { Status } from "../src/job.ts";
 import { isBound, loadJob, STATUSES } from "../src/job.ts";
@@ -70,7 +71,7 @@ function sendJson(res: ServerResponse, status: number, value: unknown): void {
 function statusFor(err: unknown): { status: number; code: string; message: string } {
   if (err instanceof HttpError) return { status: err.status, code: err.code, message: err.message };
   if (err instanceof SociotechnicError) {
-    const status = ["illegal-transition", "driver-active", "locked", "stale-design", "stale-agent-version", "stale-job", "ownership-lost"].includes(err.code) ? 409 : err.code === "not-found" ? 404 : ["db", "db-unreachable", "db-disabled", "migration-required"].includes(err.code) ? 503 : 400;
+    const status = ["illegal-transition", "driver-active", "locked", "stale-design", "stale-agent-version", "stale-sandbox-settings", "stale-job", "ownership-lost"].includes(err.code) ? 409 : err.code === "not-found" ? 404 : ["db", "db-unreachable", "db-disabled", "migration-required"].includes(err.code) ? 503 : 400;
     return { status, code: err.code, message: err.message };
   }
   return { status: 500, code: "internal", message: err instanceof Error ? err.message : String(err) };
@@ -211,6 +212,8 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
   };
 
   const routes: Route[] = [
+    { method: "GET", pattern: /^\/api\/sandboxes$/, handler: () => sandboxInventory() },
+    { method: "POST", pattern: /^\/api\/sandboxes\/capacity$/, handler: ({ body }) => setSandboxLimit(body.limit, body.expectedLimit) },
     { method: "GET", pattern: /^\/api\/agent-versions$/, handler: () => agentVersionChoices() },
     { method: "GET", pattern: /^\/api\/agent-roster$/, handler: () => agentRoster() },
     { method: "POST", pattern: /^\/api\/agents$/, handler: async ({ body }) => {

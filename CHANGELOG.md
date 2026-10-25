@@ -3,6 +3,12 @@
 Release notes are committed before publication. [GitHub Releases](https://github.com/sid-newby/sociotechnic/releases) confirms which versions shipped.
 Dates on backfilled entries use America/Chicago. See the [release guide](sociotechnic/docs/releasing.md).
 
+## v0.3.0
+
+- Add retained-sandbox management and configurable installation sandbox slots, separate from workers per run.
+- Retry failed planning with human feedback and hold for plan review before building.
+- Remove preserved sandboxes after confirmed GitHub merges and report cleanup blockers without losing the merge record.
+
 ## v0.2.1
 
 - Fix Docker Sandbox startup for standard pinned agent configurations, preserving custom-agent and nested-worker role validation.

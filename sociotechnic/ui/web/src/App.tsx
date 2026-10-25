@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Archive, ArchiveRestore, ArrowUpRight, Copy, RefreshCw, Search, X, Layers, Radio, ChartNoAxesCombined, Users, LibraryBig } from "lucide-react";
 import { Tabs } from "radix-ui";
 import { DesignCeremony } from "./components/design";
+import { SandboxManager } from "./components/sandboxes";
 import { Actions, NewRun } from "./components/actions";
 import { Activity, Agents, Analysis } from "./components/technical";
 import { AgentLibrary } from "./components/agent-library";
@@ -64,7 +65,7 @@ export default function App() {
   const failed = dataUnavailable || (detail.kind === "ready" && !!detail.error);
   return <div className="console-shell">
     <a className="skip-link" href="#run-detail" onClick={(e) => { e.preventDefault(); document.getElementById("run-detail")?.focus(); }}>Skip to main content</a>
-    <header className="app-header"><div className="brand">sociotechnic {__APP_VERSION__}</div><div className="header-actions"><span className={`connection ${dataUnavailable ? "reconnecting" : connection}`} role="status"><i aria-hidden="true" />{dataUnavailable ? "Data unavailable" : connection === "live" ? "Live" : connection === "connecting" ? "Connecting…" : "Reconnecting…"}</span><Button variant="ghost" size="icon" onClick={refresh} aria-label="Refresh runs"><RefreshCw /></Button><Button variant={library ? "secondary" : "outline"} aria-pressed={library} onClick={() => updateLocation({ view: library ? null : "agents" })}><LibraryBig />Agent library</Button><NewRun disabled={dataUnavailable} onCreated={(id) => { selectJob(id); refresh(); }} /></div></header>
+    <header className="app-header"><div className="brand">sociotechnic {__APP_VERSION__}</div><div className="header-actions"><span className={`connection ${dataUnavailable ? "reconnecting" : connection}`} role="status"><i aria-hidden="true" />{dataUnavailable ? "Data unavailable" : connection === "live" ? "Live" : connection === "connecting" ? "Connecting…" : "Reconnecting…"}</span><Button variant="ghost" size="icon" onClick={refresh} aria-label="Refresh runs"><RefreshCw /></Button><Button variant={library ? "secondary" : "outline"} aria-pressed={library} onClick={() => updateLocation({ view: library ? null : "agents" })}><LibraryBig />Agent library</Button><SandboxManager refresh={refresh} disabled={dataUnavailable} /><NewRun disabled={dataUnavailable} onCreated={(id) => { selectJob(id); refresh(); }} /></div></header>
     <div className="workspace">
       <aside className="run-sidebar" aria-label="Run list">
         <div className="sidebar-heading"><h1>Runs</h1><span>{jobs.kind === "ready" ? `${visible.length} / ${all.length}` : "—"}</span></div>

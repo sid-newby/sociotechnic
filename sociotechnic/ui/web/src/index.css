@@ -253,3 +253,9 @@ input::placeholder, textarea::placeholder { color: var(--muted-foreground); opac
 @media (max-width: 600px) { .design-option-body { padding: 16px; } .design-preview { height: 280px; } .design-preview-dialog { inset: 12px; padding: 16px; } }
 
 .workflow-track:has(> li:nth-child(8)) { grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); }
+
+.sandbox-list { display: grid; gap: 14px; margin-top: 18px; }
+.sandbox-entry, .sandbox-confirm { padding: 16px; border: 1px solid var(--border); border-radius: 8px; min-width: 0; }
+.sandbox-entry p, .sandbox-confirm p { overflow-wrap: anywhere; margin-top: 6px; }
+.sandbox-entry h3, .sandbox-confirm h3 { font-size: 15px; font-weight: 650; }
+.sandbox-confirm { margin-top: 18px; }
