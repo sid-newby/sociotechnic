@@ -8,20 +8,23 @@ Every PR into `main` needs exactly one release label:
 
 | Label | Result after merge, when publication is enabled |
 | --- | --- |
-| `release:patch` | Fixes or small refinements: `v0.1.0` becomes `v0.1.1` |
+| `release:patch` | Fixes, maintenance or small refinements: `v0.1.0` becomes `v0.1.1` |
 | `release:minor` | Capabilities or workflow changes: `v0.1.1` becomes `v0.2.0` |
-| `release:none` | No release; use for documentation or internal changes that do not warrant an upgrade |
+| `release:none` | Explicitly opt out of a release |
 
 The maintainer chooses the label during review. Merging a patch/minor PR
 authorizes publication of that merged commit after the Release workflow's checks
-pass. This policy applies to releases of Sociotechnic itself; it does not change
+pass. Use patch for maintenance PRs when each merged update should receive a
+version; none is a deliberate exception. This policy applies to releases of Sociotechnic itself; it does not change
 the runtime agents' acceptance, publication or merge gates for target projects.
 
 The [CI workflow](../../.github/workflows/ci.yml) validates the label and runs
 the [shared checks](../../.github/workflows/checks.yml). After merge, the
-[Release workflow](../../.github/workflows/release.yml) verifies the exact merge
-commit again, then creates its version tag and GitHub release with generated
-notes. GitHub supplies the short-lived token; no personal access token, provider
+[Release workflow](../../.github/workflows/release.yml) starts on a push to
+protected `main`, resolves the PR whose merge commit exactly matches that pushed
+commit, and reads its release label. It verifies that commit again, then creates
+its version tag and GitHub release with generated notes. GitHub supplies the
+short-lived token; no personal access token, provider
 login or live development database belongs in Actions secrets.
 
 ### One-time GitHub setup
@@ -80,7 +83,10 @@ changes since the previous release, including skipped-release PRs.
 To stop future automatic publication, set `AUTOMATED_RELEASES` to `false` and
 cancel any in-progress Release run that has already entered publication. To
 defer an individual PR, choose `release:none` before merging. Direct pushes to
-`main` run CI but do not trigger a release. Major and prerelease versions use the
+`main` also start the release workflow, but skip publication when no exact merged
+PR matches the pushed commit. If a PR association is temporarily unavailable,
+the notice identifies the skipped decision; use the manual PR-number run after
+checking the association. Major and prerelease versions use the
 manual process below; automatic bumps support patch and minor versions only.
 
 ### What CI establishes
@@ -89,9 +95,10 @@ The shared workflow runs `task checks` on an isolated Linux runner: engine/web
 type checks, console build, agent validation, release automation tests, workflow
 tests and the production dependency audit. Actions are pinned to reviewed
 commit IDs. Contributor jobs have read-only repository access. The release
-workflow uses `pull_request_target` only after a PR has merged, reads its
-automation from the trusted workflow commit, and gives write access only to a
-separate publication job. No unmerged contributor code executes with that token.
+workflow uses `push` on protected `main`, reads its automation from the trusted
+workflow commit, and gives write access only to a separate publication job.
+It does not require a `pull_request_target` policy exception. No unmerged
+contributor code executes with the publication token.
 
 PostgreSQL tests skip without `SOCIOTECHNIC_TEST_DATABASE_URL`; CI does not prove
 storage or migration safety. Run `task test:pg` against disposable databases for

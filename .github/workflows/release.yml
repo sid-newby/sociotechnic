@@ -1,9 +1,8 @@
 name: Release
 
 on:
-  pull_request_target:
+  push:
     branches: [main]
-    types: [closed]
   workflow_dispatch:
     inputs:
       pr_number:
@@ -24,7 +23,6 @@ concurrency:
 jobs:
   prepare:
     name: Read release decision
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -39,12 +37,19 @@ jobs:
       - uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         id: prepare
         env:
-          PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}
+          PR_NUMBER: ${{ inputs.pr_number }}
           AUTOMATED_RELEASES: ${{ vars.AUTOMATED_RELEASES }}
         with:
           script: |
-            const { prepare } = require('./.github/scripts/release.cjs');
-            const decision = await prepare(github, context.repo, process.env.PR_NUMBER);
+            const { prepare, preparePush } = require('./.github/scripts/release.cjs');
+            const decision = context.eventName === 'push'
+              ? await preparePush(github, context.repo, context.sha)
+              : await prepare(github, context.repo, process.env.PR_NUMBER);
+            if (!decision) {
+              core.setOutput('bump', 'none');
+              core.notice('No merged PR matches the pushed main commit; no release requested.');
+              return;
+            }
             for (const [name, value] of Object.entries(decision)) core.setOutput(name, value);
             core.notice(`PR #${decision.pr}: ${decision.bump}, commit ${decision.sha}.`);
             if (decision.bump !== 'none' && process.env.AUTOMATED_RELEASES !== 'true') {

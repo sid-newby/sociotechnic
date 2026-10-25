@@ -14,8 +14,8 @@ Call out migrations, changed permissions and human gates. -->
 
 ## Release
 
-<!-- Apply exactly one PR label: release:patch (fix/refinement), release:minor
-(capability/workflow change), or release:none (no release needed).
+<!-- Apply exactly one PR label: release:patch (fix/maintenance/refinement),
+release:minor (capability/workflow change), or release:none (explicit opt-out).
 With automation enabled, merging patch/minor authorizes a release after checks.
 Use a clear title for generated release notes; link any upgrade instructions
 from the PR description and affected technical documentation. -->

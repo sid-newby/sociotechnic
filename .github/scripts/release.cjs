@@ -43,6 +43,20 @@ async function prepare(github, repo, prNumber) {
   return { pr: String(pr.number), sha: pr.merge_commit_sha, bump: releaseBump(pr.labels) };
 }
 
+async function preparePush(github, repo, sha) {
+  if (!/^[a-f0-9]{40}$/.test(sha)) throw new Error('Missing pushed commit SHA.');
+  const associated = await github.paginate(github.rest.repos.listPullRequestsAssociatedWithCommit, {
+    ...repo, commit_sha: sha, per_page: 100,
+  });
+  const matches = associated.filter(pr => pr.merged_at && pr.merge_commit_sha === sha
+    && pr.base.ref === 'main' && pr.base.repo.full_name === `${repo.owner}/${repo.repo}`);
+  if (matches.length === 0) return null;
+  if (matches.length !== 1) throw new Error('Multiple merged PRs match this commit. Inspect before releasing.');
+  const decision = await prepare(github, repo, matches[0].number);
+  if (decision.sha !== sha) throw new Error('Merged PR no longer matches the pushed commit.');
+  return decision;
+}
+
 async function publish(github, repo, tested) {
   const current = await prepare(github, repo, tested.pr);
   if (current.sha !== tested.sha || current.bump !== tested.bump || current.bump === 'none') {
@@ -87,4 +101,4 @@ async function publish(github, repo, tested) {
   return { created: true, url: release.html_url };
 }
 
-module.exports = { releaseBump, nextTag, prepare, publish };
+module.exports = { releaseBump, nextTag, prepare, preparePush, publish };
