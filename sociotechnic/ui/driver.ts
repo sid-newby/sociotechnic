@@ -1,4 +1,4 @@
-import { runInteractiveDesign, stopLocalDesignPreviews } from "./design-session-runner.ts";
+import { runInteractiveDesign } from "./design-session-runner.ts";
 import type { DesignQuery } from "./design-session-runner.ts";
 import { versionRole } from "../src/agent-versions.ts";
 
@@ -20,7 +20,7 @@ import { removeSandboxDispatch, stopSandbox } from "../src/sandbox.ts";
 import { nowIso } from "../src/time.ts";
 import type { Runner } from "./runner.ts";
 
-export type DriverMode = "run" | "step";
+export type DriverMode = "run" | "step" | "conversation";
 export type LogEntry = { at: string; level: "info" | "warn" | "error"; text: string };
 export type ActiveDispatch = { dispatchId: string; agent: string; startedAt: string; deadlineAt: string; lastActivity: string | null };
 
@@ -169,6 +169,12 @@ export function createDriverRegistry(options: DriverOptions): DriverRegistry {
 
   const loop = async (id: string, slot: Slot, mode: DriverMode, hold: readonly Status[]): Promise<void> => {
     try {
+      if (mode === "conversation") {
+        const design = await readJob(id, (job) => job.designSession);
+        if (!design) throw new Error("This run has no design conversation");
+        await runInteractiveDesign({ id, token: slot.token, signal: slot.abort.signal, onActivity: (line) => activity(id, slot, design.id, line), query: options.designQuery });
+        return;
+      }
       const runner = options.runner();
       for (;;) {
         if (slot.pauseRequested) {
@@ -287,7 +293,6 @@ export function createDriverRegistry(options: DriverOptions): DriverRegistry {
         slot.abort.abort();
       }
       await Promise.all([...slots.values()].map((s) => s.loop));
-      for (const id of slots.keys()) await stopLocalDesignPreviews(id);
     },
   };
 }

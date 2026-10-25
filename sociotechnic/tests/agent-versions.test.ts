@@ -100,7 +100,7 @@ test("pinned Claude execution uses frozen model/tools/instructions and retains i
 });
 
 test("version API validates overrides before run creation, rejects stale publication and keeps origin checks", async () => {
-  const server = await startServer({ port: 0 });
+  const server = await startServer({ port: 0, catalogBundles: [] });
   const post = async (path: string, body: unknown, origin?: string) => fetch(new URL(path, server.url), { method: "POST", headers: { "content-type": "application/json", ...(origin ? { origin } : {}) }, body: JSON.stringify(body) });
   try {
     const response = await fetch(new URL(`/api/agents/${planner.name}/versions`, server.url)); assert.equal(response.status, 200);

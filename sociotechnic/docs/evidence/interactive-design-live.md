@@ -1,5 +1,11 @@
 # Live interactive design verification
 
+This records the superseded v1.1 command-adapter implementation. It proves the
+observations below, not that native /impeccable ran end to end. The current
+[native Claude chat evidence](native-design-chat.md) replaces this as the
+implementation's live verification record. The adapter sessions were interrupted
+after the user clarified the required native command behavior.
+
 Started on 2026-10-25 with the user's authorization for live testing without a
 token budget. This evidence uses the real configured Claude provider, a separate
 PostgreSQL database and a disposable target repository. No fixture SDK or fake
@@ -24,7 +30,7 @@ Observed:
 
 The [interview screenshot](interactive-design/live-question.png) contains real
 provider output. No human answer has been supplied by the verification harness.
-The session remains available for the user to answer. Native preview generation,
+The historical session was interrupted. Native preview generation,
 same-session revision and final approval are not yet claimed as live evidence;
 their fixture/native-subprocess coverage is described in
 [integration verification](interactive-design.md).

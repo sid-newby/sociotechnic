@@ -31,7 +31,7 @@ export type Round = {
   gate: { pass: boolean; head: string; blockers: string[]; flags: string[]; changedFiles: number; computedAt: string } | null;
 };
 export type DesignView = { state: "generating"; phase: string; iteration: number } | { state: "waiting" | "approved"; packet: DesignPacket; digest: string; iteration: number; optionId: string; stack: string };
-export type InteractiveDesignView = { id: string; state: string; streamingText: string; messages: DesignMessage[]; question: DesignQuestion | null; previewUrl: string | null; error: string | null; fingerprint: string; files: string[]; skillVersion: string | null; usage: { turns: number; tokens: number } };
+export type InteractiveDesignView = { id: string; state: string; needsMigration: boolean; streamingText: string; messages: DesignMessage[]; question: DesignQuestion | null; previewUrl: string | null; error: string | null; fingerprint: string; files: string[]; skillVersion: string | null; usage: { turns: number; tokens: number; reported: boolean } };
 export type Detail = {
   interactive: InteractiveDesignView | null;
   design: DesignView | null;
@@ -148,9 +148,9 @@ function parseInteractive(value: unknown): InteractiveDesignView | null {
     const url = new URL(d.previewUrl);
     if (url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname) && !url.username && !url.password) preview = url.href;
   } catch { /* Invalid preview URLs never become navigation targets. */ }
-  return { id: text(d.id), state: text(d.state), streamingText: text(d.streamingText), fingerprint: text(d.fingerprint), files: strings(d.files), previewUrl: preview, error: optionalText(d.error), skillVersion: skill ? text(skill.version) : null,
-    usage: { turns: count(usage.turns), tokens: count(usage.input) + count(usage.output) + count(usage.cacheRead) + count(usage.cacheWrite) },
-    messages: list(d.messages).map((v) => { const m = object(v); if (m.role !== "user" && m.role !== "assistant" && m.role !== "tool") throw new Error("Invalid design message role"); return { id: text(m.id), role: m.role, text: text(m.text), at: text(m.at) }; }),
+  return { id: text(d.id), state: text(d.state), needsMigration: d.needsMigration === true, streamingText: text(d.streamingText), fingerprint: text(d.fingerprint), files: strings(d.files), previewUrl: preview, error: optionalText(d.error), skillVersion: skill ? text(skill.version) : null,
+    usage: { turns: count(usage.turns), tokens: count(usage.input) + count(usage.output) + count(usage.cacheRead) + count(usage.cacheWrite), reported: usage.reported === true || usage.reported !== false && count(usage.turns) > 0 },
+    messages: list(d.messages).map((v) => { const m = object(v); if (m.role !== "user" && m.role !== "assistant" && m.role !== "tool") throw new Error("Invalid design message role"); return { id: text(m.id), role: m.role, text: text(m.text), at: text(m.at), images: list(m.images ?? []).map((value) => { const image = object(value), mediaType = image.mediaType; if (mediaType !== "image/png" && mediaType !== "image/jpeg" && mediaType !== "image/gif" && mediaType !== "image/webp") throw new Error("Invalid conversation image"); return { name: text(image.name), record: text(image.record), sha256: text(image.sha256), mediaType }; }) }; }),
     question: q ? { id: text(q.id), questions: list(q.questions).map((v) => { const item = object(v); return { question: text(item.question), header: text(item.header), multiSelect: item.multiSelect === true, options: list(item.options).map((o) => { const opt = object(o); return { label: text(opt.label), description: text(opt.description) }; }) }; }) } : null };
 }
 

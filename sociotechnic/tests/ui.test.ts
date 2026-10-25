@@ -49,7 +49,7 @@ before(async () => {
   process.env.SOCIOTECHNIC_HOME = home;
   process.env.SOCIOTECHNIC_DATABASE_URL = database ?? "off";
   const { startServer } = await import("../ui/server.ts");
-  server = await startServer({ port: 0 });
+  server = await startServer({ port: 0, catalogBundles: [] });
 });
 
 after(async () => {
@@ -96,7 +96,7 @@ test("archive is reversible, persistent console metadata and preserves job recor
     assert.equal((await list()).find((job) => job.id === id)?.archived, true);
     const event = await reader.read();
     assert.match(new TextDecoder().decode(event.value), /event: jobs/);
-    const restarted = await startServer({ port: 0 });
+    const restarted = await startServer({ port: 0, catalogBundles: [] });
     try {
       const jobs = (await (await fetch(new URL("/api/jobs", restarted.url))).json()).jobs as Json[];
       assert.equal(jobs.find((job) => job.id === id)?.archived, true);

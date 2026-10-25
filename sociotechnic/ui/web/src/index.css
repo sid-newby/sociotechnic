@@ -265,6 +265,13 @@ input::placeholder, textarea::placeholder { color: var(--muted-foreground); opac
 .design-message { padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius); min-width: 0; }
 .design-message-user { background: var(--muted); margin-left: clamp(0rem, 3vw, 3rem); }
 .design-message .record-content { padding: .5rem 0 0; }
+.design-image-drafts { display: flex; flex-wrap: wrap; gap: .75rem; list-style: none; padding: 0; margin: 0; }
+.design-image-drafts li { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; align-items: center; gap: .5rem; border: 1px solid var(--border); border-radius: var(--radius); padding: .5rem; max-width: 100%; min-width: 0; }
+.design-image-drafts img { object-fit: contain; background: var(--muted); border-radius: calc(var(--radius) / 2); }
+.design-image-drafts span { max-width: 12rem; overflow-wrap: anywhere; }
+.design-message-images { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: .75rem; }
+.design-message-images a { display: block; max-width: min(100%, 32rem); }
+.design-message-images img { display: block; max-width: 100%; max-height: 24rem; object-fit: contain; border: 1px solid var(--border); border-radius: var(--radius); }
 .design-question fieldset { min-width: 0; border: 1px solid var(--border); padding: 1rem; border-radius: var(--radius); }
 .design-question legend { padding-inline: .25rem; font-weight: 600; }
 .design-answer-options { display: grid; gap: .75rem; margin-block: .75rem 1rem; }

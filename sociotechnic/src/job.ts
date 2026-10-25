@@ -38,7 +38,7 @@ export type Status = (typeof STATUSES)[number];
 export type Step = "plan" | "research" | "design" | "build" | "review" | "approve";
 export type Bound = keyof Caps;
 export type Outcome = "ok" | "failed" | "timeout";
-export type HumanAction = "accept" | "rework" | "stop" | "override" | "merge" | "merge-remote" | "reopen" | "pr-push" | "design-answer" | "design-select" | "design-revise" | "design-approve";
+export type HumanAction = "accept" | "rework" | "stop" | "override" | "merge" | "merge-remote" | "reopen" | "pr-push" | "design-answer" | "design-select" | "design-revise" | "design-approve" | "design-migrate" | "design-handoff";
 
 export const BOUNDS: readonly Bound[] = ["rounds", "dispatchesPerRound", "retriesPerStep"];
 export const HUMAN_REVIEW_KEY = "review-human";
@@ -93,6 +93,7 @@ export type Dispatch = {
 };
 
 export type Job = {
+  designReleaseMigration?: { session: string; from: string; to: string; at: string };
   execution?: Execution;
   performanceHistory?: PerformanceHistoryEntry[];
   archived?: boolean;

@@ -211,7 +211,7 @@ flowchart LR
 
 | Command | Does | Output |
 | --- | --- | --- |
-| `ui --ensure [--port <n>] [--open] [--no-open]` | Makes the console available without blocking. When `/api/health` on the port already answers it returns at once. Otherwise it spawns the server detached (`node <cli> ui --port <n> --no-open`) and waits up to 5 s for health. It opens the URL only when it just started the server or when `--open` is given, never with `--no-open`, so a run never spawns a browser tab per command. `task ui` runs it | `{ url, port, pid, sociotechnicHome, running, started, opened }` |
+| `ui --ensure [--port <n>] [--open] [--no-open]` | Makes the console available without blocking. When `/api/health` on the port already answers it returns at once. Otherwise it spawns the server detached (`node <cli> ui --port <n> --no-open`) and waits up to 15 s for health after catalog initialization. It opens the URL only when it just started the server or when `--open` is given, never with `--no-open`, so a run never spawns a browser tab per command. `task ui` runs it | `{ url, port, pid, sociotechnicHome, running, started, opened }` |
 | `ui --stop [--port <n>]` | Sends SIGTERM to the pid that `/api/health` reports (or the pid file) and waits up to 5 s. `task ui:stop` runs it | `{ stopped, pid }` |
 
 Two files in `.sociotechnic/` belong to the daemon.
@@ -566,10 +566,12 @@ console conversation; the native Impeccable skill owns its questions and preview
 page. Docker design is refused before designer inference.
 
 The conversation routes under `/api/jobs/:id/design-session/` are `messages`,
-`answer`, `interrupt`, `resume` and `approve`. Message IDs deduplicate sends;
-question IDs and approval digests reject stale responses. Approval starts final
-planning with the normal `planned` hold. Saved design artifacts are available
-through `/api/jobs/:id/design-artifacts/<encoded-record-path>`.
+`answer`, `interrupt`, `resume`, `handoff` and `migrate`. Messages support native
+image blocks and IDs that deduplicate retries. HANDOFF.md and its artifact
+snapshot return to the caller. Initial planning retains the normal `planned`
+hold; subsequent chat can continue without running builders. Artifacts are available
+through `/api/jobs/:id/design-artifacts/<encoded-record-path>`, and conversation
+images through `/api/jobs/:id/design-images/<encoded-record-path>`.
 
 The old `design-respond` command and `design-response` HTTP route are retired
 and return a visible error. Historical packet records and approved designs remain

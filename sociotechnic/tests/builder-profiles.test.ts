@@ -123,7 +123,7 @@ for (const tier of ["EASY", "COMPLEX"] as const) test(`${tier} uses the same ide
 });
 
 test("the actual API exposes compatible versions without offering a redundant identity", async () => {
-  const server = await startServer({ port: 0 });
+  const server = await startServer({ port: 0, catalogBundles: [] });
   try {
     const choices = await (await fetch(new URL("/api/agent-versions", server.url))).json();
     const choice = choices.agents.find((entry: { name: string }) => entry.name === name);

@@ -225,7 +225,7 @@ function planPrompt(job: Job, retryReason: string | null): string {
     feedback: job.human.filter((entry) => entry.action === "rework").map((entry) => entry.note),
     repo: job.repo,
     design: approvedDesignBrief(job),
-    allowDesign: job.design === undefined && job.designSession === undefined,
+    allowDesign: job.design === undefined,
     planPath: abs(job, "plan.json"),
     planMdPath: abs(job, "plan.md"),
     researchFiles: job.research.done ? researchFiles(job) : [],
@@ -244,7 +244,7 @@ function dispatchPlanner(job: Job, now: string): StepResult {
 
 async function stepPlanning(job: Job, now: string): Promise<StepResult | null> {
   const latest = latestDispatch(job, (d) => d.step === "plan");
-  if (latest === null || job.designSession?.state === "approved" && latest.parsed?.value === "needs-design" || (job.design?.state === "approved" && job.dispatches.indexOf(latest) < job.dispatches.indexOf(latestDispatch(job, (d) => d.step === "design") ?? latest))) return dispatchPlanner(job, now);
+  if (latest === null || job.designSession?.approval && latest.parsed?.value === "needs-design" || (job.design?.state === "approved" && job.dispatches.indexOf(latest) < job.dispatches.indexOf(latestDispatch(job, (d) => d.step === "design") ?? latest))) return dispatchPlanner(job, now);
   const retry = (reason: string): StepResult => retryAll(job, [{ latest, reason, prompt: (r) => planPrompt(job, r) }], now);
   const failure = failureOf(latest);
   if (failure !== null) return retry(failure);
@@ -280,9 +280,14 @@ async function stepPlanning(job: Job, now: string): Promise<StepResult | null> {
 
 export function startDesign(job: Job, reason: string, now = nowIso()): void {
   jobfns.assertStatus(job, ["new", "planning"], "start design");
-  if (job.design || job.designSession || job.plan || job.round !== 0) throw new IllegalTransition("Design must precede the pinned implementation plan");
+  if (job.design || job.plan || job.round !== 0) throw new IllegalTransition("A planner assignment must precede the pinned implementation plan");
   if (job.execution?.kind === "docker-sandbox") throw new SociotechnicError("bad-design", "Interactive design supports Local execution only; no model was started");
-  job.designSession = newInteractiveDesign(reason);
+  if (job.designSession) {
+    const d = job.designSession, id = crypto.randomUUID();
+    d.reason = reason; d.state = "ready"; d.approval = null; d.error = null;
+    d.input = { id, text: `The planner requests additional design work:\n${reason}` };
+    d.messages.push({ id, role: "tool", text: d.input.text, at: now });
+  } else job.designSession = newInteractiveDesign(reason);
   transition(job, "designing", reason, now);
 }
 
@@ -290,16 +295,17 @@ export async function newDesignJob(repo: string, feature: string, base: string |
   if (execution?.kind === "docker-sandbox") throw new SociotechnicError("bad-design", "Interactive design supports Local execution only; no model was started");
   const out = await newJob(repo, feature, base, undefined, undefined, pinned, execution);
   const job = jobfns.loadJob(out.job);
-  startDesign(job, "The user requested a design ceremony");
+  startDesign(job, "The user requested a design-agent conversation. Follow their brief and prepare the Markdown work product for the caller.");
   saveJob(job);
   return out;
 }
 
 function approvedDesignBrief(job: Job, revalidate = true): string | undefined {
   if (job.designSession) {
-    if (job.designSession.state !== "approved") return undefined;
+    if (!job.designSession.approval) return undefined;
     const digest = revalidate ? verifyInteractiveDesign(job) : job.designSession.approval?.digest;
-    return `Required plan.designDigest: ${digest}\nApproved interactive design: ${abs(job, "design/approval.json")}\nRead the approved artifacts: ${JSON.stringify(job.designSession.approval?.files)}\n${designStarterBrief(job)}\nSkill version: ${job.designSession.skill?.version}. Preserve the human-approved design, product truth and stack decision. Include adoption of these documents and preview verification in implementation scope.`;
+    const handoff = job.designSession.approval;
+    return `Required plan.designDigest: ${digest}\nDesign agent work product: ${handoff.document ? abs(job, handoff.document) : abs(job, "design/approval.json")}\nReturned artifacts: ${JSON.stringify(handoff.files)}\n${designStarterBrief(job)}\nRead the Markdown work product and decide the next step. Use its samples and prototypes with builders where useful; request a specific follow-up design assignment when needed. Preserve the human's product facts and decisions. The handoff is work for you to assess, not an instruction to follow a fixed ceremony.`;
   }
   if (!job.design || job.design.state !== "approved") return undefined;
   const digest = revalidate ? requireDesignApproval(job) : designDigest(job.design);

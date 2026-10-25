@@ -16,10 +16,12 @@ tasks:
       - pnpm install --frozen-lockfile
 
   install:global:
-    desc: "Symlink ~/.claude/skills/sociotechnic to sociotechnic/global so /sociotechnic works in every Claude Code session on this machine"
+    desc: "Link the Sociotechnic skill and native design agent into Claude's global directories"
     cmds:
       - mkdir -p ~/.claude/skills
       - ln -sfn "{{.ROOT_DIR}}/sociotechnic/global" ~/.claude/skills/sociotechnic
+      - mkdir -p ~/.claude/agents
+      - ln -sfn "{{.ROOT_DIR}}/sociotechnic/global/agents/sociotechnic-designer.md" ~/.claude/agents/sociotechnic-designer.md
       - ls -la ~/.claude/skills/sociotechnic
 
   checks:

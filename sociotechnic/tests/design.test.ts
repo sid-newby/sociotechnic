@@ -1,16 +1,19 @@
 import assert from "node:assert/strict";
-import { execFileSync, spawn } from "node:child_process";
-import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { createHash, randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { after, before, test } from "node:test";
 import { fileURLToPath } from "node:url";
+import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import type { Job } from "../src/job.ts";
 import { createMemoryStore, createPgStore, setStore } from "../src/db/store.ts";
-import { initializeAgentVersions } from "../src/agent-versions.ts";
-import { mutateJob, readJob } from "../src/job-store.ts";
+import { initializeAgentVersions, pinAgentVersions } from "../src/agent-versions.ts";
+import { createJobOperation, mutateJob, readJob } from "../src/job-store.ts";
+import { newDesignJob, startDesign } from "../src/engine.ts";
+import { parsePlanText } from "../src/plan.ts";
 import { readJson, writeTextAtomic } from "../src/record-store.ts";
 import { jobDir } from "../src/paths.ts";
 import { testDatabase } from "./pg-fixture.ts";
@@ -19,8 +22,8 @@ import type { ServerHandle } from "../ui/server.ts";
 import { fakeRunner } from "../ui/runner.ts";
 import { fixtureDesignQuery } from "./fixtures/interactive-design.ts";
 import { designWriteAllowed, parseDesignPacket, scaffoldFingerprint } from "../src/design.ts";
-import { interactiveFingerprint, previewUrl, newInteractiveDesign } from "../src/design-session.ts";
-import { installationDigest, nativeArguments, pinImpeccable, runNative } from "../ui/impeccable-runtime.ts";
+import { approveInteractiveDesign, interactiveFingerprint, previewUrl, newInteractiveDesign } from "../src/design-session.ts";
+import { nativeImpeccable, runNative } from "../ui/impeccable.ts";
 import type { DesignQuery } from "../ui/design-session-runner.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -41,14 +44,18 @@ let calls = 0;
 let injected: DesignQuery | undefined;
 const query: DesignQuery = async function* (args) { calls++; yield* (injected ?? fixtureDesignQuery)(args); };
 const start = () => startServer({ port: 0, runner: () => fakeRunner(join(here, "fixtures/fake-agent.mjs")), designQuery: query });
-before(async () => { process.env.SOCIOTECHNIC_HOME = home; process.env.SOCIOTECHNIC_IMPECCABLE_SKILL = skill; setStore(store); await initializeAgentVersions(store); server = await start(); });
+before(async () => { process.env.SOCIOTECHNIC_HOME = home; process.env.SOCIOTECHNIC_IMPECCABLE_SKILL = skill; setStore(store); await initializeAgentVersions(store, [], []); server = await start(); });
 after(async () => { await server.close(); await store.close(); setStore(undefined); for (const [key, value] of [["SOCIOTECHNIC_HOME", old.home], ["SOCIOTECHNIC_IMPECCABLE_SKILL", old.skill]]) if (typeof key === "string") { if (value === undefined) delete process.env[key]; else process.env[key] = value; } rmSync(root, { recursive: true, force: true }); });
 let sequence = 0;
 function git(cwd: string, ...args: string[]): string { return execFileSync("git", ["-c", "user.name=Design test", "-c", "user.email=test@example.invalid", "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", ...args], { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim(); }
 async function call(path: string, body?: unknown) { const response = await fetch(new URL(path, server.url), body === undefined ? {} : { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }); return { status: response.status, data: await response.json() }; }
-async function create() {
+async function create(legacy = false) {
   const repo = join(root, `repo-${++sequence}`); mkdirSync(repo); git(repo, "init", "-q", "-b", "main");
   writeFileSync(join(repo, "README.md"), "# Research target\n"); git(repo, "add", "."); git(repo, "commit", "-qm", "init");
+  if (legacy) {
+    const pinned = await pinAgentVersions({ "sociotechnic-designer": "1.0.0" });
+    return (await createJobOperation(() => newDesignJob(repo, "Design a research workspace", null, pinned))).job;
+  }
   const result = await call("/api/jobs", { repo, feature: "Design a research workspace", workflow: "design" }); assert.equal(result.status, 200, JSON.stringify(result.data));
   return String(result.data.job);
 }
@@ -67,6 +74,7 @@ async function completeInterview(id: string) {
 
 test("native questions reach the human, waiting does no work, and replies retain the session", async () => {
   const id = await create(), before = calls;
+  assert.equal((await readJob(id, (j) => j)).agentVersions?.["sociotechnic-designer"], "1.2.0", "Console startup upgrades a baseline-only catalog before new-run selection");
   await call(`/api/jobs/${id}/run`, {});
   const waiting = await until(id, (j) => !!j.designSession?.question), q = waiting.designSession?.question; assert.ok(q);
   assert.equal(waiting.dispatches.length, 0); assert.equal(waiting.plan, null);
@@ -87,6 +95,29 @@ test("native questions reach the human, waiting does no work, and replies retain
   assert.equal(j.designSession?.usage.input, 20); assert.equal(j.designSession?.usage.output, 40);
 });
 
+test("an unused retired designer migrates in place with atomic release provenance", async () => {
+  const id = await create(true), before = calls;
+  await call(`/api/jobs/${id}/run`, {});
+  const failed = await settled(id);
+  assert.equal(failed.designSession?.state, "failed"); assert.equal(calls, before);
+  assert.equal((await call(`/api/jobs/${id}`)).data.interactive.needsMigration, true);
+  assert.equal((await call(`/api/jobs/${id}/design-session/migrate`, {})).status, 400);
+  assert.equal((await call(`/api/jobs/${id}/design-session/migrate`, { confirmed: true })).status, 200);
+  const waiting = await until(id, (j) => !!j.designSession?.question);
+  assert.equal(waiting.designSession?.id, failed.designSession?.id);
+  assert.equal(waiting.feature, failed.feature);
+  assert.equal(waiting.designReleaseMigration?.from, "1.0.0"); assert.equal(waiting.designReleaseMigration?.to, "1.2.0");
+  assert.equal(waiting.agentVersions?.["sociotechnic-designer"], "1.2.0");
+  assert.deepEqual(waiting.dispatches, failed.dispatches);
+  const q = waiting.designSession?.question; assert.ok(q);
+  await call(`/api/jobs/${id}/design-session/answer`, { questionId: q.id, answers: { [q.questions[0].question]: "Researchers" } });
+  await settled(id);
+  assert.equal((await call(`/api/jobs/${id}/design-session/migrate`, { confirmed: true })).status, 400, "An initialized designer cannot be rebound");
+  await assert.rejects(mutateJob(id, (job) => { if (job.designReleaseMigration) job.designReleaseMigration.from = "0.9.0"; }), /migration is immutable/);
+  assert.equal((await readJob(id, (j) => j)).designReleaseMigration?.from, "1.0.0");
+  assert.ok(await readJob(id, () => readJson(join(jobDir(id), "design/release-migration.json"))));
+});
+
 test("server restart resumes from the opaque PostgreSQL transcript instead of rebuilding history", async () => {
   const id = await create(); let j = await completeInterview(id); const sessionId = j.designSession?.id; assert.ok(sessionId);
   const raw = await readJob(id, () => readJson(join(jobDir(id), `design/transcripts/${sessionId}/main.json`))); assert.ok(Array.isArray(raw));
@@ -95,7 +126,85 @@ test("server restart resumes from the opaque PostgreSQL transcript instead of re
   writeFileSync(join(workspace, "uncommitted.html"), "This file never reached the database");
   await call(`/api/jobs/${id}/design-session/messages`, { message: "Make it denser after restart", messageId: randomUUID() });
   j = await settled(id); assert.equal(j.designSession?.id, sessionId); assert.match(j.designSession?.messages.at(-1)?.text ?? "", /2 prior transcript entries/);
-  assert.equal(existsSync(join(workspace, "uncommitted.html")), false, "Recovery must discard artifacts absent from the committed database snapshot");
+  assert.equal(existsSync(join(workspace, "uncommitted.html")), true, "A native chat must preserve working files between turns");
+});
+
+test("images reach the SDK as image blocks, survive history and deduplicate retries", async () => {
+  const id = await create(); await completeInterview(id);
+  const data = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jv1sAAAAASUVORK5CYII=";
+  let seen = false;
+  injected = async function* (args) {
+    const messages: SDKUserMessage[] = [];
+    if (typeof args.prompt !== "string") for await (const message of args.prompt) {
+      messages.push(message);
+      if (Array.isArray(message.message.content)) for (const block of message.message.content) if (block.type === "image" && block.source.type === "base64") {
+        assert.equal(block.source.media_type, "image/png"); assert.equal(block.source.data, data); seen = true;
+      }
+    }
+    async function* replay() { yield* messages; }
+    yield* fixtureDesignQuery({ ...args, prompt: replay() });
+  };
+  try {
+    const body = { message: "", messageId: randomUUID(), images: [{ name: "reference.png", mediaType: "image/png", data }] };
+    assert.equal((await call(`/api/jobs/${id}/design-session/messages`, body)).status, 200);
+    const job = await settled(id); assert.equal(seen, true);
+    const image = job.designSession?.messages.find((message) => message.id === body.messageId)?.images?.[0]; assert.ok(image);
+    const response = await fetch(new URL(`/api/jobs/${id}/design-images/${encodeURIComponent(image.record)}`, server.url));
+    assert.equal(response.headers.get("content-type"), "image/png"); assert.ok(Buffer.from(await response.arrayBuffer()).equals(Buffer.from(data, "base64")));
+    const count = calls;
+    await call(`/api/jobs/${id}/design-session/messages`, body); assert.equal(calls, count);
+    const mismatch = await call(`/api/jobs/${id}/design-session/messages`, { ...body, images: [{ ...body.images[0], name: "different.png" }] }); assert.equal(mismatch.status, 409);
+    assert.equal((await call(`/api/jobs/${id}/design-session/messages`, { message: "bad image", messageId: randomUUID(), images: [{ name: "bad.png", mediaType: "image/png", data: Buffer.from("not an image").toString("base64") }] })).status, 400);
+    await server.close(); server = await start();
+    const restored = await readJob(id, (j) => j.designSession?.messages.find((message) => message.id === body.messageId)?.images?.[0]); assert.deepEqual(restored, image);
+  } finally { injected = undefined; }
+});
+
+test("assistant image references are saved and displayed from canonical bytes", async () => {
+  const id = await create();
+  const data = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jv1sAAAAASUVORK5CYII=";
+  injected = async function* ({ options }) {
+    const sid = options.sessionId; assert.ok(sid && options.cwd);
+    yield { type: "system", subtype: "init", session_id: sid, skills: ["impeccable"] };
+    const target = options.additionalDirectories?.[0]; assert.ok(target);
+    const image = join(target, "sample.png"); writeFileSync(image, Buffer.from(data, "base64"));
+    yield { type: "assistant", uuid: randomUUID(), message: { content: [{ type: "text", text: `Here is the sample.\n![Sample](sample.png)\n![Sample again](file://${image})` }] } };
+    yield { type: "result", subtype: "success", is_error: false, num_turns: 1 };
+  };
+  try {
+    await call(`/api/jobs/${id}/run`, {}); const job = await settled(id);
+    const message = job.designSession?.messages.at(-1), image = message?.images?.[0]; assert.ok(image);
+    assert.equal(message?.images?.length, 1);
+    assert.equal(message?.text, "Here is the sample.");
+    const response = await fetch(new URL(`/api/jobs/${id}/design-images/${encodeURIComponent(image.record)}`, server.url));
+    assert.equal(response.status, 200); assert.ok(Buffer.from(await response.arrayBuffer()).equals(Buffer.from(data, "base64")));
+  } finally { injected = undefined; }
+});
+
+test("the conversation remains usable after returning its Markdown work product", async () => {
+  const id = await create(); await completeInterview(id);
+  const digest = await readJob(id, interactiveFingerprint);
+  assert.equal((await call(`/api/jobs/${id}/design-session/handoff`, { digest })).status, 200);
+  let job = await settled(id); assert.equal(job.status, "planned"); const sessionId = job.designSession?.id;
+  assert.ok(job.designSession?.approval?.document?.endsWith("/HANDOFF.md"));
+  const dispatches = job.dispatches.length;
+  assert.equal((await call(`/api/jobs/${id}/design-session/messages`, { message: "Review the result for quality", messageId: randomUUID() })).status, 200);
+  job = await settled(id); assert.equal(job.status, "planned"); assert.equal(job.designSession?.id, sessionId); assert.equal(job.dispatches.length, dispatches);
+  assert.match(job.designSession?.messages.at(-1)?.text ?? "", /retained our previous conversation/);
+});
+
+test("a caller can request another assignment in the same design conversation", async () => {
+  assert.equal(parsePlanText(JSON.stringify({ status: "needs-design", reason: "Compare the two prototype navigation patterns" }), false, true).kind, "needs-design");
+  const id = await create(); const initial = await completeInterview(id);
+  await mutateJob(id, (job) => {
+    approveInteractiveDesign(job, interactiveFingerprint(job));
+    startDesign(job, "Compare the two prototype navigation patterns");
+  });
+  await call(`/api/jobs/${id}/run`, {});
+  const job = await settled(id);
+  assert.equal(job.designSession?.id, initial.designSession?.id);
+  assert.ok(job.designSession?.messages.some((message) => message.role === "tool" && message.text.includes("Compare the two prototype")));
+  assert.match(job.designSession?.messages.at(-1)?.text ?? "", /retained our previous conversation/);
 });
 
 test("the house starter reaches the designer and changed starter bytes invalidate approval", async () => {
@@ -126,7 +235,7 @@ test("the house starter reaches the designer and changed starter bytes invalidat
     const planned = await settled(id);
     assert.equal(planned.status, "planned");
     const brief = planned.dispatches.find((d) => d.step === "plan")?.execution?.envelope.prompt;
-    assert.ok(brief?.includes(template));
+    assert.ok(brief); assert.ok(brief.includes(template));
     assert.ok(brief.includes(job.designSession.starter.digest));
   } finally { injected = undefined; rmSync(join(home, "sociotechnic"), { recursive: true, force: true }); }
 });
@@ -164,19 +273,16 @@ test("missing Impeccable and unsupported Docker fail before invoking the query",
 
 test("workspace and URL boundaries reject traversal, symlinks and unsafe navigation", () => {
   const scope = join(root, "scope"); mkdirSync(scope); symlinkSync(root, join(scope, "outside"));
-  for (const args of [["generate-image", "--out", "../escape.png"], ["install"], ["context", "outside/file.md"]]) assert.throws(() => nativeArguments(args, scope, "session"));
-  assert.deepEqual(nativeArguments(["serve-question", "--start", "--key", "round", "--payload", "question.json"], scope, "session"), ["serve-question", "--start", "--key", "session-round", "--payload", "question.json", "--no-open"]);
   assert.equal(previewUrl("javascript:alert(1)"), null); assert.equal(previewUrl("http://secret@example.com/"), null); assert.equal(previewUrl("http://127.0.0.1:5000/"), "http://127.0.0.1:5000/");
   assert.equal(designWriteAllowed(join(scope, "outside/escape"), join(scope, "record"), scope), false);
   assert.equal(newInteractiveDesign("reason").state, "ready");
 });
 
-test("pinned skill bytes cannot drift on resume and historical packets remain readable", async () => {
+test("the native command references the installed skill and historical packets remain readable", () => {
   const scope = join(root, "pin-test"); mkdirSync(scope);
-  const pinned = await pinImpeccable(home, scope, null);
-  assert.equal(pinned.digest, installationDigest(pinned.root));
-  writeFileSync(join(pinned.root, "SKILL.md"), readFileSync(join(pinned.root, "SKILL.md"), "utf8") + "\nchanged\n");
-  await assert.rejects(pinImpeccable(home, scope, pinned), /changed/);
+  const pinned = nativeImpeccable(home, scope);
+  assert.equal(pinned.digest, createHash("sha256").update(readFileSync(join(pinned.root, "SKILL.md"))).digest("hex"));
+  assert.equal(realpathSync(join(scope, ".claude/skills/impeccable")), realpathSync(skill));
   assert.equal(parseDesignPacket({ title: "History", strategy: "Historical interview", product: "", phase: "interview", questions: [{ id: "audience", prompt: "Who uses this?" }] }).phase, "interview");
 });
 
@@ -206,7 +312,7 @@ test("actual installed Impeccable serves, accepts, updates and stops its own dec
   const installed = process.env.SOCIOTECHNIC_TEST_IMPECCABLE_SKILL; assert.ok(installed);
   const scope = join(root, "real-native"); mkdirSync(scope);
   process.env.SOCIOTECHNIC_IMPECCABLE_SKILL = installed;
-  const native = await pinImpeccable(home, scope, null);
+  const native = nativeImpeccable(home, scope);
   process.env.SOCIOTECHNIC_IMPECCABLE_SKILL = skill;
   const key = `integration-${randomUUID()}`;
   const payload = { title: "Native integration fixture", question: "Choose a direction", options: [{ id: "reading", label: "Reading desk", thesis: "A reading workspace", palette: ["#172033", "#ffffff"], materials: ["paper"], viewport: "A notebook and reading pane", risk: "Less dense" }], followup: true };
@@ -241,22 +347,22 @@ test("a transcript persistence failure aborts the query and is not retried", asy
   } finally { injected = undefined; setStore(store); }
 });
 
-test("the native MCP transport executes the pinned binary without a shell or provider", async () => {
-  const scope = join(root, "transport"); mkdirSync(scope);
-  const native = await pinImpeccable(home, scope, null);
-  const child = spawn(process.execPath, [join(here, "../ui/impeccable-runtime.ts")], { env: { ...process.env, SOCIOTECHNIC_DESIGN_WORKSPACE: scope, SOCIOTECHNIC_DESIGN_SESSION: randomUUID(), SOCIOTECHNIC_DESIGN_SKILL_DIGEST: native.digest }, stdio: ["pipe", "pipe", "pipe"] });
+test("the SDK uses the agent Markdown file and native tools without an Impeccable MCP", async () => {
+  const id = await create();
+  let checked = false;
+  injected = async function* (args) {
+    assert.ok(Array.isArray(args.options.tools) && args.options.tools.includes("Bash") && args.options.tools.includes("Skill"));
+    assert.equal(args.options.mcpServers?.impeccable, undefined);
+    assert.ok(typeof args.options.systemPrompt === "object" && "append" in args.options.systemPrompt);
+    assert.match(args.options.systemPrompt.append ?? "", /normal,\s+turn-based conversation/);
+    assert.ok(!args.options.systemPrompt.append?.includes("mcp__impeccable__run"));
+    checked = true;
+    yield* fixtureDesignQuery(args);
+  };
   try {
-    const result = await new Promise<string>((done, fail) => {
-      let output = "", errors = "";
-      const timer = setTimeout(() => fail(new Error(`Native transport timed out: ${errors}`)), 5000);
-      child.once("error", (e) => { clearTimeout(timer); fail(e); });
-      child.stderr.on("data", (b: Buffer) => { errors += b.toString(); });
-      child.stdout.on("data", (b: Buffer) => { output += b.toString(); const lines = output.split("\n"); output = lines.pop() ?? ""; for (const line of lines) { const event = JSON.parse(line); if (event.id === 2) { clearTimeout(timer); if (event.result.isError) fail(new Error(JSON.stringify(event))); else done(event.result.content[0].text); } } });
-      child.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize" }) + "\n");
-      child.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "run", arguments: { args: ["context"] } } }) + "\n");
-    });
-    assert.match(result, /fixture/);
-  } finally { child.stdin.end(); child.kill("SIGTERM"); }
+    await completeInterview(id);
+    assert.equal(checked, true);
+  } finally { injected = undefined; }
 });
 
 test("another console cannot answer or interrupt this session even in the same process", async () => {

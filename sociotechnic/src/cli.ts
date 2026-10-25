@@ -167,6 +167,7 @@ type OpenMode = "never" | "auto" | "always";
 
 const CLI_PATH = fileURLToPath(import.meta.url);
 const UI_WAIT_MS = 5_000;
+const UI_START_WAIT_MS = 15_000;
 const HEALTH_POLL_MS = 250;
 
 const uiPidFile = (): string => join(stateDir(), "ui.pid");
@@ -250,7 +251,7 @@ async function ensureUi(requested: number, open: OpenMode): Promise<EnsureResult
   } finally {
     closeSync(log);
   }
-  const deadline = Date.now() + UI_WAIT_MS;
+  const deadline = Date.now() + UI_START_WAIT_MS;
   while (Date.now() < deadline && !exited) {
     const h = await health(port);
     if (h !== null) {
@@ -260,7 +261,7 @@ async function ensureUi(requested: number, open: OpenMode): Promise<EnsureResult
     }
     await sleep(HEALTH_POLL_MS);
   }
-  throw new SociotechnicError("ui-start", `the console did not answer on port ${port} within 5 s; see ${join(stateDir(), "ui.log")}`);
+  throw new SociotechnicError("ui-start", `the console did not answer on port ${port} within ${UI_START_WAIT_MS / 1000} s; see ${join(stateDir(), "ui.log")}`);
 }
 
 async function stopUi(requested: number): Promise<{ stopped: boolean; pid: number | null }> {

@@ -1,5 +1,9 @@
 # Interactive design verification
 
+Historical fixture evidence for the superseded command adapter. See
+[native Claude chat verification](native-design-chat.md) for the current agent
+file, native command, image chat and Markdown handoff implementation.
+
 Verified on 2026-10-25 on `codex/interactive-design-session`.
 There were **zero live model calls**. Claude responses and design content were
 deterministic fixtures. Impeccable's installed skill, executable, context command,

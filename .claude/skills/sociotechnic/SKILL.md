@@ -165,10 +165,10 @@ Pass `--workflow design` on `new` when the human requests design, then
 `run <job> --hold planned`. Design currently requires Local execution. General
 planning may request design for major UI changes.
 
-At `design-input`, direct the human to the console's conversation. The actual
-Impeccable skill supplies questions and its separate preview page. Replies resume
+At `design-input`, direct the human to the console's conversation. The normal Claude agent runs the installed /impeccable command with native
+tools and opens its own preview windows. Text and images stay in chat history. Replies resume
 the same Claude session. Do not answer, select or approve on the human's behalf.
 Do not run the retired `design-respond` packet command or loop `run` at a human
-wait. Explicit artifact approval enables final planning with the normal plan
-hold. Missing tooling and failures stay visible without automatic model retries.
-Design approval never authorizes acceptance, publication or merge.
+wait. Return work passes HANDOFF.md and any samples or prototypes to the caller.
+The planner decides whether to plan or request another assignment in this chat. Missing tooling and failures stay visible without automatic model retries.
+A work-product handoff never authorizes acceptance, publication or merge.

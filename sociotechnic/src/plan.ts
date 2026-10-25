@@ -157,7 +157,7 @@ export function validatePlan(raw: unknown): { ok: true; plan: Plan } | { ok: fal
   return { ok: true, plan: raw as unknown as Plan };
 }
 
-export function parsePlanText(text: string | null, researchUsed: boolean, designUsed = false): PlanParse {
+export function parsePlanText(text: string | null, researchUsed: boolean, _designUsed = false): PlanParse {
   if (text === null) return { kind: "malformed", errors: ["plan.json is missing"] };
   let raw: unknown;
   try {
@@ -166,7 +166,7 @@ export function parsePlanText(text: string | null, researchUsed: boolean, design
     return { kind: "malformed", errors: ["plan.json is not valid JSON"] };
   }
   if (isObj(raw) && raw.status === "needs-design") {
-    if (designUsed || typeof raw.reason !== "string" || !raw.reason.trim() || raw.reason.length > 4000) return { kind: "malformed", errors: ["needs-design requires a reason and is allowed only before the ceremony"] };
+    if (typeof raw.reason !== "string" || !raw.reason.trim() || raw.reason.length > 4000) return { kind: "malformed", errors: ["needs-design requires a specific assignment reason"] };
     return { kind: "needs-design", reason: raw.reason.trim() };
   }
   if (isObj(raw) && raw.status === "needs-research") {

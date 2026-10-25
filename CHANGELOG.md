@@ -5,8 +5,8 @@ Dates on backfilled entries use America/Chicago. See the [release guide](sociote
 
 ## Unreleased
 
-- Replace new design packets with a resumable Local Claude conversation using the actual pinned Impeccable skill and its separate native preview window.
-- Persist SDK transcripts and artifact approval in PostgreSQL, surface missing tools before inference, and retain historical design evidence. Docker design is refused; live verification awaits an agreed token budget.
+- Replace design packets with a normal turn-based Claude Code chat whose Markdown agent definition runs the installed /impeccable command with native tools and windows.
+- Support image input and output, persistent SDK history, Markdown work-product handoffs and follow-up assignments in the same conversation. Apply committed catalog additions at console startup and recover unused retired designer bindings in place.
 
 ## v0.4.2
 

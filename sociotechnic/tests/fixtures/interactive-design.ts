@@ -2,17 +2,19 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import type { DesignQuery } from "../../ui/design-session-runner.ts";
+import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 
 export const fixtureDesignQuery: DesignQuery = async function* ({ prompt, options }) {
   const id = options.resume ?? options.sessionId;
   if (!id || !options.cwd || !options.sessionStore || !options.canUseTool) throw new Error("Missing native session configuration");
   let text = typeof prompt === "string" ? prompt : "";
+  let userMessage: SDKUserMessage["message"] = { role: "user", content: text };
   let messageId = randomUUID();
-  if (typeof prompt !== "string") for await (const m of prompt) { text += typeof m.message.content === "string" ? m.message.content : ""; messageId = m.uuid ?? messageId; }
+  if (typeof prompt !== "string") for await (const m of prompt) { userMessage = m.message; text += typeof m.message.content === "string" ? m.message.content : m.message.content.flatMap((block) => block.type === "text" ? [block.text] : []).join("\n"); messageId = m.uuid ?? messageId; }
   yield { type: "system", subtype: "init", session_id: id, skills: ["impeccable"] };
   const key = { projectKey: `design-${id}`, sessionId: id };
   const prior = await options.sessionStore.load(key) ?? [];
-  await options.sessionStore.append(key, [{ type: "user", uuid: messageId, message: { role: "user", content: text } }]);
+  await options.sessionStore.append(key, [{ type: "user", uuid: messageId, message: userMessage }]);
   if (text.includes("hold response")) { await new Promise<void>((_, reject) => { const abort = () => reject(new Error("Fixture interrupted")); options.abortController?.signal.addEventListener("abort", abort, { once: true }); if (options.abortController?.signal.aborted) abort(); }); }
   let answer = "";
   if (!options.resume) {
@@ -22,6 +24,7 @@ export const fixtureDesignQuery: DesignQuery = async function* ({ prompt, option
   }
   mkdirSync(join(options.cwd, "previews"), { recursive: true });
   writeFileSync(join(options.cwd, "DESIGN.md"), `# Design\nConfirmed audience: ${answer || "retained from our conversation"}.\n${text.includes("denser") ? "Use a denser reading layout." : "Use a calm reading workspace."}\n`);
+  writeFileSync(join(options.cwd, "HANDOFF.md"), "# Design work product\n\nUse the reading layout described in DESIGN.md. The caller decides the next assignment.\n");
   writeFileSync(join(options.cwd, "previews/desk.html"), "<!doctype html><title>Fixture preview</title><h1>Research desk</h1><p>Deterministic integration fixture. No model generated this design.</p>");
   const content = `Integration fixture: ${options.resume ? "I retained our previous conversation and revised the design." : "Thank you. Here is the initial direction."} ${prior.length} prior transcript entries.`;
   const uuid = randomUUID();

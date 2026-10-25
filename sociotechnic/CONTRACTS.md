@@ -2,25 +2,45 @@
 
 ## Interactive design sessions
 
-New design work uses one resumable local Claude session and the actual pinned
+New design work uses one resumable local Claude session and the installed
 Impeccable installation. Impeccable owns questions, directions, composition and
-revision; the console hosts conversation and opens its native decision page in
-a separate window. There is no application-defined interview/showcase packet
+revision; the console hosts conversation while the native command opens its
+own windows. There is no application-defined interview/showcase packet
 protocol. Historical packet evidence remains readable; unfinished packet jobs
 require an explicit migration before further design work.
 
-PostgreSQL owns session metadata, native SDK transcripts, human input and approved
-artifact bytes. SDK files and the design workspace are materialized execution
-copies. Resume uses the exact session ID, agent release and skill digest. Missing
+Native Claude Code executes `/impeccable` with its normal Skill and Bash tools.
+The app does not replace the skill's CLI with an MCP command adapter, run its
+workflow steps on the agent's behalf, force a subcommand, or suppress native
+window opening. The installed skill is the authority for its process. The app
+persists the conversation and relays native questions to the human.
+
+Console startup applies committed catalog additions before accepting requests.
+An explicit design-session migration may replace only an unused retired designer
+binding: no designer dispatch, skill initialization, transcript, artifact or
+approval may exist. It preserves the session ID, request and completed planner,
+records the old/new release and human action, and updates the binding atomically.
+Executed agent bindings and all other role pins remain immutable.
+
+The agent's system prompt comes from its normal Markdown agent file, linked from
+the project into Claude's global agents directory. A conversation records the
+actual prompt source and resumes that same prompt and SDK session. The assignment
+determines whether the agent plans, prototypes, builds, critiques or remediates.
+
+PostgreSQL owns session metadata, native SDK transcripts, human input, images and
+returned artifact snapshots. SDK files are materialized execution copies. Missing
 tooling, unsupported Docker execution or persistence failure stops work without
 an automatic model retry. Human waiting consumes no inference or active deadline.
-Only explicit approval of a current artifact fingerprint enables final planning;
-design choices alone do not authorize implementation. Existing build gates remain.
+The work product is HANDOFF.md with references to any samples or prototypes.
+Return work passes it to the caller, which decides the next step. A planner may
+request additional design work in the same conversation. The chat remains usable
+after handoff without automatically advancing the build pipeline. Native image
+inputs, image history and image output are supported. Existing build gates remain.
 
 The maintained React/Nest starter is supplied as a read-only reference when
 available. Its source revision and content digest are pinned in the design
-session and approval; the human's choice belongs in the design conversation and
-DESIGN.md. Planners and builders receive the same starter reference and refuse
+session and handoff; the human's choice belongs in the design conversation and
+work product. Planners and builders receive the same starter reference and refuse
 changed source bytes. Explicitly requested templates are preserved. A major UI
 request hands off before elaborating an implementation plan.
 

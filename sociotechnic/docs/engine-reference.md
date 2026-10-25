@@ -573,15 +573,18 @@ interrupted, failed and approved states. Job statuses `designing` and
 Impeccable's design phases. Each human message resumes the exact SDK session.
 No designer packet dispatch or automatic missing-tool retry is created.
 
-PostgreSQL owns native SDK transcripts, human messages, saved artifact bytes,
-installation identity and approval. Driver leases guard transcript writes.
-Human waiting suspends active deadlines. An immutable approved artifact
-fingerprint binds final `plan.designDigest`, build and review handoffs.
+The native agent's prompt comes from its Markdown file. Bash and Skill execute
+the installed /impeccable command normally, including its own preview windows.
+PostgreSQL retains native SDK transcripts, messages, images and returned work.
+Driver leases guard writes. HANDOFF.md and samples return to the caller, which
+decides the next step. Its snapshot binds `plan.designDigest` when used for
+planning. Follow-up assignments and chat after handoff reuse the same session
+without automatically advancing a build. Human waits suspend active deadlines.
 Historical `job.design` packets remain supported for reading and approved
 implementation integrity, not further packet generation.
 
 See [interactive design](design-ceremony.md) for local installation, recovery,
-limits, preview lifecycle and the pending live-provider verification boundary.
+images, Markdown handoff, native windows and separate live verification evidence.
 
 ## Agent library evidence and provenance
 

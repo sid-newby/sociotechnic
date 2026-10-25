@@ -213,14 +213,17 @@ a gate. Local lock or staging files cannot grant ownership.
 
 ## Interactive design drivers
 
-The local designer runs a resumable Claude session with native Impeccable skill
-loading and a shell-free transport to the actual pinned CLI. The console hosts
-messages and native questions; Impeccable owns its separate preview page. Do not
-write ceremony packets, invent answers, choose directions or infer approval.
+The local designer is a normal Claude Code agent whose system prompt comes from
+the project-owned agent Markdown file linked into Claude's global agents. The
+SDK resumes its history, including native image inputs. Bash and Skill execute
+the installed /impeccable command normally; there is no Impeccable MCP adapter
+and no suppression of native window opening. The assignment sets the scope.
 `design-input` is a genuine human wait. Conversation replies resume the exact
 session. PostgreSQL owns opaque transcripts and artifact snapshots, protected by
-the existing driver lease. Only explicit final artifact approval permits held
-implementation planning. Docker design is refused before designer inference.
+the existing driver lease. HANDOFF.md and any samples or prototypes return to
+the caller, which decides the next step. A planner can request a follow-up in the
+same chat. Returning work does not close the conversation or run a builder.
+Docker design is refused before designer inference.
 Historical packet evidence remains readable; its response command is retired.
 Design approval never authorizes build acceptance or publication.
 

@@ -1,6 +1,9 @@
-import { answerDesignQuestion, stopDesignPreviews } from "./design-session-runner.ts";
+import { answerDesignQuestion } from "./design-session-runner.ts";
 import { approveInteractiveDesign, enqueueDesignMessage, interactiveFingerprint, artifactFiles } from "../src/design-session.ts";
 import type { DesignQuery } from "./design-session-runner.ts";
+import { applyCatalogBundles, readCatalogBundles } from "../src/db/catalog-migrations.ts";
+import type { CatalogBundle } from "../src/db/catalog-migrations.ts";
+import { interactiveDesigner, migrateUnusedDesigner } from "../src/agent-versions.ts";
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync, realpathSync, rmSync, statSync } from "node:fs";
 import { createServer } from "node:http";
@@ -49,7 +52,7 @@ const PING_MS = 15_000;
 const liveOrigin = process.env.NODE_ENV === "development" ? " http://localhost:8400" : "";
 const CSP = `default-src 'self'; script-src 'self' 'unsafe-inline'${liveOrigin}; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'${liveOrigin}`;
 
-export type ServerOptions = { port?: number; host?: string; runner?: () => Runner; designQuery?: DesignQuery };
+export type ServerOptions = { port?: number; host?: string; runner?: () => Runner; designQuery?: DesignQuery; catalogBundles?: readonly CatalogBundle[] };
 export type ServerHandle = { url: string; port: number; drivers: DriverRegistry; close: () => Promise<void> };
 export type RecordEntry = { path: string; bytes: number; mtime: string };
 
@@ -82,14 +85,14 @@ function statusFor(err: unknown): { status: number; code: string; message: strin
   return { status: 500, code: "internal", message: err instanceof Error ? err.message : String(err) };
 }
 
-function readBody(req: IncomingMessage): Promise<Record<string, unknown>> {
+function readBody(req: IncomingMessage, limit = MAX_BODY): Promise<Record<string, unknown>> {
   return new Promise((resolveBody, reject) => {
     const chunks: Buffer[] = [];
     let size = 0;
     req.on("data", (chunk: Buffer) => {
       size += chunk.length;
-      if (size > MAX_BODY) {
-        reject(new HttpError(400, "body-too-large", "request body is over 1 MB"));
+      if (size > limit) {
+        reject(new HttpError(400, "body-too-large", `Request body is over ${limit / 1024 / 1024} MB`));
         req.destroy();
         return;
       }
@@ -197,6 +200,8 @@ function serveAsset(res: ServerResponse, path: string, head: boolean): void {
 }
 
 export async function startServer(options: ServerOptions = {}): Promise<ServerHandle> {
+  const store = currentStore();
+  if (store) await store.transaction((tx) => applyCatalogBundles(tx, options.catalogBundles ?? readCatalogBundles()));
   const host = options.host ?? "127.0.0.1";
   const clients = new Set<ServerResponse>();
   const broadcast = (event: string, data: unknown): void => {
@@ -291,7 +296,7 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
       pattern: /^\/api\/jobs\/([^/]+)$/,
       handler: async ({ params }) => {
         const id = jobIdParam(params[0]);
-        return { interactive: loadJob(id).designSession ? { ...loadJob(id).designSession, fingerprint: interactiveFingerprint(loadJob(id)), files: artifactFiles(loadJob(id)) } : null, job: loadJob(id), plan: readPlanJson(id), records: listRecords(id), pr: hasRecord(join(jobDir(id), "pr.md")), worktreePresent: existsSync(loadJob(id).worktree), driver: await runningState(drivers, id, consoleUrl()) };
+        return { interactive: loadJob(id).designSession ? { ...loadJob(id).designSession, needsMigration: !interactiveDesigner(loadJob(id).agentConfigurations?.["sociotechnic-designer"]), fingerprint: interactiveFingerprint(loadJob(id)), files: artifactFiles(loadJob(id)) } : null, job: loadJob(id), plan: readPlanJson(id), records: listRecords(id), pr: hasRecord(join(jobDir(id), "pr.md")), worktreePresent: existsSync(loadJob(id).worktree), driver: await runningState(drivers, id, consoleUrl()) };
       },
     },
     {
@@ -338,6 +343,7 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
           }
         }
         const pinned = await pinAgentVersions(overrides, undefined, assignments);
+        if (body.workflow === "design" && !interactiveDesigner(pinned.configurations["sociotechnic-designer"])) throw new HttpError(400, "bad-design", "Select the interactive designer release for a new design conversation");
         if (body.initialize === true) prepareRepository(repoPath, baseBranch);
         if (githubRepository !== null) publishRepository(repoPath, baseBranch, githubRepository);
         return createJobOperation(async () => {
@@ -425,7 +431,7 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
       handler: async ({ params }) => {
         const id = jobIdParam(params[0]);
         drivers.stop(id);
-        if (await readJob(id, (job) => !!job.designSession)) { await drivers.settled(id); await stopDesignPreviews(id); }
+        if (await readJob(id, (job) => !!job.designSession)) await drivers.settled(id);
         if (await readJob(id, (job) => job.execution?.kind === "docker-sandbox")) await drivers.settled(id);
         return mutateJob(id, (job) => engine.stopJob(job));
       },
@@ -479,11 +485,17 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
       method: "POST", pattern: /^\/api\/jobs\/([^/]+)\/design-session\/messages$/,
       handler: async ({ params, body }) => {
         const id = jobIdParam(params[0]);
-        if (drivers.isRunning(id)) throw new HttpError(409, "driver-active", "Interrupt the current response before sending another message");
         await assertSessionOwner(id);
-        await mutateJob(id, (job) => enqueueDesignMessage(job, body.message, body.messageId));
-        const job = await readJob(id, (j) => j);
-        return { driver: job.status === "designing" ? await drivers.run(id, "run", ["planned"]) : drivers.state(id) };
+        if (await readJob(id, (job) => job.designSession?.messages.some((message) => message.id === body.messageId))) {
+          await mutateJob(id, (job) => enqueueDesignMessage(job, body.message, body.messageId, body.images));
+          return { driver: drivers.state(id) };
+        }
+        if (drivers.isRunning(id)) {
+          if (await readJob(id, (job) => job.designSession?.state !== "waiting")) throw new HttpError(409, "driver-active", "Interrupt the current response before sending another message");
+          drivers.stop(id); await drivers.settled(id);
+        }
+        const queued = await mutateJob(id, (job) => enqueueDesignMessage(job, body.message, body.messageId, body.images));
+        return { driver: queued ? await drivers.run(id, "conversation", []) : drivers.state(id) };
       },
     },
     {
@@ -505,6 +517,20 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
       },
     },
     {
+      method: "POST", pattern: /^\/api\/jobs\/([^/]+)\/design-session\/migrate$/,
+      handler: async ({ params, body }) => {
+        const id = jobIdParam(params[0]);
+        if (body.confirmed !== true) throw new HttpError(400, "bad-input", "Explicit designer migration is required");
+        if (drivers.isRunning(id)) throw new HttpError(409, "driver-active", "The session is already running");
+        await assertSessionOwner(id, true);
+        await mutateJob(id, async (job) => {
+          session().commitGuards = [async () => { await assertSessionOwner(id, true); if (drivers.isRunning(id)) throw new HttpError(409, "driver-active", "The session is already running"); }];
+          await migrateUnusedDesigner(job);
+        });
+        return { migrated: true, driver: await drivers.run(id, "run", ["planned"]) };
+      },
+    },
+    {
       method: "POST", pattern: /^\/api\/jobs\/([^/]+)\/design-session\/resume$/,
       handler: async ({ params }) => {
         const id = jobIdParam(params[0]);
@@ -512,12 +538,23 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
         await assertSessionOwner(id, true);
         await mutateJob(id, (job) => {
           const d = job.designSession;
-          if (!d || !["ready", "failed", "interrupted", "working", "waiting"].includes(d.state) || !["design-input", "designing"].includes(job.status)) throw new HttpError(409, "illegal-transition", "This session cannot be resumed here");
+          if (!d || !["ready", "failed", "interrupted", "working", "waiting"].includes(d.state) || job.status === "stopped") throw new HttpError(409, "illegal-transition", "This session cannot be resumed here");
           d.state = "ready"; d.error = null;
           if (!d.input) d.input = { id: crypto.randomUUID(), text: "Continue our design conversation from the last completed step. If a question was interrupted, present it again; do not invent an answer." };
-          job.status = "designing";
+          if (["design-input", "designing"].includes(job.status)) job.status = "designing";
         });
-        return { driver: await drivers.run(id, "run", ["planned"]) };
+        return { driver: await drivers.run(id, "conversation", []) };
+      },
+    },
+    {
+      method: "POST", pattern: /^\/api\/jobs\/([^/]+)\/design-session\/handoff$/,
+      handler: async ({ params, body }) => {
+        const id = jobIdParam(params[0]);
+        if (drivers.isRunning(id)) throw new HttpError(409, "driver-active", "Finish the current response before returning the work");
+        await assertSessionOwner(id);
+        await mutateJob(id, (job) => approveInteractiveDesign(job, body.digest));
+        const planning = await readJob(id, (job) => job.status === "planning");
+        return { returned: true, driver: planning ? await drivers.run(id, "run", ["planned"]) : drivers.state(id) };
       },
     },
     {
@@ -528,7 +565,6 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
         await assertSessionOwner(id);
         if (body.confirmed !== true) throw new HttpError(400, "bad-input", "Explicit design approval is required");
         await mutateJob(id, (job) => approveInteractiveDesign(job, body.digest));
-        await stopDesignPreviews(id);
         return { approved: true, driver: await drivers.run(id, "run", ["planned"]) };
       },
     },
@@ -568,6 +604,19 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
     if (method === "GET" || method === "HEAD") {
       if (path === "/" || path === "/legacy") return serveIndex(res, path === "/legacy", method === "HEAD");
       if (path.startsWith("/assets/")) return serveAsset(res, path, method === "HEAD");
+      const designImage = /^\/api\/jobs\/([^/]+)\/design-images\/(.+)$/.exec(path);
+      if (designImage) {
+        const id = jobIdParam(designImage[1]);
+        return readJob(id, (job) => {
+          const file = decodeURIComponent(designImage[2]);
+          const image = job.designSession?.messages.flatMap((message) => message.images ?? []).find((item) => item.record === file);
+          const record = image ? session().records.get(file) : null;
+          if (!image || !record) throw new HttpError(404, "not-found", "Unknown conversation image");
+          const bytes = record.encoding === "base64" ? Buffer.from(record.text, "base64") : Buffer.from(record.text);
+          res.writeHead(200, { "content-type": image.mediaType, "cache-control": "no-store", "x-content-type-options": "nosniff", "content-security-policy": "default-src 'none'" });
+          res.end(method === "HEAD" ? undefined : bytes);
+        });
+      }
       const interactiveAsset = /^\/api\/jobs\/([^/]+)\/design-artifacts\/(.+)$/.exec(path);
       if (interactiveAsset) {
         const id = jobIdParam(interactiveAsset[1]);
@@ -611,7 +660,7 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
       if (route.method !== method) continue;
       const m = route.pattern.exec(path);
       if (m === null) continue;
-      const body = mutating ? await readBody(req) : {};
+      const body = mutating ? await readBody(req, /^\/api\/jobs\/[^/]+\/design-session\/messages$/.test(path) ? 64 * 1024 * 1024 : MAX_BODY) : {};
       const jobMatch = /^\/api\/jobs\/([^/]+)/.exec(path);
       const invoke = () => route.handler({ req, res, params: m.slice(1), body });
       const out = jobMatch ? await readJob(jobIdParam(jobMatch[1]), invoke) : await invoke();

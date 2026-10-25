@@ -33,9 +33,9 @@ export function versionRole(base: Role, value: unknown): Role {
   const v = object(value);
   if (!Array.isArray(v.tools) || !v.tools.every((t): t is string => typeof t === "string")) fail("tools must be a list");
   const tools = v.tools;
-  const allowance = base.record === "design" ? [...new Set([...base.tools, "Edit", "Skill", "AskUserQuestion", "mcp__impeccable__run"])] : base.tools;
+  const allowance = base.record === "design" ? [...new Set([...base.tools, "Edit", "Skill", "AskUserQuestion", "Bash", "Agent", "TaskOutput", "TaskStop", "TodoWrite", "NotebookEdit", "mcp__impeccable__run"])] : base.tools;
   if (tools.some((t) => !allowance.includes(t)) || new Set(tools).size !== tools.length || ["Read", "Grep", "Glob", "Write"].some((t) => !tools.includes(t))) fail("Tools must retain Read/Grep/Glob/Write and stay within the baseline allowance");
-  if (base.record === "design" && !tools.includes("mcp__design__impeccable") && !tools.includes("mcp__impeccable__run")) fail("Designer requires its scoped design tool");
+  if (base.record === "design" && !tools.includes("mcp__design__impeccable") && !tools.includes("mcp__impeccable__run") && !(tools.includes("Bash") && tools.includes("Skill") && tools.includes("AskUserQuestion"))) fail("Designer requires native Claude Code tools or its historical design transport");
   const codex = typeof v.model === "string" && isCodexModel(v.model);
   const effort: Role["effort"] = typeof v.model === "string" && isModelEffort(v.model, v.effort) ? v.effort : fail("Unsupported effort for this model");
   const common = { effort, tools: allowance.filter((t) => tools.includes(t)), maxTurns: limit(v.maxTurns, 250, "Turn/tool-call limit"), timeoutMinutes: limit(v.timeoutMinutes, 120, "Deadline") };

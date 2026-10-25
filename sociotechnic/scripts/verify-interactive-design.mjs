@@ -11,7 +11,7 @@ import { newDesignJob } from '../src/engine.ts';
 import { fakeRunner } from '../ui/runner.ts';
 import { startServer } from '../ui/server.ts';
 import { fixtureDesignQuery } from '../tests/fixtures/interactive-design.ts';
-import { runNative } from '../ui/impeccable-runtime.ts';
+import { runNative } from '../ui/impeccable.ts';
 
 if (!process.env.SOCIOTECHNIC_TEST_IMPECCABLE_SKILL) throw new Error('Set SOCIOTECHNIC_TEST_IMPECCABLE_SKILL to the installed skill. This script uses no live models.');
 const root = mkdtempSync(join(tmpdir(), 'sociotechnic-design-browser-'));
@@ -38,10 +38,10 @@ const sdkQuery = async function* (args) {
       writeFileSync(join(workspace, 'question.json'), JSON.stringify(payload));
       const startArgs = ['serve-question', '--start', '--key', nativeKey, '--payload', 'question.json', '--no-open'];
       const output = await runNative(native, workspace, startArgs);
-      const base = { session_id: args.options.sessionId, transcript_path: '', cwd: workspace, tool_name: 'mcp__impeccable__run', tool_use_id: 'fixture-preview', tool_input: { args: startArgs } };
+      const base = { session_id: args.options.sessionId, transcript_path: '', cwd: workspace, tool_name: 'Bash', tool_use_id: 'fixture-preview', tool_input: { command: 'impeccable serve-question --start --payload question.json' } };
       for (const group of args.options.hooks.PostToolUse ?? []) for (const hook of group.hooks) await hook({ ...base, hook_event_name: 'PostToolUse', tool_response: { content: [{ type: 'text', text: output }] } }, 'fixture-preview', { signal: args.options.abortController.signal });
       const waitArgs = ['serve-question', '--wait', '--key', nativeKey];
-      for (const group of args.options.hooks.PreToolUse ?? []) for (const hook of group.hooks) await hook({ ...base, hook_event_name: 'PreToolUse', tool_input: { args: waitArgs } }, 'fixture-preview', { signal: args.options.abortController.signal });
+      for (const group of args.options.hooks.PreToolUse ?? []) for (const hook of group.hooks) await hook({ ...base, hook_event_name: 'PreToolUse', tool_input: { command: 'impeccable serve-question --wait' } }, 'fixture-preview', { signal: args.options.abortController.signal });
       const answer = await runNative(native, workspace, waitArgs, args.options.abortController.signal);
       assert.match(answer, /reading/);
       for (const group of args.options.hooks.PostToolUse ?? []) for (const hook of group.hooks) await hook({ ...base, hook_event_name: 'PostToolUse', tool_input: { args: waitArgs }, tool_response: { content: [{ type: 'text', text: answer }] } }, 'fixture-preview', { signal: args.options.abortController.signal });
@@ -76,24 +76,31 @@ try {
   await server.drivers.settled(id);
   await browser('reload');
   await browser('wait', '--text', 'Your message');
+  await browser('upload', 'input[type="file"]', join(proof, 'native-preview.png'));
+  await browser('wait', '--text', 'native-preview.png');
   await browser('fill', '#design-message', 'Keep this draft after a network error');
   await browser('eval', 'window.fixtureFetch = window.fetch; window.fetch = (...args) => String(args[0]).includes("/design-session/messages") ? Promise.reject(new Error("Fixture network failure")) : window.fixtureFetch(...args)');
   await browser('press', 'Enter');
   await browser('wait', '--text', 'Cannot reach Sociotechnic');
   assert.equal(await browser('get', 'value', '#design-message'), 'Keep this draft after a network error');
+  assert.equal(await browser('eval', 'document.querySelectorAll(".design-image-drafts img").length'), '1');
   assert.equal(calls, 1);
   await browser('eval', 'window.fetch = window.fixtureFetch; delete window.fixtureFetch');
   await browser('fill', '#design-message', 'Make it denser');
   await browser('press', 'Enter');
   await browser('wait', '--text', 'retained our previous conversation');
+  assert.equal(await browser('eval', 'document.querySelectorAll(".design-message-user img").length'), '1');
   assert.equal(calls, 2);
   await browser('set', 'viewport', '390', '844');
+  if (await browser('eval', 'document.documentElement.scrollWidth <= innerWidth') !== 'true') {
+    await browser('screenshot', join(proof, 'overflow.png'), '--full');
+    writeFileSync(join(proof, 'overflow.json'), await browser('eval', 'JSON.stringify([...document.querySelectorAll("body *")].map(e => ({tag:e.tagName,class:e.className,left:e.getBoundingClientRect().left,right:e.getBoundingClientRect().right,width:e.getBoundingClientRect().width,max:getComputedStyle(e).maxWidth})).filter(e=>e.right>innerWidth+1).slice(-25))'));
+  }
   assert.equal(await browser('eval', 'document.documentElement.scrollWidth <= innerWidth'), 'true');
   await browser('screenshot', join(proof, 'conversation-mobile.png'), '--full');
-  await browser('check', '.design-approval input');
-  await browser('find', 'role', 'button', 'click', '--name', 'Approve design and continue');
+  await browser('find', 'role', 'button', 'click', '--name', 'Return work');
   await server.drivers.settled(id);
-  await browser('wait', '--text', 'Design approved');
+  await browser('wait', '--text', 'Work returned to the caller');
   for (let n = 0; n < 300 && await readJob(id, j => j.status) !== 'planned'; n++) await new Promise(resolve => setTimeout(resolve, 20));
   assert.equal(await readJob(id, j => j.status), 'planned');
   assert.equal(await readJob(id, j => j.round), 0);

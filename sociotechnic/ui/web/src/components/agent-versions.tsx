@@ -39,6 +39,8 @@ function VersionForm({ name, data, onPublished, onDirty, onBusy, onReload }: { n
   const initial = data.versions.find((v) => v.version === data.latest) ?? data.versions[0];
   const [source, setSource] = useState(initial?.version ?? "1.0.0");
   const [draft, setDraft] = useState(initial?.settings ?? data.baseline);
+  const nativeDesigner = name === "sociotechnic-designer" && draft.tools.includes("Bash") && draft.tools.includes("Skill");
+  const allowance = nativeDesigner ? [...new Set([...data.baseline.tools, ...draft.tools])].filter((tool) => !["mcp__design__impeccable", "mcp__impeccable__run"].includes(tool)) : data.baseline.tools;
   const [version, setVersion] = useState(() => { const [major, minor, patch] = data.latest.split(".").map(Number); return `${major}.${minor}.${patch + 1}`; });
   const [label, setLabel] = useState("");
   const [purpose, setPurpose] = useState(initial?.purpose ?? "");
@@ -53,7 +55,7 @@ function VersionForm({ name, data, onPublished, onDirty, onBusy, onReload }: { n
   const publish = async () => {
     if (inFlight.current) return;
     inFlight.current = true; setBusy(true); onBusy(true); setError("");
-    try { await request(`/api/agents/${encodeURIComponent(name)}/versions`, undefined, { ...draft, version, label, instructions, purpose, expectedLatest: data.latest }); onPublished(); }
+    try { await request(`/api/agents/${encodeURIComponent(name)}/versions`, undefined, { ...draft, version, label, ...(nativeDesigner ? {} : { instructions }), purpose, expectedLatest: data.latest }); onPublished(); }
     catch (e) { setError(errorMessage(e)); setConfirming(false); requestAnimationFrame(() => errorRef.current?.focus()); }
     finally { inFlight.current = false; setBusy(false); onBusy(false); }
   };
@@ -62,9 +64,9 @@ function VersionForm({ name, data, onPublished, onDirty, onBusy, onReload }: { n
     <label>Copy settings from<select value={source} disabled={busy} onChange={(e) => { const selected = data.versions.find((v) => v.version === e.target.value); if (selected) { setSource(selected.version); setDraft(selected.settings); setInstructions(selected.instructions); setPurpose(selected.purpose); setConfirming(false); } }}>{data.versions.map((v) => <option key={v.version} value={v.version}>v{v.version}{v.version === data.latest ? " · Latest" : " · Legacy"} — {v.label}</option>)}</select></label>
     <label>New version<input value={version} disabled={busy} onChange={(e) => { setVersion(e.target.value); setConfirming(false); }} placeholder="1.0.1" /></label>
     <p className="technical-description">Patch: corrections. Minor: compatible capabilities. Major: changes to expected behavior. Every release preserves the role's record and permission limits.</p>
-    <AgentSettings value={draft} onChange={(v) => { setDraft(v); setConfirming(false); }} models={data.models} allowance={data.baseline.tools} disabled={busy} />
+    <AgentSettings value={draft} onChange={(v) => { setDraft(v); setConfirming(false); }} models={data.models} allowance={allowance} disabled={busy} />
     <label>When should this agent be called?<textarea className="resize-none" rows={2} maxLength={500} value={purpose} disabled={busy} onChange={(e) => { setPurpose(e.target.value); setConfirming(false); }} /></label>
-    <label>Instructions<textarea className="resize-none" rows={12} value={instructions} maxLength={100000} disabled={busy} onChange={(e) => { setInstructions(e.target.value); setConfirming(false); }} /></label>
+    {nativeDesigner ? <p className="technical-description">The native design chat loads its system prompt from ~/.claude/agents/sociotechnic-designer.md, linked to the project’s agent Markdown file. Edit that file to change the prompt; each conversation keeps the version it started with.</p> : <label>Instructions<textarea className="resize-none" rows={12} value={instructions} maxLength={100000} disabled={busy} onChange={(e) => { setInstructions(e.target.value); setConfirming(false); }} /></label>}
     <p className="technical-description">Permissions stay within this role's baseline. Skills and write guards are preserved. Job round, dispatch and retry caps are separate. Nested comment workers retain v1.0.0.</p>
     <label>What changed?<input value={label} maxLength={80} disabled={busy} onChange={(e) => { setLabel(e.target.value); setConfirming(false); }} placeholder="Try Sonnet with a smaller turn budget" /></label>
     {error ? <div><p ref={errorRef} tabIndex={-1} className="inline-error" role="alert">{error}</p><Button type="button" variant="outline" onClick={onReload}>Reload releases and reset draft</Button></div> : null}
