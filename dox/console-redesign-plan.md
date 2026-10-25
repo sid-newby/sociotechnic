@@ -200,3 +200,15 @@ remain open. Prepare the next release from their actual completed scope.
 - Per-dispatch interrupt changes recorded outcomes; the contract must say how
   an interrupted dispatch counts against retries.
 - The legacy console at `/legacy` keeps its controls until wave 3 lands.
+
+## Finish continuation — October 25, 2026
+
+The bounded wave-5 finish implementation is prepared in an isolated worktree:
+root DESIGN.md, the console UI builder guide, repaired capture harness, refreshed
+primary and supplemental screenshots, and reconciled source/documentation maps.
+Shared Textarea defaults and compact-button typography preserve the established
+resize and 13px utility rules. See the [finish plan](../sociotechnic/docs/console-finish-plan.md)
+and [review](../sociotechnic/docs/evidence/console-finish/finish-review.md) for
+actual fixture proof and remaining limits. Strict premium still reports 19
+composed-control findings; official DESIGN lint is unavailable. No new version,
+merge, release or publication is implied. Live provider success is not claimed.

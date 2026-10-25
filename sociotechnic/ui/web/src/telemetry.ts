@@ -24,7 +24,6 @@ export function duration(ms: number | null): string {
   const minutes = Math.floor(seconds / 60);
   return minutes < 60 ? `${minutes}m ${seconds % 60}s` : `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
 }
-export const usd = (value: number | null) => value === null ? "Not reported" : new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: value < 1 ? 4 : 2 }).format(value);
 export const tokens = (value: number | null) => value === null ? "Not reported" : value.toLocaleString("en-US");
 
 export function aggregate(dispatches: Dispatch[], now: number) {
@@ -35,7 +34,7 @@ export function aggregate(dispatches: Dispatch[], now: number) {
     const completed = rows.filter((d) => d.finishedAt !== null);
     const durations = completed.flatMap((d) => { const value = elapsed(d, now); return value === null ? [] : [value]; });
     const deadlines = completed.map((d) => deadline(d, now)).filter((d) => d.completed);
-    return { input: sumTokens(rows.map((d) => d.usage.breakdown?.input ?? null)), output: sumTokens(rows.map((d) => d.usage.breakdown?.output ?? null)), cacheRead: sumTokens(rows.map((d) => d.usage.breakdown?.cacheRead ?? null)), cacheWrite: sumTokens(rows.map((d) => d.usage.breakdown?.cacheWrite ?? null)), breakdownMissing: rows.filter((d) => !d.usage.breakdown || Object.values(d.usage.breakdown).some((v) => v === null)).length, agent, count: rows.length, retries: rows.filter((d) => d.attempt > 1).length, cumulative: durations.length ? durations.reduce((a, b) => a + b, 0) : null, median: durations.length ? median(durations) : null, measuredTimes: durations.length, completed: completed.length, onTime: deadlines.filter((d) => !d.late).length, measuredDeadlines: deadlines.length, cost: costs.length ? costs.reduce((a, b) => a + b, 0) : null, costMissing: rows.length - costs.length, tokens: tokenCounts.length ? tokenCounts.reduce((a, b) => a + b, 0) : null, tokensMissing: rows.length - tokenCounts.length };
+    return { input: sumTokens(rows.map((d) => d.usage.breakdown?.input ?? null)), output: sumTokens(rows.map((d) => d.usage.breakdown?.output ?? null)), cacheRead: sumTokens(rows.map((d) => d.usage.breakdown?.cacheRead ?? null)), cacheWrite: sumTokens(rows.map((d) => d.usage.breakdown?.cacheWrite ?? null)), breakdownMissing: rows.filter((d) => !d.usage.breakdown || [d.usage.breakdown.total, d.usage.breakdown.input, d.usage.breakdown.output, d.usage.breakdown.cacheRead, d.usage.breakdown.cacheWrite].some((v) => v === null)).length, agent, count: rows.length, retries: rows.filter((d) => d.attempt > 1).length, cumulative: durations.length ? durations.reduce((a, b) => a + b, 0) : null, median: durations.length ? median(durations) : null, measuredTimes: durations.length, completed: completed.length, onTime: deadlines.filter((d) => !d.late).length, measuredDeadlines: deadlines.length, cost: costs.length ? costs.reduce((a, b) => a + b, 0) : null, costMissing: rows.length - costs.length, tokens: tokenCounts.length ? tokenCounts.reduce((a, b) => a + b, 0) : null, tokensMissing: rows.length - tokenCounts.length };
   });
 }
 function median(values: number[]): number {

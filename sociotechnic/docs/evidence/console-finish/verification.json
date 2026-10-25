@@ -1,0 +1,342 @@
+{
+  "baseCommit": "1eb0a89d3c32319c3be5e530caf5605f1e0cecf3",
+  "integrationBranch": "codex/console-finish-plan",
+  "uncommitted": true,
+  "applicationTests": {
+    "total": 409,
+    "passed": 377,
+    "skipped": 32,
+    "failed": 0,
+    "databaseOptIn": false,
+    "nativeUnitOptIn": false
+  },
+  "releaseTests": {
+    "passed": 18,
+    "failed": 0
+  },
+  "typecheck": {
+    "engine": "passed",
+    "web": "passed"
+  },
+  "productionBuild": "passed; existing chunk-size advisory retained",
+  "runPage": {
+    "passed": 99,
+    "failed": 0
+  },
+  "historyAgentsSettings": {
+    "passed": 40,
+    "failed": 0
+  },
+  "wizardScenarioGroups": 18,
+  "ownershipScenarioGroups": 8,
+  "designer": {
+    "fixtureSdk": true,
+    "actualImpeccable": true,
+    "modelCalls": 0,
+    "sdkQueries": 4,
+    "status": "planned",
+    "previewSeparateWindowTarget": true,
+    "anchoredTurns": true,
+    "streamingReadingPosition": true,
+    "ime": true,
+    "failedSendRecovery": true,
+    "reconnect": true,
+    "interruptResume": true,
+    "themes": [
+      "dark",
+      "light"
+    ],
+    "widths": [
+      1440,
+      390
+    ],
+    "reducedMotion": true
+  },
+  "designerA11y": {
+    "success": true,
+    "data": {
+      "axeVersion": "4.12.1",
+      "counts": {
+        "inapplicable": 58,
+        "incomplete": 0,
+        "passes": 30,
+        "violations": 0
+      },
+      "incomplete": [],
+      "lifecycle": {
+        "effectiveLaunch": {
+          "browserLaunched": true,
+          "engine": "chrome",
+          "launchHash": 9467515241851480000
+        },
+        "launched": false,
+        "relaunchedBrowser": false,
+        "restartedBackground": false,
+        "restoreStatus": "not_configured",
+        "reused": true,
+        "saveStatus": "not_attempted"
+      },
+      "url": "http://127.0.0.1:57601/#job=20261025-design-a-research-notebo",
+      "violations": []
+    },
+    "error": null
+  },
+  "capture": {
+    "capturedAt": "2026-10-25T19:33:00.628Z",
+    "baseCommit": "1eb0a89d3c32319c3be5e530caf5605f1e0cecf3",
+    "sourceSha256": "2b866d3d8602e356a3398e4fc0d20a9b3f329aaf03bced5ff9519a312751b706",
+    "buildSha256": "4cf4dea7a433708145ec76e5fb358a818eeb2408fca8a624c1c15d4bbf5fbb90",
+    "scriptSha256": "c0dc8e0a4c812e858a5210f7b02d3f8204113d707ef25bc95c41c1e60597a997",
+    "fixture": "sociotechnic/ui/seed/demo-job",
+    "viewport": {
+      "width": 1600,
+      "height": 1000
+    },
+    "deviceScaleFactor": 1,
+    "scheme": "dark",
+    "preset": "shadcn-neutral",
+    "locale": "en-US",
+    "timezone": "UTC",
+    "reducedMotion": true,
+    "dispatchCalls": 0,
+    "images": [
+      {
+        "file": "overview.png",
+        "sha256": "e0b6a103973ece00fe5cd95a60753fa0dee1e57397f29c3d3d4c89abb43b7e9c"
+      },
+      {
+        "file": "start-a-run.png",
+        "sha256": "4fa6db2afc342ac104dfdfaf89a3364024f6aeada488809f01a6ebee4b3dad58"
+      },
+      {
+        "file": "activity.png",
+        "sha256": "545ac4dba0b4c9a306429973328aad5e82a0b8f5dd509dd3db93bad0e38d2ee9"
+      },
+      {
+        "file": "round.png",
+        "sha256": "6de8fc1ce342baed759a47114a5ba731fc8b4037ed0c2c5d33459a9596994621"
+      },
+      {
+        "file": "analysis.png",
+        "sha256": "b385f904ec83ceb8ab84fc2dc6f2d19d505be4c5de80b7be00ab8485d82d616a"
+      },
+      {
+        "file": "agent-library.png",
+        "sha256": "e86fb04403e8c60bae5e2a17c20462dbc266d212429d0629fa10b634aa538234"
+      },
+      {
+        "file": "agent-creation.png",
+        "sha256": "80bb1803e72d7ccbdd938ddd56485554f4966ff02597acf772da19598e38c273"
+      },
+      {
+        "file": "records.png",
+        "sha256": "bc325fc75c10ec8f4ea84c7d037be2bd43d10c35ba12b475e38294e407136fb7"
+      }
+    ],
+    "styleProof": [
+      {
+        "name": "overview",
+        "minButtonFontPx": 13,
+        "textareaResize": [],
+        "scrollbarColor": "oklch(1 0 0 / 0.1) rgba(0, 0, 0, 0)"
+      },
+      {
+        "name": "start-a-run",
+        "minButtonFontPx": 13,
+        "textareaResize": [
+          "none"
+        ],
+        "scrollbarColor": "oklch(1 0 0 / 0.1) rgba(0, 0, 0, 0)"
+      },
+      {
+        "name": "activity",
+        "minButtonFontPx": 13,
+        "textareaResize": [],
+        "scrollbarColor": "oklch(1 0 0 / 0.1) rgba(0, 0, 0, 0)"
+      },
+      {
+        "name": "round",
+        "minButtonFontPx": 13,
+        "textareaResize": [],
+        "scrollbarColor": "oklch(1 0 0 / 0.1) rgba(0, 0, 0, 0)"
+      },
+      {
+        "name": "analysis",
+        "minButtonFontPx": 13,
+        "textareaResize": [],
+        "scrollbarColor": "oklch(1 0 0 / 0.1) rgba(0, 0, 0, 0)"
+      },
+      {
+        "name": "agent-library",
+        "minButtonFontPx": 14,
+        "textareaResize": [],
+        "scrollbarColor": "oklch(1 0 0 / 0.1) rgba(0, 0, 0, 0)"
+      },
+      {
+        "name": "agent-creation",
+        "minButtonFontPx": 14,
+        "textareaResize": [
+          "none",
+          "none",
+          "none"
+        ],
+        "scrollbarColor": "oklch(1 0 0 / 0.1) rgba(0, 0, 0, 0)"
+      },
+      {
+        "name": "records",
+        "minButtonFontPx": 13,
+        "textareaResize": [],
+        "scrollbarColor": "oklch(1 0 0 / 0.1) rgba(0, 0, 0, 0)"
+      }
+    ],
+    "popupProof": [
+      {
+        "width": 1600,
+        "triggerWidth": 624,
+        "popupWidth": 624,
+        "keyboardEscapeFocus": true
+      },
+      {
+        "width": 390,
+        "triggerWidth": 310,
+        "popupWidth": 310,
+        "keyboardEscapeFocus": true
+      }
+    ],
+    "sandboxProof": {
+      "browserInterceptedInventory": true,
+      "invalidResponseRecovery": true,
+      "empty": true,
+      "removalConfirmationCancelled": true,
+      "realSandboxOperations": 0
+    }
+  },
+  "strictPremium": {
+    "errors": 19,
+    "exitCode": 1,
+    "cleanPass": false,
+    "report": "premium-usage.json"
+  },
+  "officialDesignLint": "unavailable; no install authorized/performed",
+  "networkDependencyAudit": {
+    "status": "passed",
+    "exitCode": 0,
+    "registry": "https://registry.npmjs.org/",
+    "packageManager": "existing installed pnpm 12.15.0",
+    "arguments": [
+      "audit",
+      "--prod",
+      "--audit-level",
+      "high",
+      "--json"
+    ],
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0
+    },
+    "report": "production-dependency-audit.json",
+    "executionAndHashes": "production-dependency-audit-result.json",
+    "manifestsLockAndWorkspaceUnchanged": true
+  },
+  "postgresTests": "not run",
+  "liveProviderModelCalls": 0,
+  "realSandboxOperations": 0,
+  "publicationActions": 0,
+  "ownedFixtureServices": "Final capture, History, run-page and designer finally handlers closed their owned resources; no persistent preview",
+  "privateDependencies": [
+    {
+      "path": "sociotechnic/node_modules",
+      "regular_files": 24608,
+      "relative_links": 1607,
+      "shared_inodes": 0
+    },
+    {
+      "path": "sociotechnic/ui/web/node_modules",
+      "regular_files": 3,
+      "relative_links": 24,
+      "shared_inodes": 0
+    }
+  ],
+  "priorFinishCheckpoint": {
+    "applicationTests": {
+      "total": 400,
+      "passed": 368,
+      "skipped": 32,
+      "failed": 0,
+      "databaseOptIn": false,
+      "nativeUnitOptIn": false
+    },
+    "releaseTests": {
+      "passed": 18,
+      "failed": 0
+    },
+    "wizardScenarioGroups": 18,
+    "ownershipScenarioGroups": 8,
+    "reports": [
+      "run-page-browser.json",
+      "history-browser.json",
+      "designer-browser.json",
+      "premium-final.json"
+    ]
+  },
+  "package": "P6 recorded provider usage; supersedes current summary and captures",
+  "reports": {
+    "runPage": "usage-run-page-browser.json",
+    "history": "usage-history-browser.json",
+    "designer": "usage-designer-browser.json",
+    "designerA11y": "usage-designer-a11y.json"
+  },
+  "currentSourceDigestIncludesUntrackedSource": true,
+  "scopeProtection": [
+    "No runner, adapter, collector, engine policy, schema, migration or catalog edits",
+    "Raw payloads and historical totals preserved",
+    "No user service stopped/restarted; fixture handles closed"
+  ],
+  "finalStaticChecks": {
+    "imageHashesAndDimensions": 11,
+    "sourceFilesHashed": 250,
+    "sourceAndBuildDigests": "matched final capture",
+    "relativeMarkdownPaths": "passed",
+    "gitDiffCheck": "passed",
+    "newTestsOutsideSource": true,
+    "authoredComponentDollarLabels": "absent",
+    "changedFiles": 72,
+    "p6ChangedFiles": 58
+  },
+  "preservation": {
+    "primaryBranch": "main",
+    "primaryHead": "1eb0a89d3c32319c3be5e530caf5605f1e0cecf3",
+    "primaryTrackedDirt": "exact original .gitignore edit",
+    "userServer": "existing PID 30322 listening 127.0.0.1:4747; untouched",
+    "ownedVerificationCommands": "none remain",
+    "persistentPreview": false
+  },
+  "aggregateTaskChecksInvoked": false,
+  "componentGateChronology": {
+    "finalP6": [
+      "engine typecheck",
+      "web typecheck",
+      "production build",
+      "409 application tests (377 pass, 32 optional skips)",
+      "99 run-page fixture checks",
+      "40 History fixture checks",
+      "designer/native-preview fixture",
+      "final captures and provenance",
+      "production dependency audit (subsequent authorized network lookup)"
+    ],
+    "priorP0P5UnchangedInputs": [
+      "agent seed validation",
+      "18 release tests",
+      "18 wizard scenario groups",
+      "8 ownership scenario groups"
+    ],
+    "notPerformed": [
+      "PostgreSQL optional tests",
+      "official DESIGN lint (tool absent)",
+      "live provider/model calls"
+    ]
+  }
+}

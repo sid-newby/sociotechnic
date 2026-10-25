@@ -1,0 +1,41 @@
+{
+  "capturedDate": "2026-10-25",
+  "baseCommit": "bc09db86f346939b1a8ddb697d984b08241eedc0",
+  "images": [
+    {
+      "file": "settings.png",
+      "width": 1440,
+      "height": 1000,
+      "script": "verify-console-history.mjs --stable",
+      "fixture": "Settings defaults fixture",
+      "sha256": "4410cd5b8360669df489156c0d452e268fba6b5e2366c1052af67f3d676ae1e9",
+      "scheme": "dark",
+      "preset": "shadcn-neutral",
+      "buildSha256": "4cf4dea7a433708145ec76e5fb358a818eeb2408fca8a624c1c15d4bbf5fbb90"
+    },
+    {
+      "file": "designer-chat.png",
+      "width": 1440,
+      "height": 1000,
+      "script": "verify-interactive-design.mjs",
+      "fixture": "Fake SDK designer thread",
+      "sha256": "476016e9c16698f5c907f3faa60528b66afac8900f9ee2bf467aab82b735a103",
+      "scheme": "dark",
+      "preset": "shadcn-neutral",
+      "buildSha256": "4cf4dea7a433708145ec76e5fb358a818eeb2408fca8a624c1c15d4bbf5fbb90"
+    },
+    {
+      "file": "commands.png",
+      "width": 1440,
+      "height": 1000,
+      "script": "verify-run-page.mjs --stable",
+      "fixture": "Needs-human command fixture",
+      "sha256": "ec304f538e60d55d8b3e3c96af5ee6faf2cb36bee11c00478d11bfca478c8aba",
+      "scheme": "dark",
+      "preset": "shadcn-neutral",
+      "buildSha256": "4cf4dea7a433708145ec76e5fb358a818eeb2408fca8a624c1c15d4bbf5fbb90"
+    }
+  ],
+  "package": "Combined UI and merged orchestration local review",
+  "sourceSha256": "ad1c16099756f323c9df6b94c3d7e3243d171efa6af15f3f723174cf0f9ff5e1"
+}

@@ -1,0 +1,29 @@
+{
+  "success": true,
+  "data": {
+    "axeVersion": "4.12.1",
+    "counts": {
+      "inapplicable": 58,
+      "incomplete": 0,
+      "passes": 30,
+      "violations": 0
+    },
+    "incomplete": [],
+    "lifecycle": {
+      "effectiveLaunch": {
+        "browserLaunched": true,
+        "engine": "chrome",
+        "launchHash": 9467515241851480000
+      },
+      "launched": false,
+      "relaunchedBrowser": false,
+      "restartedBackground": false,
+      "restoreStatus": "not_configured",
+      "reused": true,
+      "saveStatus": "not_attempted"
+    },
+    "url": "http://127.0.0.1:63483/#job=20261025-design-a-research-notebo",
+    "violations": []
+  },
+  "error": null
+}

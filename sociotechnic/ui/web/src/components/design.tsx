@@ -100,7 +100,7 @@ function Conversation({ detail, refresh, disabled }: { detail: Detail; refresh: 
     <div className="grid min-w-0 gap-3 px-6">
     {artifacts.length ? <details className="design-artifacts min-w-0 text-sm [&_summary]:cursor-pointer [&_summary]:font-medium [&_summary]:focus-visible:outline-ring"><summary>Design artifacts ({artifacts.length})</summary><ul className="mt-3 max-h-32 space-y-2 overflow-y-auto break-all text-sm [&_a]:underline [&_a]:underline-offset-4">{artifacts.map((p) => <li key={p}><a href={`${jobUrl(detail.job.id)}/design-artifacts/${encodeURIComponent(p)}`} target={`design-artifact-${d.id}`} rel="noopener noreferrer">{p.split("/workspace/")[1] ?? p}</a></li>)}</ul></details> : null}
     {canApprove ? <div className="flex flex-wrap items-center gap-3"><Button disabled={blocked} onClick={() => void action("handoff", { digest: d.fingerprint })}>Return work <ArrowRight /></Button><p className="text-sm leading-relaxed text-muted-foreground">Return HANDOFF.md and its artifacts to the planner for assessment and plan review.</p></div> : null}
-    <p className="text-sm leading-relaxed text-muted-foreground">{active ? "Usage updates when this response finishes." : d.usage.reported ? `Last usage report: ${d.usage.turns} model turns · ${d.usage.tokens.toLocaleString()} tokens.` : "Token usage has not been reported."} </p>
+    <p className="text-sm leading-relaxed text-muted-foreground">{active ? "Usage updates when this response finishes." : d.usage.reported ? `Last recorded aggregate: ${d.usage.turns} model turns · ${d.usage.tokens.toLocaleString()} tokens.` : "Token usage has not been reported."} Per-turn and category provenance is unavailable in this stored designer summary.</p>
     </div>
   </section>;
 }

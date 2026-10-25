@@ -1,0 +1,28 @@
+{
+  "startedAt": "2026-10-25T19:41:05.415159+00:00",
+  "finishedAt": "2026-10-25T19:41:05.723361+00:00",
+  "exitCode": 0,
+  "packageManager": "pnpm 12.15.0 (existing installed executable)",
+  "registry": "https://registry.npmjs.org/",
+  "arguments": [
+    "audit",
+    "--prod",
+    "--audit-level",
+    "high",
+    "--json"
+  ],
+  "before": {
+    "sociotechnic/package.json": "20ee22575d3b61bc00ebb7642a6b81b2716b0d5a77400f548f056187b7f9c0d5",
+    "sociotechnic/ui/web/package.json": "6c9497b63f9daec989a6a62e7b332e47860a03d8305b311bd3a9d4b933118862",
+    "sociotechnic/pnpm-lock.yaml": "1bf7e0621e0778fba0796d2559ece536ac613dca7280511792922bebc9ab75b8",
+    "sociotechnic/pnpm-workspace.yaml": "b5835c8de597520588f4e183b78007585533cef91c839cdca8fdf53968fcab80"
+  },
+  "after": {
+    "sociotechnic/package.json": "20ee22575d3b61bc00ebb7642a6b81b2716b0d5a77400f548f056187b7f9c0d5",
+    "sociotechnic/ui/web/package.json": "6c9497b63f9daec989a6a62e7b332e47860a03d8305b311bd3a9d4b933118862",
+    "sociotechnic/pnpm-lock.yaml": "1bf7e0621e0778fba0796d2559ece536ac613dca7280511792922bebc9ab75b8",
+    "sociotechnic/pnpm-workspace.yaml": "b5835c8de597520588f4e183b78007585533cef91c839cdca8fdf53968fcab80"
+  },
+  "manifestLockWorkspaceUnchanged": true,
+  "installedPackages": false
+}

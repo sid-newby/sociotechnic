@@ -1,0 +1,203 @@
+{
+  "base": "bc09db86f346939b1a8ddb697d984b08241eedc0",
+  "branch": "codex/ui-combined-verification",
+  "uncommitted": true,
+  "aggregateTaskChecksInvoked": false,
+  "method": "Six equivalent required stages using existing direct installed binaries; no installs",
+  "node": "v26.8.1",
+  "sourceAndTestsSha256": "0c21da3be7b7167f8a7910e760d008f1a30fa8beaebc2f051df8d57ee58eca73",
+  "fixtureEndpoint": "postgresql://sidnewby@localhost:55439/postgres?host=%2Ftmp%2Fsociotechnic-flow-pg-20261025",
+  "fixtureDataDirectory": "/Users/sidnewby/Documents/Codex/2026-10-25/task/flow-pg/data",
+  "tcpListening": false,
+  "startedAt": "2026-10-25T22:22:10.891845+00:00",
+  "checks": [
+    {
+      "name": "focused-usage-runner",
+      "exitCode": 0,
+      "seconds": 2.05,
+      "command": [
+        "/opt/homebrew/bin/node",
+        "--test",
+        "sociotechnic/tests/token-usage.test.ts",
+        "sociotechnic/tests/history.test.ts",
+        "sociotechnic/tests/run-controls.test.ts",
+        "sociotechnic/tests/run-table.test.ts",
+        "sociotechnic/tests/runner-envelope.test.ts",
+        "sociotechnic/tests/runner-evidence.test.ts"
+      ],
+      "cwd": "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/sociotechnic-ui-combined",
+      "log": "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/combined-verification/focused-usage-runner.log"
+    },
+    {
+      "name": "engine-types",
+      "exitCode": 0,
+      "seconds": 0.39,
+      "command": [
+        "/opt/homebrew/bin/node",
+        "sociotechnic/node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "-p",
+        "sociotechnic"
+      ],
+      "cwd": "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/sociotechnic-ui-combined",
+      "log": "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/combined-verification/engine-types.log"
+    },
+    {
+      "name": "web-types",
+      "exitCode": 0,
+      "seconds": 0.53,
+      "command": [
+        "/opt/homebrew/bin/node",
+        "node_modules/typescript/bin/tsc",
+        "-b",
+        "--noEmit"
+      ],
+      "cwd": "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/sociotechnic-ui-combined/sociotechnic/ui/web",
+      "log": "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/combined-verification/web-types.log"
+    },
+    {
+      "name": "web-build-types",
+      "exitCode": 0,
+      "seconds": 0.5,
+      "command": [
+        "/opt/homebrew/bin/node",
+        "node_modules/typescript/bin/tsc",
+        "-b"
+      ],
+      "cwd": "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/sociotechnic-ui-combined/sociotechnic/ui/web",
+      "log": "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/combined-verification/web-build-types.log"
+    },
+    {
+      "name": "production-build",
+      "exitCode": 0,
+      "seconds": 0.81,
+      "command": [
+        "/opt/homebrew/bin/node",
+        "node_modules/vite/bin/vite.js",
+        "build"
+      ],
+      "cwd": "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/sociotechnic-ui-combined/sociotechnic/ui/web",
+      "log": "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/combined-verification/production-build.log"
+    },
+    {
+      "name": "agent-seeds",
+      "exitCode": 0,
+      "seconds": 0.13,
+      "command": [
+        "/opt/homebrew/bin/node",
+        "sociotechnic/src/cli.ts",
+        "agents"
+      ],
+      "cwd": "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/sociotechnic-ui-combined",
+      "log": "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/combined-verification/agent-seeds.log"
+    },
+    {
+      "name": "release-tests",
+      "exitCode": 0,
+      "seconds": 0.33,
+      "command": [
+        "/opt/homebrew/bin/node",
+        "--test",
+        ".github/scripts/changelog.test.cjs",
+        ".github/scripts/release.test.cjs"
+      ],
+      "cwd": "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/sociotechnic-ui-combined",
+      "log": "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/combined-verification/release-tests.log"
+    },
+    {
+      "name": "application-and-pg",
+      "exitCode": 0,
+      "seconds": 119.27,
+      "command": [
+        "/opt/homebrew/bin/node",
+        "--test",
+        "sociotechnic/tests/agent-catalog-db.test.ts",
+        "sociotechnic/tests/agent-discovery.test.ts",
+        "sociotechnic/tests/agent-library.test.ts",
+        "sociotechnic/tests/agent-models.test.ts",
+        "sociotechnic/tests/agent-skills.test.ts",
+        "sociotechnic/tests/agent-version-backfill.test.ts",
+        "sociotechnic/tests/agent-versions.test.ts",
+        "sociotechnic/tests/agents.test.ts",
+        "sociotechnic/tests/azure-sme.test.ts",
+        "sociotechnic/tests/backup-restore-pg.test.ts",
+        "sociotechnic/tests/brief-policy.test.ts",
+        "sociotechnic/tests/browser-tools.test.ts",
+        "sociotechnic/tests/builder-profiles.test.ts",
+        "sociotechnic/tests/catalog-migrations.test.ts",
+        "sociotechnic/tests/check-repair-lifecycle.test.ts",
+        "sociotechnic/tests/check-repair.test.ts",
+        "sociotechnic/tests/checks.test.ts",
+        "sociotechnic/tests/codex-build-tools.test.ts",
+        "sociotechnic/tests/codex.test.ts",
+        "sociotechnic/tests/comment-inventory.test.ts",
+        "sociotechnic/tests/console-ownership.test.ts",
+        "sociotechnic/tests/console-preferences.test.ts",
+        "sociotechnic/tests/console-version.test.ts",
+        "sociotechnic/tests/console.test.ts",
+        "sociotechnic/tests/csp.test.ts",
+        "sociotechnic/tests/db.test.ts",
+        "sociotechnic/tests/dbpg.test.ts",
+        "sociotechnic/tests/design.test.ts",
+        "sociotechnic/tests/dev-ports.test.ts",
+        "sociotechnic/tests/driver.test.ts",
+        "sociotechnic/tests/e2e.test.ts",
+        "sociotechnic/tests/effect-recovery.test.ts",
+        "sociotechnic/tests/ensure.test.ts",
+        "sociotechnic/tests/gate.test.ts",
+        "sociotechnic/tests/guards.test.ts",
+        "sociotechnic/tests/history-cleanup.test.ts",
+        "sociotechnic/tests/history.test.ts",
+        "sociotechnic/tests/import-review-regressions.test.ts",
+        "sociotechnic/tests/interrupt.test.ts",
+        "sociotechnic/tests/job-import.test.ts",
+        "sociotechnic/tests/job-store.test.ts",
+        "sociotechnic/tests/job.test.ts",
+        "sociotechnic/tests/plan.test.ts",
+        "sociotechnic/tests/planning-recovery.test.ts",
+        "sociotechnic/tests/postgres-environment.test.ts",
+        "sociotechnic/tests/record-content.test.ts",
+        "sociotechnic/tests/release-policy.test.ts",
+        "sociotechnic/tests/remote-merge.test.ts",
+        "sociotechnic/tests/repositories.test.ts",
+        "sociotechnic/tests/restore-api.test.ts",
+        "sociotechnic/tests/restore-guards.test.ts",
+        "sociotechnic/tests/run-controls.test.ts",
+        "sociotechnic/tests/run-log.test.ts",
+        "sociotechnic/tests/run-moment.test.ts",
+        "sociotechnic/tests/run-table.test.ts",
+        "sociotechnic/tests/run.test.ts",
+        "sociotechnic/tests/runner-envelope.test.ts",
+        "sociotechnic/tests/runner-evidence.test.ts",
+        "sociotechnic/tests/runtime-recovery.test.ts",
+        "sociotechnic/tests/sandbox-context7.test.ts",
+        "sociotechnic/tests/sandbox.test.ts",
+        "sociotechnic/tests/staging.test.ts",
+        "sociotechnic/tests/stop.test.ts",
+        "sociotechnic/tests/storage-boundaries.test.ts",
+        "sociotechnic/tests/token-usage.test.ts",
+        "sociotechnic/tests/ui.test.ts",
+        "sociotechnic/tests/verdict.test.ts"
+      ],
+      "cwd": "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/sociotechnic-ui-combined",
+      "log": "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/combined-verification/application-and-pg.log"
+    },
+    {
+      "name": "production-audit",
+      "exitCode": 0,
+      "seconds": 0.29,
+      "command": [
+        "/Users/sidnewby/Library/pnpm/store/v11/links/@/pnpm/12.15.0/db792e74dce3d126b3c20e0672f18d97c6f63fee2ef3ddb971a47615ac903948/node_modules/@pnpm/exe.darwin-arm64/pnpm",
+        "audit",
+        "--prod",
+        "--audit-level",
+        "high",
+        "--json"
+      ],
+      "cwd": "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/sociotechnic-ui-combined/sociotechnic",
+      "log": "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/combined-verification/production-audit.log"
+    }
+  ],
+  "sourceStillUnchanged": true,
+  "finishedAt": "2026-10-25T22:24:15.897004+00:00"
+}

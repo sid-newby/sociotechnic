@@ -1,6 +1,6 @@
 # Local setup and development
 
-[App guide](../../README.md) · [CLI and driver reference](cli-reference.md) · [Engine and state reference](engine-reference.md)
+[App guide](../../README.md) · [Console UI builder guide](console-ui.md) · [CLI and driver reference](cli-reference.md) · [Engine and state reference](engine-reference.md)
 
 ## Local setup
 
@@ -35,9 +35,11 @@ dark viewport. Refresh it with [console-screenshots.mjs](../scripts/console-scre
 after building the console; let the build finish before capturing. The script reuses the UI tests' in-memory store,
 committed demo records, release catalog and real HTTP server. A runner guard
 refuses agent dispatch. It opens an isolated headless Chrome profile, fills and
-discards an agent draft, captures eight views, checks for browser/HTTP errors,
-then closes the browser and server and removes its temporary home. It does not
-connect to PostgreSQL, start a run, publish an agent or restart your live console.
+discards an agent draft, captures eight current dashboard/ledger/History/library/record views, checks
+button typography, textarea sizing, select popup geometry and browser/HTTP errors,
+then closes the browser and server and removes its temporary home. Sandbox inventory/error/confirmation checks are intercepted in the browser;
+no real sandbox operation occurs. It does not connect to PostgreSQL, start a
+run, publish an agent or restart your live console.
 
 Requires Node 24+, Google Chrome and Playwright. Playwright is optional capture
 tooling, not an application dependency. If it is already resolvable from the
@@ -52,9 +54,11 @@ SOCIOTECHNIC_PLAYWRIGHT_MODULE=/tmp/sociotechnic-screenshot-tools/node_modules/p
 ```
 
 Review all eight images at their native size, check that each is 1600 × 1000,
-and verify the README links before committing. Keep unavailable measurements
-and skipped reviews visible. Update the capture date and application commit in
-the screenshot notes when refreshing the set.
+and verify README links. The script writes `assets/console/capture.json` only
+after successful completion, with source/build/script digests, image hashes and
+computed-style/popup evidence. Keep unavailable measurements and skipped reviews
+visible. The screenshot manifest identifies supplemental fixture captures and
+historical images separately; do not describe all files as one viewport size.
 
 ### Run wizard browser verification
 
@@ -102,9 +106,11 @@ run-page, wizard, ownership and interactive-design scripts for their workflows.
 Run `task checks` and `task test:pg` separately; browser fixtures do not establish
 real PostgreSQL locking or live provider behavior.
 
-Wave 5 still owns the final finish review, `DESIGN.md`, `console-ui.md`, the
-refreshed committed `assets/console/` screenshots and final minor release
-preparation. Existing README screenshots predate the dashboard redesign.
+The console finish pass provides root [DESIGN.md](../../DESIGN.md), the
+[builder guide](console-ui.md), current `assets/console/` captures and a
+[finish review](evidence/console-finish/finish-review.md). The review records
+actual fixture checks and the remaining strict-audit/format-lint limits. No
+release version is implied by completing these artifacts.
 
 ### Interactive design browser verification
 
@@ -135,9 +141,9 @@ New application tests belong under `tests/`; existing release-script tests under
 ## Development
 
 For contribution scope, issue reports and PR expectations, read
-[CONTRIBUTING.md](../../CONTRIBUTING.md). [Releasing](releasing.md) covers checks,
+[CONTRIBUTING.md](../../dox/CONTRIBUTING.md). [Releasing](releasing.md) covers checks,
 tags, public snapshots and GitHub setup. Licenses for bundled sources are listed
-in [third-party notices](../../THIRD_PARTY_NOTICES.md).
+in [third-party notices](../../dox/THIRD_PARTY_NOTICES.md).
 
 Agents changing this repository should start with the root
 [AGENTS.md](../../AGENTS.md); [CLAUDE.md](../../CLAUDE.md) loads those same
@@ -314,7 +320,7 @@ browser interaction was exercised.
 | Project and global session entry points | [project skill](../../.claude/skills/sociotechnic/SKILL.md), [global skill and shim](../global/) | [run.test.ts](../tests/run.test.ts), [ensure.test.ts](../tests/ensure.test.ts); skill wording also needs manual review |
 | Comment inventory and fixed cleanup plans | [comment-inventory.ts](../src/comment-inventory.ts), [engine.ts](../src/engine.ts), [cleanup guide](comment-cleanup.md) | [comment-inventory.test.ts](../tests/comment-inventory.test.ts), [ui.test.ts](../tests/ui.test.ts) |
 | Comment cleanup | [cleanup guide](comment-cleanup.md), [coordinator/worker initialization seeds](../seeds/agents.json), [runner.ts](../ui/runner.ts) | [agents.test.ts](../tests/agents.test.ts), [plan.test.ts](../tests/plan.test.ts), [driver.test.ts](../tests/driver.test.ts), [e2e.test.ts](../tests/e2e.test.ts) |
-| Contributions and releases | [Contributor guide](../../CONTRIBUTING.md), [security policy](../../SECURITY.md), [releasing](releasing.md), [third-party notices](../../THIRD_PARTY_NOTICES.md), root `.github/` templates | Verify Markdown links and template metadata, ignore rules, release contents and the checks described in the release guide |
+| Contributions and releases | [Contributor guide](../../dox/CONTRIBUTING.md), [security policy](../../dox/SECURITY.md), [releasing](releasing.md), [third-party notices](../../dox/THIRD_PARTY_NOTICES.md), root `.github/` templates | Verify Markdown links and template metadata, ignore rules, release contents and the checks described in the release guide |
 
 Use [CLI/API contracts](cli-reference.md), [engine and state contracts](engine-reference.md)
 and [the behavioral specification](../CONTRACTS.md) for supported behavior. For UI
@@ -352,7 +358,7 @@ task install
 
 #### shadcn components
 
-`components.json` configures shadcn: style `radix-nova`, neutral base, CSS variables, Lucide icons and `@/` aliases. Generated components live in `src/components/ui/`, with `src/hooks/use-mobile.ts` for the sidebar. They are: avatar, badge, breadcrumb, button, card, chart, checkbox, command, dialog, drawer, dropdown-menu, input, input-group, label, progress, scroll-area, select, separator, sheet, sidebar, skeleton, sonner, table, tabs, textarea, toggle, toggle-group and tooltip. Keep their `data-slot` attributes and the `cn` import from the `cn` package.
+`components.json` configures shadcn: style `radix-nova`, neutral base, CSS variables, Lucide icons and `@/` aliases. Generated components live in `src/components/ui/`, with `src/hooks/use-mobile.ts` for the sidebar. They are: avatar, badge, breadcrumb, button, card, chart, checkbox, command, dialog, drawer, dropdown-menu, input, input-group, label, progress, radio-group, scroll-area, select, separator, sheet, sidebar, skeleton, sonner, table, tabs, textarea, toggle, toggle-group and tooltip. Keep their `data-slot` attributes and the `cn` import from the `cn` package.
 
 The `shadcn` package is not a dependency. Its tree includes `semver@6.3.1`, which the `no-downgrade` trust policy rejects, and `pnpm dlx` applies the same policy. Run the CLI pinned at **4.22.1** through npx from `sociotechnic/ui/web`, previewing first:
 
@@ -509,7 +515,7 @@ Two small demo runs were documented on 2026-10-24:
 | Claude Code project skill | Add `farewell(name)`, a test and API documentation | `ready` in one round, six dispatches, 136,334 reported tokens | [Committed job snapshot](../ui/seed/demo-job) with plan, build, reviews, checks and decision |
 | Console Agent SDK | Add `shout(name)`, a test and API documentation | Reported `ready` in one round after a plan hold | Maintainer’s historical run report; no corresponding committed job snapshot |
 
-The committed seed is a snapshot, not a live job. Its paths contain placeholders and its referenced repository and worktree are absent. The earlier console report included SDK dollar estimates; those do not establish actual subscription charges. Current Analysis presents recorded token usage and leaves missing measurements unreported.
+The committed seed is a snapshot, not a live job. Its paths contain placeholders and its referenced repository and worktree are absent. The earlier console report included SDK dollar estimates; those do not establish actual subscription charges. The current dashboard and History present recorded token usage and leaves missing measurements unreported.
 
 ## Design lineage
 

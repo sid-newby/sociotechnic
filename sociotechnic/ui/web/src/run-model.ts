@@ -221,16 +221,15 @@ export function dispatchElapsed(dispatch: Dispatch, now: number, driver: Dispatc
   return !isLive(dispatch) || isRunningDispatch(dispatch, driver) ? elapsed(dispatch, now) : null;
 }
 
-export type Totals = { agentMs: number | null; timeReported: number; timeMissing: number; live: Dispatch[]; unfinished: Dispatch[]; tokens: number | null; tokensReported: number; cost: number | null; costReported: number; cacheRead: number | null; cacheReported: number; cacheShare: number | null; finished: number };
+export type Totals = { agentMs: number | null; timeReported: number; timeMissing: number; live: Dispatch[]; unfinished: Dispatch[]; tokens: number | null; tokensReported: number; cost: number | null; costReported: number; cacheRead: number | null; cacheReported: number; finished: number };
 
 export function runTotals(dispatches: readonly Dispatch[], now: number, driver: DispatchDriver): Totals {
   const finished = dispatches.filter((dispatch) => !isLive(dispatch));
   const times = dispatches.flatMap((dispatch) => { const value = dispatchElapsed(dispatch, now, driver); return value === null ? [] : [value]; });
   const tokens = finished.map((dispatch) => dispatch.usage.tokens);
   const costs = finished.map((dispatch) => dispatch.usage.cost);
-  const cached = finished.filter((dispatch) => dispatch.usage.breakdown?.cacheRead != null && dispatch.usage.tokens !== null);
+  const cached = finished.filter((dispatch) => dispatch.usage.breakdown?.cacheRead != null);
   const cacheRead = sumTokens(cached.map((dispatch) => dispatch.usage.breakdown?.cacheRead ?? null));
-  const cachedTotal = sumTokens(cached.map((dispatch) => dispatch.usage.tokens));
   return {
     agentMs: times.length ? times.reduce((a, b) => a + b, 0) : null,
     timeReported: times.length,
@@ -243,7 +242,6 @@ export function runTotals(dispatches: readonly Dispatch[], now: number, driver: 
     costReported: costs.filter((value) => value !== null).length,
     cacheRead,
     cacheReported: cached.length,
-    cacheShare: cached.length === finished.length && cacheRead !== null && cachedTotal ? cacheRead / cachedTotal : null,
     finished: finished.length,
   };
 }

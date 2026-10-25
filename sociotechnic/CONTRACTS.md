@@ -1502,8 +1502,8 @@ but runtime catalog reads and job workflows require PostgreSQL.
 
 The React console uses runtime-owned tokens in `ui/web/src/index.css` and
 `src/theme/` presets. The approved direction contract lives in
-`ui/web/.impeccable/surfaces/sociotechnic-ui-web-src-app-tsx.md`; the final design
-document is a later finish deliverable. Geist is local, body text is 16px, utility
+`ui/web/.impeccable/surfaces/sociotechnic-ui-web-src-app-tsx.md`; the visual system is recorded in [DESIGN.md](../DESIGN.md), with implementation
+guidance in [console-ui.md](docs/console-ui.md). Geist is local, body text is 16px, utility
 text is at least 13px, and section cards use 24px padding. Role colors map once
 in `role-colors.ts` to chart tokens and follow badges, chart and dispatch rows.
 Status labels/icons remain present alongside supplementary semantic colors.
@@ -1552,9 +1552,9 @@ Views:
   count, SKIPPED by guard), the gate's blockers and flags.
 - **Dispatches**: a timeline of every dispatch (id, agent, model and effort,
   attempt, started, finished or elapsed, deadline, outcome, effective result,
-  cost when present), ordered by start.
+  recorded token usage when present), ordered by start.
 - **Records drawer**: click any record to read it raw (monospace, scrollable).
-- **Usage**: per-role bars (tokens or cost when present) from `job.dispatches`.
+- **Usage**: per-role bars (recorded tokens when present) from `job.dispatches`.
 - **Driver**: Run, Step, Pause controls and the driver log with elapsed time
   per active dispatch, the overdue ones highlighted.
 - **Help drawer**: `agentsMd` rendered as preformatted text.
@@ -2205,7 +2205,7 @@ Database filters precede a 100-job scan (one extra row detects truncation), orde
 by update time and ID. scan reports jobs, limit and incomplete; totals describe
 that labelled cohort, never all history when truncated. Dispatch rows page within
 it. Responses contain source/warnings/query/scan, page/pages/total, summary metrics
-and cost coverage, rows, daily completion series, role/round groups and feats.
+and per-field token coverage, legacy cost fields, rows, daily completion series, role/round groups and feats.
 There is no file fallback, record-body bulk download or durable-log claim.
 
 Measurements use completed recorded reports; missing counters remain null and
@@ -2223,7 +2223,7 @@ Hash navigation preserves job, dispatch and record on reload. Agent summary and
 history routes accept job scope; history accepts metric (deployments, errors, ok,
 failed, timeout, interrupted, pending, malformed, negative, retries, timing,
 tokens) and observation category filters before paging. History additionally accepts
-the cost metric. Agent history accepts an exact JSON cohort tuple (workflow, tier,
+cacheRead and the legacy cost metric. Agent history accepts an exact JSON cohort tuple (workflow, tier,
 model, effort, version, revision), validated before projection. Counts of observations
 can exceed contributing dispatch counts. In-run profiles use /api/meta?job=<id>
 for pinned assignments/configuration; global profiles remain latest releases.
@@ -2246,3 +2246,34 @@ and interrupted ownership guards and the job-operation boundary govern recovery.
 It dispatches no agents and preserves status, human gates, records and branch
 history. Retry is idempotent. Restore worktree is a separate console action from
 Recover and continue for missing-worktree cases without active/external ownership.
+
+## Console provider-usage reporting
+
+The console reports recorded dispatch aggregates and sums of those reports,
+not unique context-window size or a per-turn timeline. API-dollar estimates
+are retained in raw historical payloads for compatibility but are not displayed
+as subscription cost or translated from tokens in usage reports.
+
+Uncached input, output, cache reads and cache creation are disjoint categories
+when reported by the normalized provider payload. Explicit thinking counters
+are output subsets, never added again to total. Missing categories remain
+unknown; zero is shown only when recorded. Aggregates carry coverage per field
+across the full filtered cohort before paging. Optional reasoning/image details
+are shown only from verified retained fields; unavailable instrumentation is
+identified. No cache-hit ratio, cache expiry/lifetime, session warmup or per-turn
+inference is made. Raw records, schema, collector behavior and human gates remain
+unchanged. Existing History cost fields/filter remain API-compatible.
+
+Source precedence is nested `usage`, then flat legacy counters, then `modelUsage`
+fallback; the existing total calculation is preserved. Main-agent `usage`
+excludes auxiliary calls, while per-model query-pipeline reports may include
+them; these sources are never added together. Resumable snapshots can be
+cumulative. Rows retain `usageScope`; summary `usageScopes`, `tokenBreakdown`
+and `tokenCoverage` describe the full filtered cohort before paging.
+
+Historical Codex cache-creation zero may be synthetic. An explicit Codex
+provider envelope or pinned configuration marks creation unavailable, not
+measured zero; model names do not establish provenance. Image-token detail has
+no verified retained mapping and remains unreported. The History `cacheRead`
+filter includes measured zero and excludes unavailable values. Raw records
+retain their original values, including incompatible historical semantics.

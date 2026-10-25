@@ -211,7 +211,7 @@ acceptance counts. Engine check results and the `no-checks-configured` human
 flag remain separate. No command or HTTP route changes are required.
 
 
-Analysis reports recorded tokens with uncached input, output, cache read and cache write, plus dispatch counts and median durations. Missing measurements stay unreported. SDK dollar estimates in historical records are not a statement of subscription billing.
+Dashboard metric sheets and History report recorded tokens with uncached input, output, cache reads and cache creation, plus dispatch counts and timing. Thinking is a reported output subset; image detail is unavailable without verified retained fields. Missing measurements stay unreported. Historical SDK cost fields remain API-compatible but dollar estimates are not displayed in usage reports.
 
 
 ### Keeping the console up
@@ -257,11 +257,11 @@ scroll independently from the detail pane, with the rail filters fixed above.
 | Surface | Content |
 | --- | --- |
 | Decision bar and evidence sheets | Current human decision, plan, checks, reviews, gate blockers, approval and diff; round selection and original request/worktree detail |
-| Summary cards and chart | Cumulative agent time, reported tokens and estimated cost, moment evidence; completion-step usage by dispatch with cache-read subset overlay |
+| Summary cards and chart | Cumulative agent time, reported tokens and cache reads, moment evidence; completion-step usage by dispatch with cache-read subset overlay |
 | Dispatches | Role/status, model/effort, tokens, elapsed, record and details; column customization and filtered visible-column CSV download |
 | Records | Name, kind, attribution, timestamp, size and original-byte download; formatted/raw sheets |
 | Log and Decisions | Buffered driver log with dispatch filter and SSE catch-up; human actions and notes |
-| History | Run/project/archive filters, completion-day cost reports, tokens by role/round, separate outcomes and feedback, paged exact source evidence |
+| History | Run/project/archive filters, completion-day token reports, tokens by role/round, separate outcomes and feedback, paged exact source evidence |
 | Agents | Global search and comparisons; In run uses pinned assignments, releases, tools and budgets; metric/category/cohort counts open contributing deployments |
 | Settings | Local dispatch limit, sandbox capacity, theme and saved new-run holds in this browser |
 
@@ -721,7 +721,7 @@ installation, session persistence, preview lifecycle and verification limits.
 | `round` | Whole number from 0 through 1,000,000 |
 | `day` | Valid UTC completion date, `YYYY-MM-DD` |
 | `archive` | `include` (default), `exclude` or `only` |
-| `metric` | `deployments`, `errors`, `ok`, `failed`, `timeout`, `interrupted`, `pending`, `malformed`, `negative`, `retries`, `timing`, `tokens` or `cost` |
+| `metric` | `deployments`, `errors`, `ok`, `failed`, `timeout`, `interrupted`, `pending`, `malformed`, `negative`, `retries`, `timing`, `tokens`, `cacheRead` or legacy `cost` |
 | `category` | `execution`, `timeout`, `interrupted`, `record`, `retry`, `typecheck`, `test`, `lint`, `build`, `checks`, `review` or `rework` |
 | `page` | Positive integer; default 1, clamped to the last result page |
 | `limit` | Dispatches per page, 1–100; default 25 |
@@ -731,7 +731,7 @@ filters apply in the database before a scan of at most 100 runs, ordered by
 `updatedAt` and ID descending. One additional row detects truncation. Metric
 and observation filters select dispatches within that cohort before paging.
 `errors` means failed or timed-out calls; `negative` means valid CHANGES, BLOCKED
-or ESCALATE results. Timing, tokens and cost filters require that measurement.
+or ESCALATE results. Timing, tokens, cacheRead and legacy cost filters require that measurement; recorded zero is retained.
 
 The response contains `{ source: "db", warnings, query, scan, page, pages,
 total, summary, rows, series, groups, feats }`. `scan` is `{ jobs, limit,
@@ -744,7 +744,9 @@ build dispatch remains in the filtered cohort.
 
 Rows retain job, dispatch, round, commit, source record, model/effort/release,
 recorded configuration and token breakdown. Summary counters expose timing,
-token, cost and cache-read coverage. Missing values remain `null`; measured
+token, legacy cost and cache-read coverage. `tokenBreakdown` and per-field
+`tokenCoverage` cover the entire filtered cohort before paging; `usageScopes`
+counts main-agent, per-model, Codex and legacy report scopes. Missing values remain `null`; measured
 subtotals can be partial. Cache reads are included in total tokens. Live logs
 and unfinished calls are not durable completed measurements. Record bodies
 are fetched only through the existing per-record API. Archived runs are included
@@ -789,7 +791,7 @@ It never labels the latest catalog configuration as a run pin.
 `GET /api/agents/:name?page=1&sort=recent|longest|issues` returns ten deployments
 per page, a clamped page/range and up to three checked-build feats. Optional
 `job`, `metric`, `category` and `cohort` filters apply before paging. `metric`
-uses the History API values except `cost`; `category` uses its observation
+uses the History API values except `cost` and `cacheRead`; `category` uses its observation
 categories. `cohort` is a URL-encoded JSON tuple
 `[workflow,tier,model,effort,version,revision]`, matched exactly. Workflow is
 `feature`, `design` or `comments`; tier is `COMPLEX`, `EASY`, `BULK`, `COMMENTS`

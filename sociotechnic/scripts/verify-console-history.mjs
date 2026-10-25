@@ -63,6 +63,7 @@ try {
     const job = { ...structuredClone(original), id: current.id, feature: current.feature, repo, worktree: current.worktree, branch: current.branch, base: current.base, archived, creation: current.creation, consoleHolds: current.consoleHolds, agentVersions: current.agentVersions, agentConfigurations: current.agentConfigurations, agentRoster: current.agentRoster, agentLocks: current.agentLocks, updatedAt: original.updatedAt };
     for (const [index, dispatch] of job.dispatches.entries()) {
       if (dispatch.finishedAt || dispatch.outcome) dispatch.usage = { ...(dispatch.usage ?? {}), total_cost_usd: Number(((index + 1) * 0.0125).toFixed(4)) };
+      if (index === 0 && (dispatch.finishedAt || dispatch.outcome)) dispatch.usage = { ...dispatch.usage, usage: { input_tokens: 10, output_tokens: 8, cache_read_input_tokens: 20, cache_creation_input_tokens: 2, output_tokens_details: { thinking_tokens: 3 } } };
       const config = current.agentConfigurations[dispatch.agent];
       if (config) { dispatch.configuration = config; dispatch.model = config.model; dispatch.effort = config.effort; }
     }
@@ -146,8 +147,18 @@ try {
       scenario = 'history'; await history(); await capture('history'); await overflow();
       const total = await (await fetch(new URL(`/api/history?job=${jobs.history.id}`, server.url))).json();
       await page.getByText(new RegExp(`Matching cohort.*${total.total} dispatches`)).waitFor();
-      const costChart = page.locator('[aria-label="Reported estimated cost by completion day"]');
-      await costChart.locator('svg').waitFor(); assert.ok(await costChart.locator('.recharts-bar-rectangle').count() > 0, 'Recorded provider costs must render actual chart bars');
+      const usageChart = page.locator('[aria-label="Recorded tokens by completion day"]');
+      await usageChart.locator('svg').waitFor(); assert.ok(await usageChart.locator('.recharts-bar-rectangle').count() > 0, 'Recorded token totals must render actual chart bars');
+      assert.doesNotMatch(await page.locator('body').innerText(), /Estimated cost|Reported cost|\$[0-9]/, 'Usage reports must not show dollar translations');
+      await page.getByText('Input, output and cache breakdown', { exact: true }).click();
+      const breakdown = page.getByRole('region', { name: 'Recorded token breakdown' }).first();
+      await breakdown.getByText('Uncached input', { exact: true }).waitFor();
+      await breakdown.getByText('Thinking · output subset', { exact: true }).waitFor();
+      assert.ok((await breakdown.innerText()).includes('reported'), 'Each category exposes report coverage');
+      assert.match(await breakdown.innerText(), /not deduplicated session usage|not deduplicated/);
+      await page.getByRole('button').filter({ hasText: /^Cache reads/ }).click();
+      await page.waitForFunction(() => new URLSearchParams(location.hash.slice(1)).get('historyMetric') === 'cacheRead');
+      await page.getByRole('button', { name: 'Clear filters', exact: true }).click();
       await page.getByRole('button').filter({ hasText: 'Reported tokens' }).click();
       await page.waitForFunction(() => new URLSearchParams(location.hash.slice(1)).get('historyMetric') === 'tokens');
       await page.getByRole('region', { name: 'History dispatch evidence' }).waitFor();

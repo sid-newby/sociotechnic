@@ -1,0 +1,23 @@
+{
+  "fixtureSdk": true,
+  "actualImpeccable": true,
+  "modelCalls": 0,
+  "sdkQueries": 4,
+  "status": "planned",
+  "previewSeparateWindowTarget": true,
+  "anchoredTurns": true,
+  "streamingReadingPosition": true,
+  "ime": true,
+  "failedSendRecovery": true,
+  "reconnect": true,
+  "interruptResume": true,
+  "themes": [
+    "dark",
+    "light"
+  ],
+  "widths": [
+    1440,
+    390
+  ],
+  "reducedMotion": true
+}

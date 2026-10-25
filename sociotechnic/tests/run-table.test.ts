@@ -43,3 +43,15 @@ test("dispatch CSV includes the recorded start value when that column is visible
   assert.ok(text.startsWith('"Dispatch","Started"'));
   assert.ok(text.includes(first.startedAt));
 });
+
+test("CSV exports recorded categories and scope while keeping thinking inside output", () => {
+  const job = JSON.parse(readFileSync(new URL("../ui/seed/demo-job/job.json", import.meta.url), "utf8")) as { dispatches: { usage: unknown }[] };
+  job.dispatches[0].usage = { usage: { input_tokens: 10, output_tokens: 8, cache_read_input_tokens: 20, cache_creation_input_tokens: 2, output_tokens_details: { thinking_tokens: 3 } } };
+  const parsed = parseDetail({ job, records: [] });
+  const row = parsed.dispatches[0];
+  assert.equal(row.usage.tokens, 40);
+  const csv = dispatchCsv([row], ["tokens", "input", "output", "cacheRead", "cacheWrite", "reasoning", "scope"], 0, () => "ok", parsed.driver);
+  assert.ok(csv.includes('"40","10","8","20","2","3","Main-agent loop; excludes auxiliary calls"'));
+  assert.ok(csv.includes("Thinking tokens (output subset)"));
+  assert.doesNotMatch(csv, /Cost|USD|\$/);
+});

@@ -1,0 +1,542 @@
+{
+  "checkout": "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/sociotechnic-console-finish",
+  "output": "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history",
+  "startedAt": "2026-10-25T18:52:14.831Z",
+  "isolation": {
+    "store": "memory",
+    "database": "off",
+    "dispatchCalls": 0,
+    "refusedMutations": [],
+    "interceptedStarts": [
+      {
+        "label": "1440-dark",
+        "path": "/api/jobs/20261025-wave-4-new-run-pin-1440/run",
+        "body": {
+          "mode": "run",
+          "hold": [
+            "planned",
+            "built",
+            "reviewed"
+          ]
+        }
+      },
+      {
+        "label": "1440-dark",
+        "path": "/api/jobs/20261025-wave-4-new-run-pin-1440/run",
+        "body": {
+          "mode": "run",
+          "hold": [
+            "planned",
+            "checked"
+          ]
+        }
+      },
+      {
+        "label": "1440-dark",
+        "path": "/api/jobs/20261025-wave-4-restore-evidence/run",
+        "body": {
+          "mode": "run",
+          "hold": [
+            "built"
+          ]
+        }
+      },
+      {
+        "label": "1440-light",
+        "path": "/api/jobs/20261025-wave-4-new-run-pin-1440-2/run",
+        "body": {
+          "mode": "run",
+          "hold": [
+            "planned",
+            "built",
+            "reviewed"
+          ]
+        }
+      },
+      {
+        "label": "1440-light",
+        "path": "/api/jobs/20261025-wave-4-new-run-pin-1440-2/run",
+        "body": {
+          "mode": "run",
+          "hold": [
+            "planned",
+            "checked"
+          ]
+        }
+      },
+      {
+        "label": "1440-light",
+        "path": "/api/jobs/20261025-wave-4-restore-evidence/run",
+        "body": {
+          "mode": "run",
+          "hold": [
+            "built"
+          ]
+        }
+      },
+      {
+        "label": "390-dark",
+        "path": "/api/jobs/20261025-wave-4-new-run-pin-390-d/run",
+        "body": {
+          "mode": "run",
+          "hold": [
+            "planned",
+            "built",
+            "reviewed"
+          ]
+        }
+      },
+      {
+        "label": "390-dark",
+        "path": "/api/jobs/20261025-wave-4-new-run-pin-390-d/run",
+        "body": {
+          "mode": "run",
+          "hold": [
+            "planned",
+            "checked"
+          ]
+        }
+      },
+      {
+        "label": "390-dark",
+        "path": "/api/jobs/20261025-wave-4-restore-evidence/run",
+        "body": {
+          "mode": "run",
+          "hold": [
+            "built"
+          ]
+        }
+      },
+      {
+        "label": "390-light",
+        "path": "/api/jobs/20261025-wave-4-new-run-pin-390-l/run",
+        "body": {
+          "mode": "run",
+          "hold": [
+            "planned",
+            "built",
+            "reviewed"
+          ]
+        }
+      },
+      {
+        "label": "390-light",
+        "path": "/api/jobs/20261025-wave-4-new-run-pin-390-l/run",
+        "body": {
+          "mode": "run",
+          "hold": [
+            "planned",
+            "checked"
+          ]
+        }
+      },
+      {
+        "label": "390-light",
+        "path": "/api/jobs/20261025-wave-4-restore-evidence/run",
+        "body": {
+          "mode": "run",
+          "hold": [
+            "built"
+          ]
+        }
+      }
+    ],
+    "createdJobs": [
+      {
+        "label": "1440-dark",
+        "id": "20261025-wave-4-new-run-pin-1440",
+        "body": {
+          "repo": "/private/var/folders/sc/89rfdlsd03529hbs6lt848xc0000gn/T/sociotechnic-wave4-a08nfm/repo",
+          "feature": "Wave 4 new run pin 1440-dark",
+          "initialize": true,
+          "agentVersions": {},
+          "agentAssignments": {},
+          "execution": {
+            "kind": "local"
+          },
+          "consoleHolds": [
+            "planned",
+            "built",
+            "reviewed"
+          ]
+        }
+      },
+      {
+        "label": "1440-light",
+        "id": "20261025-wave-4-new-run-pin-1440-2",
+        "body": {
+          "repo": "/private/var/folders/sc/89rfdlsd03529hbs6lt848xc0000gn/T/sociotechnic-wave4-a08nfm/repo",
+          "feature": "Wave 4 new run pin 1440-light",
+          "initialize": true,
+          "agentVersions": {},
+          "agentAssignments": {},
+          "execution": {
+            "kind": "local"
+          },
+          "consoleHolds": [
+            "planned",
+            "built",
+            "reviewed"
+          ]
+        }
+      },
+      {
+        "label": "390-dark",
+        "id": "20261025-wave-4-new-run-pin-390-d",
+        "body": {
+          "repo": "/private/var/folders/sc/89rfdlsd03529hbs6lt848xc0000gn/T/sociotechnic-wave4-a08nfm/repo",
+          "feature": "Wave 4 new run pin 390-dark",
+          "initialize": true,
+          "agentVersions": {},
+          "agentAssignments": {},
+          "execution": {
+            "kind": "local"
+          },
+          "consoleHolds": [
+            "planned",
+            "built",
+            "reviewed"
+          ]
+        }
+      },
+      {
+        "label": "390-light",
+        "id": "20261025-wave-4-new-run-pin-390-l",
+        "body": {
+          "repo": "/private/var/folders/sc/89rfdlsd03529hbs6lt848xc0000gn/T/sociotechnic-wave4-a08nfm/repo",
+          "feature": "Wave 4 new run pin 390-light",
+          "initialize": true,
+          "agentVersions": {},
+          "agentAssignments": {},
+          "execution": {
+            "kind": "local"
+          },
+          "consoleHolds": [
+            "planned",
+            "built",
+            "reviewed"
+          ]
+        }
+      }
+    ]
+  },
+  "checks": [
+    {
+      "name": "isolated fixture APIs expose exact superseded records, feedback and pinned releases",
+      "category": "harness",
+      "ok": true,
+      "ms": 16,
+      "details": {
+        "jobs": {
+          "history": "20261025-wave-4-history-evidence",
+          "archived": "20261025-wave-4-archived-evidence",
+          "restore": "20261025-wave-4-restore-evidence"
+        },
+        "superseded": "round-1/build.md.superseded-by-d-901",
+        "builder": "sociotechnic-builder-lite",
+        "pinnedPlanner": "1.0.2",
+        "latestPlanner": "1.0.3"
+      }
+    },
+    {
+      "name": "1440-dark: History layout, archive filters, totals and focus",
+      "category": "ui",
+      "ok": true,
+      "ms": 1376
+    },
+    {
+      "name": "1440-dark: History dispatch opens exact superseded record and survives reload",
+      "category": "ui",
+      "ok": true,
+      "ms": 3006
+    },
+    {
+      "name": "1440-dark: History empty and retryable failure",
+      "category": "ui",
+      "ok": true,
+      "ms": 1694
+    },
+    {
+      "name": "1440-dark: global Agents switch to pinned run configuration and metric feedback",
+      "category": "ui",
+      "ok": true,
+      "ms": 5102
+    },
+    {
+      "name": "1440-dark: Settings defaults save, reload and storage failure retain saved state",
+      "category": "ui",
+      "ok": true,
+      "ms": 2078
+    },
+    {
+      "name": "1440-dark: New run pins saved defaults and protects initial plan hold",
+      "category": "ui",
+      "ok": true,
+      "ms": 1375
+    },
+    {
+      "name": "1440-dark: One-run hold before planning still requires plan review",
+      "category": "ui",
+      "ok": true,
+      "ms": 991
+    },
+    {
+      "name": "1440-dark: Restore worktree preserves a human gate without driver execution",
+      "category": "ui",
+      "ok": true,
+      "ms": 1289
+    },
+    {
+      "name": "1440-dark: command palette keyboard Escape restores focus",
+      "category": "ui",
+      "ok": true,
+      "ms": 765
+    },
+    {
+      "name": "1440-light: History layout, archive filters, totals and focus",
+      "category": "ui",
+      "ok": true,
+      "ms": 1061
+    },
+    {
+      "name": "1440-light: History dispatch opens exact superseded record and survives reload",
+      "category": "ui",
+      "ok": true,
+      "ms": 2551
+    },
+    {
+      "name": "1440-light: History empty and retryable failure",
+      "category": "ui",
+      "ok": true,
+      "ms": 1639
+    },
+    {
+      "name": "1440-light: global Agents switch to pinned run configuration and metric feedback",
+      "category": "ui",
+      "ok": true,
+      "ms": 6523
+    },
+    {
+      "name": "1440-light: Settings defaults save, reload and storage failure retain saved state",
+      "category": "ui",
+      "ok": true,
+      "ms": 4127
+    },
+    {
+      "name": "1440-light: New run pins saved defaults and protects initial plan hold",
+      "category": "ui",
+      "ok": true,
+      "ms": 3270
+    },
+    {
+      "name": "1440-light: One-run hold before planning still requires plan review",
+      "category": "ui",
+      "ok": true,
+      "ms": 2149
+    },
+    {
+      "name": "1440-light: Restore worktree preserves a human gate without driver execution",
+      "category": "ui",
+      "ok": true,
+      "ms": 3792
+    },
+    {
+      "name": "1440-light: command palette keyboard Escape restores focus",
+      "category": "ui",
+      "ok": true,
+      "ms": 1835
+    },
+    {
+      "name": "390-dark: History layout, archive filters, totals and focus",
+      "category": "ui",
+      "ok": true,
+      "ms": 3581
+    },
+    {
+      "name": "390-dark: History dispatch opens exact superseded record and survives reload",
+      "category": "ui",
+      "ok": true,
+      "ms": 4998
+    },
+    {
+      "name": "390-dark: History empty and retryable failure",
+      "category": "ui",
+      "ok": true,
+      "ms": 1800
+    },
+    {
+      "name": "390-dark: global Agents switch to pinned run configuration and metric feedback",
+      "category": "ui",
+      "ok": true,
+      "ms": 5391
+    },
+    {
+      "name": "390-dark: Settings defaults save, reload and storage failure retain saved state",
+      "category": "ui",
+      "ok": true,
+      "ms": 2019
+    },
+    {
+      "name": "390-dark: New run pins saved defaults and protects initial plan hold",
+      "category": "ui",
+      "ok": true,
+      "ms": 1473
+    },
+    {
+      "name": "390-dark: One-run hold before planning still requires plan review",
+      "category": "ui",
+      "ok": true,
+      "ms": 964
+    },
+    {
+      "name": "390-dark: Restore worktree preserves a human gate without driver execution",
+      "category": "ui",
+      "ok": true,
+      "ms": 1299
+    },
+    {
+      "name": "390-dark: command palette keyboard Escape restores focus",
+      "category": "ui",
+      "ok": true,
+      "ms": 763
+    },
+    {
+      "name": "390-light: History layout, archive filters, totals and focus",
+      "category": "ui",
+      "ok": true,
+      "ms": 1062
+    },
+    {
+      "name": "390-light: History dispatch opens exact superseded record and survives reload",
+      "category": "ui",
+      "ok": true,
+      "ms": 2486
+    },
+    {
+      "name": "390-light: History empty and retryable failure",
+      "category": "ui",
+      "ok": true,
+      "ms": 1316
+    },
+    {
+      "name": "390-light: global Agents switch to pinned run configuration and metric feedback",
+      "category": "ui",
+      "ok": true,
+      "ms": 4713
+    },
+    {
+      "name": "390-light: Settings defaults save, reload and storage failure retain saved state",
+      "category": "ui",
+      "ok": true,
+      "ms": 1770
+    },
+    {
+      "name": "390-light: New run pins saved defaults and protects initial plan hold",
+      "category": "ui",
+      "ok": true,
+      "ms": 1304
+    },
+    {
+      "name": "390-light: One-run hold before planning still requires plan review",
+      "category": "ui",
+      "ok": true,
+      "ms": 894
+    },
+    {
+      "name": "390-light: Restore worktree preserves a human gate without driver execution",
+      "category": "ui",
+      "ok": true,
+      "ms": 1278
+    },
+    {
+      "name": "390-light: command palette keyboard Escape restores focus",
+      "category": "ui",
+      "ok": true,
+      "ms": 696
+    },
+    {
+      "name": "browser runtime errors",
+      "category": "runtime",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "name": "unexpected HTTP failures",
+      "category": "runtime",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "name": "no live model calls or unplanned mutations",
+      "category": "harness",
+      "ok": true,
+      "ms": 0
+    }
+  ],
+  "screenshots": [
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/1440-dark-history.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/1440-dark-history-archived.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/1440-dark-superseded-record.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/1440-dark-superseded-record-reloaded.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/1440-dark-run-after-drilldown.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/1440-dark-history-empty.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/1440-dark-history-error.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/1440-dark-agents-pinned.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/1440-dark-agents-feedback-source.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/1440-dark-settings-defaults.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/1440-dark-settings-save-failed.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/1440-dark-new-run-pinned.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/1440-dark-initial-plan-hold.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/1440-dark-restore-paused.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/1440-light-history.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/1440-light-history-archived.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/1440-light-superseded-record.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/1440-light-superseded-record-reloaded.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/1440-light-run-after-drilldown.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/1440-light-history-empty.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/1440-light-history-error.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/1440-light-agents-pinned.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/1440-light-agents-feedback-source.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/1440-light-settings-defaults.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/1440-light-settings-save-failed.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/1440-light-new-run-pinned.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/1440-light-initial-plan-hold.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/1440-light-restore-paused.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/390-dark-history.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/390-dark-history-archived.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/390-dark-superseded-record.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/390-dark-superseded-record-reloaded.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/390-dark-run-after-drilldown.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/390-dark-history-empty.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/390-dark-history-error.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/390-dark-agents-pinned.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/390-dark-agents-feedback-source.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/390-dark-settings-defaults.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/390-dark-settings-save-failed.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/390-dark-new-run-pinned.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/390-dark-initial-plan-hold.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/390-dark-restore-paused.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/390-light-history.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/390-light-history-archived.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/390-light-superseded-record.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/390-light-superseded-record-reloaded.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/390-light-run-after-drilldown.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/390-light-history-empty.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/390-light-history-error.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/390-light-agents-pinned.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/390-light-agents-feedback-source.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/390-light-settings-defaults.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/390-light-settings-save-failed.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/390-light-new-run-pinned.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/390-light-initial-plan-hold.png",
+    "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/visual-batch/history/390-light-restore-paused.png"
+  ],
+  "runtimeErrors": [],
+  "httpErrors": [],
+  "finishedAt": "2026-10-25T18:53:45.429Z",
+  "summary": {
+    "passed": 40,
+    "failed": 0,
+    "failures": []
+  }
+}

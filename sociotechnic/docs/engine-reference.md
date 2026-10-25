@@ -665,8 +665,11 @@ exact source references; narrowing the filters can produce a complete cohort.
 [The API reference](cli-reference.md#history-api) defines the filters and limits.
 Daily series use actual completion dates; there is no usage interpolation or
 unfinished-dispatch agent timer. Cache reads are a subset of total tokens.
-Provider cost remains an estimate reported by completed calls, not subscription
-billing. Empty measurements remain null, and partial totals retain coverage.
+Historical provider cost fields remain stored for compatibility; console usage
+reports display recorded token categories and per-field coverage instead. Main
+`usage` counters and per-model `modelUsage` pipeline totals are never added
+together. Resumable snapshots may be cumulative; their sums are not deduplicated
+session usage. Empty measurements remain null, and partial totals retain coverage.
 
 New engine dispatches include optional `configuration` metadata: SHA-256 revision
 of the role settings and definition bytes, plus observed provider/model/effort,

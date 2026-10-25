@@ -95,16 +95,18 @@ implemented in `sociotechnic/ui/web/src/`:
   start point), an optional base branch, a change description, and agent and
   version assignments. Run types: ordinary feature, **New repository** (starter
   commit and private GitHub publication before planning), **Comment cleanup**,
-  and **Design ceremony**. Execution is **Local** by default or **Docker
+  and **Design conversation**. Execution is **Local** by default or **Docker
   Sandbox** (experimental), with CPU, memory and concurrency settings the
   browser remembers.
-- The workflow strip shows Plan, Build, Checks, Review, Gate, Approve and Human
-  for the current round as recorded milestones, not a percentage.
-- Views: **Overview** (plan, checks, review exceptions, gate evidence, next
-  decision), **Activity** (live driver output, dispatch history, elapsed time,
-  deadlines), **Analysis** (per-round build, checks, findings, conformance,
-  timing, token usage split into uncached input, output, cache read and cache
-  write), **Agents** (roles, models, effort, tools, history in the selected run).
+- The run dashboard shows the current decision, four summary cards, recorded
+  token burn and one ledger with **Dispatches**, **Records**, **Log** and
+  **Decisions**. Metrics, records and supporting evidence open in sheets.
+  Missing measurements and stale checks remain explicit.
+- **History** presents bounded cross-run cohorts with recorded token categories, cache-read and time
+  coverage and exact contributing dispatches. **Run agents** shows pinned
+  assignments and recorded releases; the global library shows current releases.
+- **Settings** owns browser defaults, theme, local concurrency and capacity.
+  Saved holds are pinned per new run; existing runs keep their settings.
 - **Agent library** browses the whole team across projects and runs: search,
   inspect, **Add agent**, **Manage versions** with patch, minor and major
   releases, and deployment history including errors and feedback. Each role has
@@ -205,7 +207,9 @@ checkout; `notes/`) is lineage, not a product being designed here.
 
 - `README.md`: the web console user guide, with console screenshots at
   `assets/console/` (eight 1600 × 1000 dark captures of the built console on
-  committed demo data, refreshed October 24, 2026), run-wizard captures at
+  committed demo data, refreshed October 25, 2026, with source/build digests
+  in `assets/console/capture.json`), plus current Settings, designer and command
+  fixture captures. Historical run-wizard captures remain at
   `assets/run-wizard/` and `assets/sandbox-recovery/`.
 - `sociotechnic/docs/`: CLI and driver reference, engine and state reference,
   development guide with the feature-to-code map, design ceremony, comment
@@ -222,8 +226,10 @@ checkout; `notes/`) is lineage, not a product being designed here.
   `sociotechnic/scripts/` and the recorded run at
   `sociotechnic/docs/evidence/interactive-design.md`. Their presence is not a
   claim that they passed in this session.
-- `CHANGELOG.md` and GitHub Releases from v0.1.1 through v0.4.2, with
-  unreleased work on resumable Impeccable design sessions.
+- `CHANGELOG.md` records versions through v0.6.0, including the dashboard,
+  History, Settings and designer chat. The current finish pass adds design and
+  builder documentation, refreshed fixture captures and bounded UI hardening;
+  it does not publish a release. See its finish review for actual proof limits.
 
 Absences future work must not fill in: no customer testimonials, adoption
 figures, external user counts, pricing, performance guarantees or production
