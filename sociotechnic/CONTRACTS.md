@@ -1870,6 +1870,26 @@ change the job's pinned approval digest or manufacture a successful dispatch.
 
 ## Infrastructure expert and packaged skills
 
+### Browser verification skills
+
+The opt-in browser builder and browser builder-lite inherit the ordinary COMPLEX
+and EASY templates and pin `browser-verification` as packaged instruction
+resources. Default assignments are unchanged. The skill uses agent-browser
+0.39.2 and Chrome DevTools MCP/CLI 1.12.0 through existing Bash access. It grants
+no new tools or permissions to any role. Local operators install the pinned
+tools explicitly; skill-bearing Sandbox build dispatches install them and Chrome
+dependencies inside their own VM before provider execution. Setup failure
+prevents that dispatch from running; no host fallback or false proof is permitted.
+
+Each dispatch receives separate browser session identifiers for both CLIs.
+Claude and Codex receive the same scoped environment, with telemetry disabled.
+Completion, failure, stop and timeout attempt bounded cleanup of only those
+sessions. Cleanup failure is a visible warning. Existing runs retain immutable
+skill/configuration pins. Browser content is untrusted, screenshots do not
+establish completion, and acceptance/publication gates remain unchanged.
+
+### Infrastructure specialists and resource snapshots
+
 The optional infrastructure planner and builder are separate custom catalog
 identities at v1.0.0, both pinned to gpt-6.1-sol/high. They retain their template's
 plan/build record and assignment contracts. Creating them does not replace default
@@ -1887,7 +1907,8 @@ can access tools/credentials available in its execution environment; this local
 adapter is not the Docker microVM integration.
 
 Explicit API `skills` selections attach only bundled text resources, never
-automatically executed code, MCP servers, hooks or extra permissions. Imported frontmatter still
+arbitrary executable code, MCP servers, hooks or extra permissions. The browser
+skill's fixed tool preparation is owned by the runner as specified above. Imported frontmatter still
 cannot attach skills. Releases optionally include `skillResources`: named UTF-8
 text resources with safe relative paths, an entrypoint and bounded size.
 Canonical release content digests cover these bytes; pinning, catalog migration

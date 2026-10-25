@@ -7,6 +7,7 @@ import { ensureSandbox, importSandboxCommit, sandboxName, sbx, stopSandbox, VM_D
 import type { SandboxJob } from "../src/sandbox.ts";
 import { STOPPED_NOTE } from "../src/job.ts";
 import { copySandboxOutputs, sameSandboxInputs } from "./sandbox-outputs.ts";
+import { assertBrowserToolchain, needsBrowserTools } from "./browser-tools.ts";
 
 const initializing = new Map<string, Promise<void>>();
 const running = new Map<string, { active: Set<Promise<void>>; waiting: number }>();
@@ -56,6 +57,12 @@ export async function runInSandbox(entry: DispatchOut, original: RunContext): Pr
       let preparation = initializing.get(name);
       if (!preparation) { preparation = ensureSandbox(job, ctx.signal); initializing.set(name, preparation); }
       try { await preparation; } finally { if (initializing.get(name) === preparation) initializing.delete(name); }
+      if (needsBrowserTools(entry.configuration)) {
+        if (!entry.configuration?.tools.includes("Bash")) throw new Error("Browser verification requires the pinned role's existing Bash permission");
+        assertBrowserToolchain(entry.configuration);
+        ctx.onActivity("preparing pinned browser tools inside the run sandbox");
+        await vmExec(ctx.jobId, ["node", `${VM_HOME}/sociotechnic/ui/browser-tools.ts`, "--install"], { signal: ctx.signal, timeoutMs: Math.max(1, Date.parse(entry.deadlineAt) - Date.now()), onLine: ctx.onActivity });
+      }
       ctx.onActivity(`sandbox ${name}: ${ctx.execution?.kind === "docker-sandbox" ? `${ctx.execution.cpus} CPUs, ${ctx.execution.memoryGiB} GiB` : ""}`);
       const scope = `${VM_DISPATCHES}/${entry.id}`;
       const paths: [string, string][] = [[ctx.outputRoot ?? "", `${scope}/outputs`], [ctx.inputRoot ?? "", `${scope}/inputs`], [ctx.worktree, VM_REPO], [ctx.repo, VM_REPO], [ctx.sociotechnicHome, VM_HOME]];

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, test } from "node:test";
 import { bundledSkills, materializeSkills, parseSkillResources } from "../src/agent-skills.ts";
-import { agentBase, createAgent, initializeAgentVersions, pinAgentVersions, publishAgentVersion, readAgentVersion } from "../src/agent-versions.ts";
+import { agentBase, agentVersionChoices, createAgent, initializeAgentVersions, pinAgentVersions, publishAgentVersion, readAgentVersion } from "../src/agent-versions.ts";
 import { canonicalJson, parseAgentVersion, releaseContentDigest } from "../src/agent-version-data.ts";
 import { applyCatalogBundles, exportCatalogBundle, parseCatalogBundle } from "../src/db/catalog-migrations.ts";
 import { createMemoryStore, setStore } from "../src/db/store.ts";
@@ -78,4 +78,19 @@ test("Claude receives snapshotted skill entrypoints and references, then removes
   assert.equal(result.outcome, "failed");
   assert.match(result.note ?? "", /without a result message/);
   assert.equal(existsSync(reference), false);
+});
+
+test("browser specialist profiles preserve template permissions and pin complete skill references", async () => {
+  for (const template of ["sociotechnic-builder", "sociotechnic-builder-lite"]) {
+    const base = roleOf(template), name = `${template}-browser-test`;
+    const peers = (await agentVersionChoices()).agents.filter((agent) => agent.roleVersions[template]?.includes(agent.latest));
+    const release = await createAgent({ ...base, name, template, purpose: "Implement UI changes with browser-based acceptance evidence and diagnostics.", distinctPurpose: "Own browser-driven UI verification with isolated sessions and pinned agent-browser and Chrome DevTools tools.", instructions: "Implement the approved plan and use the pinned browser-verification skill when its UI acceptance criteria require browser evidence. Preserve the normal build record and human gates.", skills: ["browser-verification"], reviewedAgents: peers.map((agent) => `${agent.name}@${agent.latest}`) });
+    assert.deepEqual(release.role.tools, base.tools);
+    const pins = await pinAgentVersions({}, undefined, { [template]: name });
+    assert.equal(pins.assignments?.[template], name);
+    assert.deepEqual(pins.configurations[template].skillResources, release.skillResources);
+    assert.ok(release.skillResources?.[0].files["references/devtools.md"]);
+    const defaults = await pinAgentVersions();
+    assert.equal(defaults.assignments?.[template], undefined);
+  }
 });

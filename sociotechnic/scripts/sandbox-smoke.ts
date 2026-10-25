@@ -36,6 +36,12 @@ try {
   const tools = JSON.parse(await vmExec(id, ["node", `${VM_HOME}/sociotechnic/ui/sandbox-context7.ts`, "--check"]));
   assert.deepEqual(tools.sort(), ["query-docs", "resolve-library-id"]);
   await vmExec(id, ["node", "-e", `const fs=require('node:fs');for(const name of ['terraform-skill','container-technologies'])if(!fs.readFileSync('${VM_HOME}/sociotechnic/skills/'+name+'/SKILL.md','utf8').trim())process.exit(1)`]);
+  if (process.argv.includes("--browser-tools")) {
+    await vmExec(id, ["node", `${VM_HOME}/sociotechnic/ui/browser-tools.ts`, "--install"], { timeoutMs: 15 * 60_000, onLine: (line) => process.stdout.write(line + "\n") });
+    const proof: unknown = JSON.parse(await vmExec(id, ["node", `${VM_HOME}/sociotechnic/ui/browser-tools.ts`, "--smoke"], { timeoutMs: 120_000 }));
+    assert.ok(typeof proof === "object" && proof !== null && "observed" in proof && proof.observed === "Sociotechnic browser runtime proof");
+    process.stdout.write("PASS: both browser CLIs rendered the proof page inside the Linux VM.\n");
+  }
   await vmExec(id, ["node", "-e", `require('node:fs').writeFileSync('${VM_REPO}/proof.txt', 'committed inside Linux VM\\n')`]);
   await vmExec(id, ["git", "-C", VM_REPO, "add", "proof.txt"]);
   await vmExec(id, ["git", "-C", VM_REPO, "-c", "commit.gpgsign=false", "commit", "-m", "Sandbox proof"]);

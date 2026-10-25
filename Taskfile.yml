@@ -50,6 +50,11 @@ tasks:
     cmds:
       - "{{.SOCIOTECHNIC}} agents"
 
+  browser:install:
+    desc: "Install the pinned builder browser CLIs and Chrome runtime on this machine"
+    cmds:
+      - node sociotechnic/ui/browser-tools.ts --install
+
   test:
     desc: "Run the test suite (no network, no LLM, no database)"
     cmds:

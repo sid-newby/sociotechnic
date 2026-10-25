@@ -98,6 +98,10 @@ Analysis separates uncached input, output, cache read and cache write, with per-
 
 ## Agent library
 
+For UI work that needs browser verification, choose the browser builder or browser
+builder-lite in New run's agent assignments. They use isolated browser sessions
+for rendered checks and diagnostics. [Setup and scope](sociotechnic/docs/browser-verification.md).
+
 Choose **Agent library**, beside **New run**, to browse the whole team across
 projects and runs. Each role has a distinct icon shared with run profiles,
 activity and analysis. Search by role, model or description, then inspect when

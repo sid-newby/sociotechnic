@@ -44,6 +44,13 @@ can recommend the bundled React + NestJS house special; the human chooses the
 stack and approves the design before implementation. Non-UI projects need no
 scaffold. Explicitly requested scaffolds and existing UI foundations are respected.
 
+## Browser verification
+
+Opt-in browser builders include the [browser-verification skill](browser-verification.md).
+Its immutable snapshot uses existing Bash access, per-dispatch sessions and
+pinned host/VM tooling. Default assignments and read-only role permissions stay
+unchanged. Setup failure is not verification evidence and cannot clear a gate.
+
 ## Job states
 
 Job statuses (contract section 7.1). An override resumes the interrupted step; the diagram omits those return edges. `stopped` is reachable from any non-terminal status. It records `stoppedFrom`, the status the job left, and `reopen` leads back to it. `merged` is the only terminal status. The standard human path is `ready` → `merge` (local, into your checkout) → `merged-local` → test there → `accept` → `pr --push` → `merge --remote --confirm`.

@@ -16,10 +16,12 @@ import type { Execution } from "../src/execution.ts";
 
 import { materializeSkills } from "../src/agent-skills.ts";
 import { connectContext7Gateway, CONTEXT7_SETUP, sandboxContext7Server } from "./sandbox-context7.ts";
+import { assertBrowserToolchain, browserEnvironment, closeBrowserSessions, needsBrowserTools, verifyBrowserTools } from "./browser-tools.ts";
 
 export type RunResult = { outcome: Outcome; usage: unknown; note: string | null };
 
 export type RunContext = {
+  browserEnv?: Record<string, string>;
   sandboxed?: true;
   execution?: Execution;
   branch?: string;
@@ -270,6 +272,7 @@ export function sdkRunner(queryOverride?: SdkQuery): Runner {
         try {
           let result: RunResult | null = null;
           const options = sdkOptions(entry, role, ctx.sociotechnicHome, abort, executable, context7);
+          options.env = { ...options.env, ...ctx.browserEnv };
           const skills = materializeSkills(entry.configuration?.skillResources, skillDirectory);
           for (const agent of Object.values(options.agents ?? {})) agent.prompt += skills.prompt;
           options.env = { ...options.env, SOCIOTECHNIC_OUTPUT_ROOT: ctx.outputRoot, SOCIOTECHNIC_INPUT_ROOT: ctx.inputRoot };
@@ -380,16 +383,31 @@ function localRunnerFromEnv(): Runner {
   return {
     name: "mixed",
     async run(entry, role, ctx) {
-      if (isCodexModel(entry.model)) {
-        let context7: McpServerConfig | null = null;
-        if (needsContext7(role)) {
-          try { context7 = await context7ForExecution(ctx); }
-          catch { return { outcome: "failed", usage: null, note: CONTEXT7_SETUP }; }
-        }
-        return codexRunner(context7).run(entry, role, ctx);
+      let browserEnv: Record<string, string> | undefined;
+      if (needsBrowserTools(entry.configuration)) {
+        if (!hasBash(role)) return { outcome: "failed", usage: null, note: "Browser verification requires the pinned role's existing Bash permission" };
+        if (ctx.signal.aborted) return { outcome: "failed", usage: null, note: STOPPED_NOTE };
+        let executable: string;
+        try { assertBrowserToolchain(entry.configuration); executable = verifyBrowserTools(); }
+        catch (error) { return { outcome: "failed", usage: null, note: error instanceof Error ? error.message : "Browser tool setup failed" }; }
+        if (ctx.signal.aborted) return { outcome: "failed", usage: null, note: STOPPED_NOTE };
+        if (Date.parse(entry.deadlineAt) <= Date.now()) return { outcome: "timeout", usage: null, note: "deadline reached during browser setup" };
+        browserEnv = browserEnvironment(ctx.sociotechnicHome, ctx.jobId, entry.id, ctx.outputRoot, executable);
+        ctx = { ...ctx, browserEnv };
+        ctx.onActivity(`browser sessions: ${browserEnv.AGENT_BROWSER_SESSION}, DevTools ${browserEnv.CD4A_INTERNAL_DAEMON_SESSION_ID}`);
       }
-      if (!["claude-fable-5-1", "fable", "opus", "sonnet", "haiku"].includes(entry.model)) throw new Error(`Unsupported dispatch model: ${entry.model}`);
-      return claude.run(entry, role, ctx);
+      try {
+        if (isCodexModel(entry.model)) {
+          let context7: McpServerConfig | null = null;
+          if (needsContext7(role)) {
+            try { context7 = await context7ForExecution(ctx); }
+            catch { return { outcome: "failed", usage: null, note: CONTEXT7_SETUP }; }
+          }
+          return await codexRunner(context7).run(entry, role, ctx);
+        }
+        if (!["claude-fable-5-1", "fable", "opus", "sonnet", "haiku"].includes(entry.model)) throw new Error(`Unsupported dispatch model: ${entry.model}`);
+        return await claude.run(entry, role, ctx);
+      } finally { if (browserEnv) closeBrowserSessions(browserEnv, ctx.onWarn); }
     },
   };
 }
