@@ -95,7 +95,7 @@
 .agent-color-conformance { --agent-color: var(--agent-steel); }
 .agent-color-approver { --agent-color: var(--agent-forest); }
 :root { --agent-copper: #95521a; --agent-teal: #08736e; --agent-olive: #626915; --agent-indigo: #5555b3; --agent-rose: #a43c70; --agent-orchid: #9046a4; --agent-brick: #a7453b; --agent-steel: #4a688a; --agent-forest: #287145; }
-@media (prefers-color-scheme: dark) { :root { --agent-copper: #eeb383; --agent-teal: #69cfc5; --agent-olive: #c0cc78; --agent-indigo: #b1b0ff; --agent-rose: #eda0c5; --agent-orchid: #d8a1ed; --agent-brick: #f3a79c; --agent-steel: #a3bedf; --agent-forest: #91d3a3; } }
+.dark { --agent-copper: #eeb383; --agent-teal: #69cfc5; --agent-olive: #c0cc78; --agent-indigo: #b1b0ff; --agent-rose: #eda0c5; --agent-orchid: #d8a1ed; --agent-brick: #f3a79c; --agent-steel: #a3bedf; --agent-forest: #91d3a3; }
 .library-no-results { padding: 40px 0; }
 @media (max-width: 1200px) { .library-workspace { grid-template-columns: 190px minmax(0, 1fr); gap: 20px; } .library-dossier { padding-left: 20px; } .profile-model { width: 100%; margin-left: 0; } }
 @media (max-width: 950px) { .library-workspace { grid-template-columns: minmax(0, 1fr); gap: 28px; } .library-dossier { padding-left: 0; border-left: 0; } .library-roster .agent-roster { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: 240px; overflow-y: auto; overscroll-behavior: contain; } .profile-model { width: auto; margin-left: auto; } }

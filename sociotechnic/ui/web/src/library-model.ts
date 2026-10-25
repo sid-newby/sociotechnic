@@ -35,7 +35,7 @@ export function parseAgentHistory(value: unknown): AgentHistoryView & { warnings
   const v = object(value);
   return { name: text(v.name), page: number(v.page), pages: number(v.pages), total: number(v.total), warnings: strings(v.warnings), rows: array(v.rows).map((entry) => {
     const r = object(entry);
-    if (r.outcome !== null && r.outcome !== "ok" && r.outcome !== "failed" && r.outcome !== "timeout") throw new Error("Unknown deployment outcome.");
+    if (r.outcome !== null && r.outcome !== "ok" && r.outcome !== "failed" && r.outcome !== "timeout" && r.outcome !== "interrupted") throw new Error("Unknown deployment outcome.");
     return { workflow: workflow(r.workflow), tier: tier(r.tier), observations: array(r.observations).map((v) => { const o = object(v); if (o.attribution !== "dispatch" && o.attribution !== "build-context") throw new Error("Unknown feedback attribution."); return { category: category(o.category), attribution: o.attribution, reporter: text(o.reporter), record: text(o.record), summary: text(o.summary) }; }), job: text(r.job), feature: text(r.feature), repo: text(r.repo), accepted: r.accepted === true, id: text(r.id), round: number(r.round), attempt: number(r.attempt), model: text(r.model), effort: text(r.effort), version: optional(r.version), revision: optional(r.revision), startedAt: text(r.startedAt), outcome: r.outcome, result: optional(r.result), malformed: r.malformed === true, note: optional(r.note), durationMs: measured(r.durationMs), tokens: measured(r.tokens), record: text(r.record) };
   }), feats: array(v.feats).map((entry) => { const f = object(entry); return { job: text(f.job), feature: text(f.feature), commit: text(f.commit), round: number(f.round), accepted: f.accepted === true }; }) };
 }

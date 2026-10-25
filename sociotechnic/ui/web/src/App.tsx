@@ -11,6 +11,8 @@ import { Button } from "./components/ui/button";
 import { Workflow, RunEvidence, PlanSteps } from "./components/experience";
 import { errorMessage, projectName, runTitle, shortSha, statusLabels } from "./model";
 import { useConsole } from "./use-console";
+import { useTheme } from "./theme/provider";
+import { ThemeSwitcher } from "./theme/theme-switcher";
 import welcomeBannerLight from "../../../../assets/sociotechnic-banner-v4.png";
 import welcomeBanner from "../../../../assets/sociotechnic-banner-v4-transparent.png";
 
@@ -23,6 +25,7 @@ function CopyPath({ path }: { path: string }) {
 
 export default function App() {
   const { jobs, selected, detail, connection, revision, refresh, select, setArchived } = useConsole();
+  const { scheme } = useTheme();
   const [hash, setHash] = useState(() => location.hash);
   useEffect(() => { const change = () => setHash(location.hash); window.addEventListener("hashchange", change); return () => window.removeEventListener("hashchange", change); }, []);
   const params = new URLSearchParams(hash.slice(1));
@@ -65,7 +68,7 @@ export default function App() {
   const failed = dataUnavailable || (detail.kind === "ready" && !!detail.error);
   return <div className="console-shell">
     <a className="skip-link" href="#run-detail" onClick={(e) => { e.preventDefault(); document.getElementById("run-detail")?.focus(); }}>Skip to main content</a>
-    <header className="app-header"><div className="brand">sociotechnic {__APP_VERSION__}</div><div className="header-actions"><span className={`connection ${dataUnavailable ? "reconnecting" : connection}`} role="status"><i aria-hidden="true" />{dataUnavailable ? "Data unavailable" : connection === "live" ? "Live" : connection === "connecting" ? "Connecting…" : "Reconnecting…"}</span><Button variant="ghost" size="icon" onClick={refresh} aria-label="Refresh runs"><RefreshCw /></Button><Button variant={library ? "secondary" : "outline"} aria-pressed={library} onClick={() => updateLocation({ view: library ? null : "agents" })}><LibraryBig />Agent library</Button><SandboxManager refresh={refresh} disabled={dataUnavailable} /><NewRun disabled={dataUnavailable} onCreated={(id) => { selectJob(id); refresh(); }} /></div></header>
+    <header className="app-header"><div className="brand">sociotechnic {__APP_VERSION__}</div><div className="header-actions"><span className={`connection ${dataUnavailable ? "reconnecting" : connection}`} role="status"><i aria-hidden="true" />{dataUnavailable ? "Data unavailable" : connection === "live" ? "Live" : connection === "connecting" ? "Connecting…" : "Reconnecting…"}</span><Button variant="ghost" size="icon" onClick={refresh} aria-label="Refresh runs"><RefreshCw /></Button><ThemeSwitcher /><Button variant={library ? "secondary" : "outline"} aria-pressed={library} onClick={() => updateLocation({ view: library ? null : "agents" })}><LibraryBig />Agent library</Button><SandboxManager refresh={refresh} disabled={dataUnavailable} /><NewRun disabled={dataUnavailable} onCreated={(id) => { selectJob(id); refresh(); }} /></div></header>
     <div className="workspace">
       <aside className="run-sidebar" aria-label="Run list">
         <div className="sidebar-heading"><h1>Runs</h1><span>{jobs.kind === "ready" ? `${visible.length} / ${all.length}` : "—"}</span></div>
@@ -86,10 +89,7 @@ export default function App() {
       </aside>
       <main id="run-detail" tabIndex={-1} className="run-detail">
         {library ? <AgentLibrary params={params} update={updateLocation} revision={revision} openRun={(id) => { selectJob(id); document.getElementById("run-detail")?.focus(); }} /> : !selected ? <section className="empty-detail" aria-label="Welcome to Sociotechnic">
-          <picture>
-            <source media="(prefers-color-scheme: dark)" srcSet={welcomeBanner} />
-            <img className="welcome-banner" src={welcomeBannerLight} width={2172} height={724} alt="Sociotechnic — one request, a team of specialists." />
-          </picture>
+          <img className="welcome-banner" src={scheme === "dark" ? welcomeBanner : welcomeBannerLight} width={2172} height={724} alt="Sociotechnic — one request, a team of specialists." />
         </section> : detail.kind === "error" ? <div className="error-state" role="alert"><h2>Could not load this run</h2><p>{detail.message}</p><Button variant="outline" onClick={refresh}>Retry</Button><a className="text-link" href={`/legacy#job=${encodeURIComponent(selected)}`}>Open in legacy console</a></div> : !current ? <div className="loading-state detail-loading" role="status">Loading run…</div> : <>
           <header className="run-heading"><h1>{runTitle(current.job.feature, current.plan)}</h1><details className="original-request"><summary>Original request</summary><p>{current.job.feature}</p></details><div className="run-meta"><span>{projectName(current.job.repo)}</span><span className={`status-label status-${current.job.status}`}>{statusLabels[current.job.status]}</span><code>{current.job.branch}</code><span>Build round {current.job.round} · limit {current.job.caps.rounds + current.overrides.filter((entry) => entry.bound === "rounds").length}</span></div></header>
           {failed && detail.kind === "ready" ? <div className="stale-warning" role="alert">Showing the last loaded state. Actions are disabled until refresh succeeds. {detail.error} <Button variant="outline" onClick={refresh}>Retry</Button></div> : null}
