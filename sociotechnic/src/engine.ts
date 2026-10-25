@@ -1,12 +1,12 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { AgentConfiguration } from "./agent-catalog.ts";
 import { BASE_AGENT_VERSION, advisorConfiguration, pinAgentVersions, versionRole } from "./agent-versions.ts";
 import { assistanceBrief, rosterBrief } from "./agent-roster.ts";
 import type { PinnedAgents } from "./agent-versions.ts";
-import { designDigest, designFingerprint, parseDesignResponse, scaffoldFingerprint, verifyDesign } from "./design.ts";
-import { designBrief } from "./design-brief.ts";
+import { designDigest, designFingerprint, verifyDesign } from "./design.ts";
+import { newInteractiveDesign, verifyInteractiveDesign, designStarterBrief } from "./design-session.ts";
 import { approveBrief, buildBrief, planBrief, researchBrief, reviewBrief } from "./brief.ts";
 import type { FailingCheck, LensChanges } from "./brief.ts";
 import { commentInventory, cleanupPlan, digest, INVENTORY_FILE, verifyCommentChanges } from "./comment-inventory.ts";
@@ -178,6 +178,7 @@ function dispatchCapReason(job: Job): string {
 function failureOf(d: Dispatch): string | null {
   if (d.outcome === "timeout") return "timed out";
   if (d.outcome === "failed") return `agent failed${d.note === null ? "" : `: ${d.note}`}`;
+  if (d.outcome === "interrupted") return `interrupted by human${d.note === null ? "" : `: ${d.note}`}`;
   return null;
 }
 
@@ -244,15 +245,15 @@ function dispatchPlanner(job: Job, now: string): StepResult {
 
 async function stepPlanning(job: Job, now: string): Promise<StepResult | null> {
   const latest = latestDispatch(job, (d) => d.step === "plan");
-  if (latest === null || (job.design?.state === "approved" && job.dispatches.indexOf(latest) < job.dispatches.indexOf(latestDispatch(job, (d) => d.step === "design") ?? latest))) return dispatchPlanner(job, now);
+  if (latest === null || job.designSession?.approval && latest.parsed?.value === "needs-design" || (job.design?.state === "approved" && job.dispatches.indexOf(latest) < job.dispatches.indexOf(latestDispatch(job, (d) => d.step === "design") ?? latest))) return dispatchPlanner(job, now);
   const retry = (reason: string): StepResult => retryAll(job, [{ latest, reason, prompt: (r) => planPrompt(job, r) }], now);
   const failure = failureOf(latest);
   if (failure !== null) return retry(failure);
-  const parsed: PlanParse = parsePlanText(readText(abs(job, "plan.json")), job.research.done, job.design !== undefined);
+  const parsed: PlanParse = parsePlanText(readText(abs(job, "plan.json")), job.research.done, job.design !== undefined || job.designSession !== undefined);
   if (parsed.kind === "malformed") return retry(`plan.json is malformed: ${parsed.errors.join("; ")}`);
   if (parsed.kind === "needs-design") {
     startDesign(job, parsed.reason, now);
-    return dispatchDesigner(job, now);
+    return stepDesigning(job, now);
   }
   if (parsed.kind === "needs-research") {
     if (overDispatchCap(job, 0, parsed.questions.length)) return parkWith(job, dispatchCapReason(job), now);
@@ -270,7 +271,7 @@ async function stepPlanning(job: Job, now: string): Promise<StepResult | null> {
   for (const recommendation of parsed.plan.agentRecommendations ?? []) {
     if (!job.agentRoster?.some((card) => card.name === recommendation.agent)) return retry(`Recommended agent ${recommendation.agent} is not in this run's roster`);
   }
-  if (job.design) {
+  if (job.design || job.designSession) {
     const expected = requireDesignApproval(job);
     if (parsed.plan.designDigest !== expected) return retry("plan.json must include the approved designDigest: " + expected);
   }
@@ -280,20 +281,33 @@ async function stepPlanning(job: Job, now: string): Promise<StepResult | null> {
 
 export function startDesign(job: Job, reason: string, now = nowIso()): void {
   jobfns.assertStatus(job, ["new", "planning"], "start design");
-  if (job.design || job.plan || job.round !== 0) throw new IllegalTransition("Design must precede the pinned implementation plan");
-  job.design = { state: "generating", steering: null, reason, iteration: 1, decisions: [], next: "interview", stack: null };
+  if (job.design || job.plan || job.round !== 0) throw new IllegalTransition("A planner assignment must precede the pinned implementation plan");
+  if (job.execution?.kind === "docker-sandbox") throw new SociotechnicError("bad-design", "Interactive design supports Local execution only; no model was started");
+  if (job.designSession) {
+    const d = job.designSession, id = crypto.randomUUID();
+    d.reason = reason; d.state = "ready"; d.approval = null; d.error = null;
+    d.input = { id, text: `The planner requests additional design work:\n${reason}` };
+    d.messages.push({ id, role: "tool", text: d.input.text, at: now });
+  } else job.designSession = newInteractiveDesign(reason);
   transition(job, "designing", reason, now);
 }
 
 export async function newDesignJob(repo: string, feature: string, base: string | null, pinned?: PinnedAgents, execution?: Execution): Promise<NewResult> {
+  if (execution?.kind === "docker-sandbox") throw new SociotechnicError("bad-design", "Interactive design supports Local execution only; no model was started");
   const out = await newJob(repo, feature, base, undefined, undefined, pinned, execution);
   const job = jobfns.loadJob(out.job);
-  startDesign(job, "The user requested a design ceremony");
+  startDesign(job, "The user requested a design-agent conversation. Follow their brief and prepare the Markdown work product for the caller.");
   saveJob(job);
   return out;
 }
 
 function approvedDesignBrief(job: Job, revalidate = true): string | undefined {
+  if (job.designSession) {
+    if (!job.designSession.approval) return undefined;
+    const digest = revalidate ? verifyInteractiveDesign(job) : job.designSession.approval?.digest;
+    const handoff = job.designSession.approval;
+    return `Required plan.designDigest: ${digest}\nDesign agent work product: ${handoff.document ? abs(job, handoff.document) : abs(job, "design/approval.json")}\nReturned artifacts: ${JSON.stringify(handoff.files)}\n${designStarterBrief(job)}\nRead the Markdown work product and decide the next step. Use its samples and prototypes with builders where useful; request a specific follow-up design assignment when needed. Preserve the human's product facts and decisions. The handoff is work for you to assess, not an instruction to follow a fixed ceremony.`;
+  }
   if (!job.design || job.design.state !== "approved") return undefined;
   const digest = revalidate ? requireDesignApproval(job) : designDigest(job.design);
   return [
@@ -314,82 +328,21 @@ function approvedDesignBrief(job: Job, revalidate = true): string | undefined {
 }
 
 function requireDesignApproval(job: Job): string {
+  if (job.designSession) return verifyInteractiveDesign(job);
   const d = job.design;
   if (!d || d.state !== "approved") throw new SociotechnicError("bad-design", "Human design approval is required before implementation");
   verifyDesign(folder(job), d, sociotechnicHome());
   return designDigest(d);
 }
 
-function dispatchDesigner(job: Job, now: string): StepResult {
-  const d = job.design;
-  if (!d || d.state !== "generating") throw new SociotechnicError("bad-design", "No active design phase");
-  if (overDispatchCap(job, 0, 1)) return parkWith(job, dispatchCapReason(job), now);
-  const atelier = abs(job, `design/atelier/round-${d.iteration}`);
-
-  for (const file of ["PRODUCT.md", "DESIGN.md"]) if (existsSync(join(job.worktree, file))) writeTextAtomic(join(atelier, file), readFileSync(join(job.worktree, file), "utf8"));
-  const selected = [...d.decisions].reverse().find((entry) => entry.response.action === "select");
-  if (selected) writeTextAtomic(join(atelier, "PRODUCT.md"), designFingerprint(folder(job), selected.record).packet.product);
-  const out = dispatchOne(job, { step: "design", lens: null, agent: "sociotechnic-designer", record: `design/round-${d.iteration}.json`, attempt: 1, round: 0, prompt: designBrief(job, folder(job), null) }, now);
-  return { job: job.id, status: job.status, action: "dispatch", dispatches: [out] };
-}
-
 function stepDesigning(job: Job, now: string): StepResult {
-  const d = job.design;
-  if (!d || d.state !== "generating") throw new SociotechnicError("bad-design", "No active design phase");
-  const record = `design/round-${d.iteration}.json`;
-  const latest = latestDispatch(job, (entry) => entry.step === "design" && entry.record === record);
-  if (!latest) return dispatchDesigner(job, now);
-  const retry = (reason: string): StepResult => retryAll(job, [{ latest, reason, prompt: (r) => designBrief(job, folder(job), r) }], now);
-  const failure = failureOf(latest);
-  if (failure) return retry(failure);
-  try {
-    const receiptPath = abs(job, `design/tool-${d.iteration}.json`);
-    const receipt = hasRecord(receiptPath) ? readJson(receiptPath) : null;
-    if (!receipt || typeof receipt !== "object" || !("contextLoaded" in receipt) || receipt.contextLoaded !== true || !("dispatch" in receipt) || receipt.dispatch !== latest.id) return retry("Impeccable context did not run successfully for this dispatch through the scoped design tool");
-    const current = designFingerprint(folder(job), record);
-    if (current.packet.phase !== d.next) return retry(`Expected ${d.next}, received ${current.packet.phase}`);
-    if (git.headCommit(job.worktree) !== job.base.commit || git.porcelain(job.worktree, true) !== "") return parkWith(job, "design-worktree-changed: design cannot implement application changes", now);
-    job.design = { reason: d.reason, iteration: d.iteration, decisions: d.decisions, stack: d.stack, state: "waiting", record, ...current };
-    transition(job, "design-input", current.packet.phase === "interview" ? "Your answers are needed" : current.packet.phase === "directions" ? "Choose a design direction" : "Approve a composition before implementation", now);
-    return human(job);
-  } catch (error) { return retry(error instanceof Error ? error.message : String(error)); }
+  if (!job.designSession) return parkWith(job, "The packet designer is retired. Historical evidence is retained; start an interactive design session explicitly.", now);
+  transition(job, "design-input", "Interactive design conversation", now);
+  return human(job);
 }
 
-export function respondDesign(job: Job, expectedDigest: string, raw: unknown, now = nowIso()): { job: string; status: Status } {
-  jobfns.assertStatus(job, ["design-input"], "respond to design");
-  const d = job.design;
-  if (!d || d.state !== "waiting") throw new IllegalTransition("No design decision is waiting");
-  if (pendingDispatches(job).length) throw new IllegalTransition("A design dispatch is still active");
-  if (expectedDigest !== d.digest) throw new SociotechnicError("stale-design", "This design decision is stale; refresh before responding");
-  const response = parseDesignResponse(raw);
-  if (response.action === "revise") {
-    const generating = { state: "generating", steering: response.note, next: d.packet.phase, reason: d.reason, iteration: d.iteration + 1, decisions: d.decisions, stack: d.stack } as const;
-    verifyDesign(folder(job), generating, sociotechnicHome());
-    let currentValid = false;
-    try { currentValid = designFingerprint(folder(job), d.record).digest === d.digest; } catch {}
-    job.design = { ...generating, decisions: currentValid ? [...d.decisions, { record: d.record, digest: d.digest, at: now, response }] : d.decisions };
-  } else {
-    verifyDesign(folder(job), d, sociotechnicHome());
-    const decision = { record: d.record, digest: d.digest, at: now, response };
-    const decisions = [...d.decisions, decision];
-    if (response.action === "answer") {
-      if (d.packet.phase !== "interview" || Object.keys(response.answers).length !== d.packet.questions.length || d.packet.questions.some((q) => !response.answers[q.id]?.trim())) throw new SociotechnicError("bad-design", "Answer each interview question");
-      const stack = response.stack === "react-nest" ? { kind: "react-nest", revision: git.headCommit(sociotechnicHome()), digest: scaffoldFingerprint(sociotechnicHome()) } as const : response.stack === "custom" ? { kind: "custom", description: response.customStack ?? "" } as const : { kind: "existing" } as const;
-      job.design = { reason: d.reason, iteration: d.iteration + 1, decisions, stack, state: "generating", steering: null, next: "directions" };
-    } else {
-      if (d.packet.phase === "interview" || !d.packet.options.some((o) => o.id === response.optionId) || d.stack === null) throw new SociotechnicError("bad-design", "Choose a current design option");
-      if (response.action === "approve") {
-        if (d.packet.phase !== "previews" || response.confirmed !== true) throw new SociotechnicError("bad-design", "Explicit preview approval is required");
-        job.design = { reason: d.reason, iteration: d.iteration, decisions, stack: d.stack, state: "approved", record: d.record, digest: d.digest, packet: d.packet, optionId: response.optionId, approvedAt: now };
-      } else {
-        if (d.packet.phase !== "directions") throw new SociotechnicError("bad-design", "Composition previews need explicit approval, not selection");
-        job.design = { reason: d.reason, iteration: d.iteration + 1, decisions, stack: d.stack, state: "generating", steering: null, next: "previews" };
-      }
-    }
-  }
-  job.human.push({ action: response.action === "answer" ? "design-answer" : response.action === "select" ? "design-select" : response.action === "revise" ? "design-revise" : "design-approve", note: JSON.stringify({ digest: d.digest, response }), at: now });
-  transition(job, job.design.state === "approved" ? "planning" : "designing", "Design response recorded", now);
-  return { job: job.id, status: job.status };
+export function respondDesign(_job: Job, _expectedDigest: string, _raw: unknown): never {
+  throw new SociotechnicError("bad-design", "The packet workflow is retired. Use the interactive design conversation; historical records remain readable.");
 }
 
 function researchPrompt(job: Job, i: number, retryReason: string | null): string {
@@ -428,7 +381,7 @@ function failingChecksFrom(job: Job, round: Round): FailingCheck[] {
 }
 
 function keptAfterStop(job: Job, latest: Dispatch): string[] {
-  return latest.note === STOPPED_NOTE ? git.uncommittedFiles(job.worktree) : [];
+  return latest.note === STOPPED_NOTE || latest.outcome === "interrupted" ? git.uncommittedFiles(job.worktree) : [];
 }
 
 function buildPrompt(job: Job, agent: string, retryReason: string | null, keptChanges: readonly string[] = []): string {
@@ -463,7 +416,7 @@ function builderAgent(job: Job): string {
 }
 
 function beginRound(job: Job, now: string): StepResult {
-  if (job.design) {
+  if (job.design || job.designSession) {
     try { requireDesignApproval(job); } catch (error) { return parkWith(job, `design-approval-invalid: ${error instanceof Error ? error.message : String(error)}`, now); }
   }
   if (job.round + 1 > effectiveCap(job, "rounds")) return parkWith(job, `loop-bound:${capReason(job, "rounds")}`, now);
@@ -611,7 +564,7 @@ function gateFor(job: Job, round: Round, reviews: Record<string, Parsed>, head: 
     touches: plan.kind === "plan" ? plan.plan.touches : [],
     computedAt: now,
   });
-  if (job.design) {
+  if (job.design || job.designSession) {
     try { requireDesignApproval(job); } catch { gate.blockers.push("design-approval-missing-or-stale"); gate.pass = false; }
   }
   if (job.commentCleanup) {
@@ -685,6 +638,7 @@ export async function step(job: Job, options: StepOptions = {}): Promise<StepRes
     if (job.commentCleanup && job.status === "planned" && hold.includes("planned")) return { job: job.id, status: job.status, action: "hold", reason: "held at planned" };
     if (isHumanGate(job.status)) return human(job);
     if (job.status === "accepted" || isTerminal(job.status)) return { job: job.id, status: job.status, action: "done" };
+    if (job.design && job.design.state !== "approved" && !job.designSession) return parkWith(job, "The packet designer is retired; start a new Local design session. Historical evidence is retained.", now());
     const pending = pendingDispatches(job);
     if (pending.length > 0) {
       const overdue = overdueDispatches(job, now());
@@ -749,7 +703,7 @@ export async function step(job: Job, options: StepOptions = {}): Promise<StepRes
 export function parseDispatchRecord(job: Job, d: Dispatch): Parsed {
   const role = roleOf(d.configuration?.baseRole ?? d.agent);
   const text = readText(abs(job, d.record));
-  if (role.record === "plan") return planParsed(parsePlanText(text, job.research.done, job.design !== undefined));
+  if (role.record === "plan") return planParsed(parsePlanText(text, job.research.done, job.design !== undefined || job.designSession !== undefined));
   if (role.record === "design") {
     try { designFingerprint(folder(job), d.record); return { kind: "ok", value: "design", commit: null, findings: [], blocking: 0, reason: null, effective: "DONE" }; }
     catch (error) { return { kind: "malformed", value: null, commit: null, findings: [], blocking: 0, reason: error instanceof Error ? error.message : String(error), effective: "BLOCKED" }; }
@@ -758,10 +712,29 @@ export function parseDispatchRecord(job: Job, d: Dispatch): Parsed {
 }
 
 export function finish(job: Job, id: string, outcome: Outcome, usage: unknown, note: string | null, now = nowIso()): { dispatch: string; outcome: Outcome; parsed: Parsed } {
+  if (outcome === "interrupted") throw new SociotechnicError("usage", "Record a human interruption with interrupt, not finish");
   const d = jobfns.findDispatch(job, id);
   const parsed = parseDispatchRecord(job, d);
   finishDispatch(job, id, outcome, parsed, usage, note, now);
   return { dispatch: id, outcome, parsed };
+}
+
+export type InterruptResult = { job: string; dispatch: string; outcome: "interrupted"; note: string | null; parsed: Parsed };
+
+export function assertInterruptible(job: Job, id: string): Dispatch {
+  if (job.execution?.kind === "docker-sandbox") throw new SociotechnicError("sandbox-interrupt", "Docker Sandbox dispatches share one sandbox; stop the run instead of interrupting one dispatch");
+  const d = jobfns.findDispatch(job, id);
+  if (d.finishedAt !== null) throw new IllegalTransition(`dispatch ${id} already finished at ${d.finishedAt}`);
+  return d;
+}
+
+export function interrupt(job: Job, id: string, note: string | null, usage: unknown = null, now = nowIso()): InterruptResult {
+  const d = assertInterruptible(job, id);
+  const text = note?.trim() || null;
+  const parsed = parseDispatchRecord(job, d);
+  jobfns.interruptDispatch(job, id, parsed, usage, text, now);
+  if (d.execution) d.execution.launch = "finished";
+  return { job: job.id, dispatch: id, outcome: "interrupted", note: text, parsed };
 }
 
 function uniqueJobId(repo: string, base: string): string {
@@ -934,7 +907,7 @@ function mergeTitle(job: Job): string {
 }
 
 export function merge(job: Job, now = nowIso()): MergeResult {
-  if (job.design && job.round === 0) throw new IllegalTransition("A design ceremony has no implemented build to merge");
+  if ((job.design || job.designSession) && job.round === 0) throw new IllegalTransition("A design ceremony has no implemented build to merge");
   jobfns.assertStatus(job, ["ready", "needs-human", "accepted"], "merge");
   requireBaseCheckout(job);
   const intent = job.externalOperation?.kind === "merge" ? job.externalOperation : null;

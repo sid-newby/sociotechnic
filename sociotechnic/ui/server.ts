@@ -1,10 +1,16 @@
+import { answerDesignQuestion } from "./design-session-runner.ts";
+import { approveInteractiveDesign, enqueueDesignMessage, interactiveFingerprint, artifactFiles } from "../src/design-session.ts";
+import type { DesignQuery } from "./design-session-runner.ts";
+import { applyCatalogBundles, readCatalogBundles } from "../src/db/catalog-migrations.ts";
+import type { CatalogBundle } from "../src/db/catalog-migrations.ts";
+import { interactiveDesigner, migrateUnusedDesigner } from "../src/agent-versions.ts";
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync, realpathSync, rmSync, statSync } from "node:fs";
 import { createServer } from "node:http";
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { homedir } from "node:os";
-import { dirname, extname, join, resolve, sep } from "node:path";
+import { dirname, extname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { designAsset, verifyDesign } from "../src/design.ts";
 import { BASE_AGENT_VERSION, agentBase, agentVersionChoices, createAgent, isAgentVersion, listAgentVersions, loadAgentCatalog, pinAgentVersions, publishAgentVersion, readAgentVersion } from "../src/agent-versions.ts";
@@ -15,8 +21,9 @@ import { dbStatus } from "../src/db/init.ts";
 import { listJobs, listProjects, loadJobHistory } from "../src/db/listing.ts";
 import { readJob, effectJob, createJobOperation } from "../src/job-store.ts";
 import { requireStore, currentStore } from "../src/db/store.ts";
-import { session, readText, readJson, hasRecord } from "../src/record-store.ts";
+import { session, readText, readJson, readBytes, hasRecord } from "../src/record-store.ts";
 import * as engine from "../src/engine.ts";
+import { localDispatchConfigurable, localDispatchLimit, setLocalDispatchLimit } from "../src/local-capacity.ts";
 import { assertNoForeignDriver } from "../src/driverlock.ts";
 import { SociotechnicError } from "../src/errors.ts";
 import { sandboxInventory, setSandboxLimit } from "../src/sandbox.ts";
@@ -46,7 +53,7 @@ const PING_MS = 15_000;
 const liveOrigin = process.env.NODE_ENV === "development" ? " http://localhost:8400" : "";
 const CSP = `default-src 'self'; script-src 'self' 'unsafe-inline'${liveOrigin}; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'${liveOrigin}`;
 
-export type ServerOptions = { port?: number; host?: string; runner?: () => Runner };
+export type ServerOptions = { port?: number; host?: string; runner?: () => Runner; designQuery?: DesignQuery; catalogBundles?: readonly CatalogBundle[] };
 export type ServerHandle = { url: string; port: number; drivers: DriverRegistry; close: () => Promise<void> };
 export type RecordEntry = { path: string; bytes: number; mtime: string };
 
@@ -73,20 +80,20 @@ function sendJson(res: ServerResponse, status: number, value: unknown): void {
 function statusFor(err: unknown): { status: number; code: string; message: string } {
   if (err instanceof HttpError) return { status: err.status, code: err.code, message: err.message };
   if (err instanceof SociotechnicError) {
-    const status = ["illegal-transition", "driver-active", "locked", "stale-design", "stale-agent-version", "stale-sandbox-settings", "stale-job", "ownership-lost"].includes(err.code) ? 409 : err.code === "not-found" ? 404 : ["db", "db-unreachable", "db-disabled", "migration-required"].includes(err.code) ? 503 : 400;
+    const status = ["illegal-transition", "driver-active", "locked", "stale-design", "stale-agent-version", "stale-sandbox-settings", "stale-job", "ownership-lost", "sandbox-interrupt", "dispatch-starting", "driver-stopped", "stale-local-capacity", "local-capacity-managed"].includes(err.code) ? 409 : err.code === "not-found" ? 404 : ["db", "db-unreachable", "db-disabled", "migration-required"].includes(err.code) ? 503 : 400;
     return { status, code: err.code, message: err.message };
   }
   return { status: 500, code: "internal", message: err instanceof Error ? err.message : String(err) };
 }
 
-function readBody(req: IncomingMessage): Promise<Record<string, unknown>> {
+function readBody(req: IncomingMessage, limit = MAX_BODY): Promise<Record<string, unknown>> {
   return new Promise((resolveBody, reject) => {
     const chunks: Buffer[] = [];
     let size = 0;
     req.on("data", (chunk: Buffer) => {
       size += chunk.length;
-      if (size > MAX_BODY) {
-        reject(new HttpError(400, "body-too-large", "request body is over 1 MB"));
+      if (size > limit) {
+        reject(new HttpError(400, "body-too-large", `Request body is over ${limit / 1024 / 1024} MB`));
         req.destroy();
         return;
       }
@@ -152,6 +159,36 @@ function recordPath(id: string, raw: string): { rel: string; full: string } {
 }
 function readPlanJson(id: string): unknown { return hasRecord(join(jobDir(id),"plan.json")) ? readJson(join(jobDir(id),"plan.json")) : null; }
 
+const DOWNLOAD_TYPES: Record<string, string> = { ".md": "text/markdown; charset=utf-8", ".json": "application/json; charset=utf-8", ".txt": "text/plain; charset=utf-8", ".patch": "text/x-diff; charset=utf-8", ".diff": "text/x-diff; charset=utf-8", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp" };
+function sendRecordDownload(res: ServerResponse, id: string, raw: string, head: boolean): void {
+  const { full } = recordPath(id, raw);
+  const key = relative(jobDir(id), full).split(sep).join("/");
+  const bytes = readBytes(full);
+  const name = key.replaceAll("/", "-");
+  res.writeHead(200, {
+    "content-type": DOWNLOAD_TYPES[extname(key.replace(/\.superseded-by-d-[0-9]+$/, ""))] ?? "application/octet-stream",
+    "content-length": bytes.length,
+    "content-disposition": `attachment; filename="${name.replace(/[^A-Za-z0-9._-]/g, "_")}"; filename*=UTF-8''${encodeURIComponent(name).replace(/['()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)}`,
+    "cache-control": "no-store", "x-content-type-options": "nosniff", "content-security-policy": "sandbox; default-src 'none'",
+  });
+  res.end(head ? undefined : bytes);
+}
+
+function intQuery(query: URLSearchParams, key: string, fallback: number, min: number, max: number): number {
+  const raw = query.get(key);
+  if (raw === null) return fallback;
+  const value = /^[0-9]{1,16}$/.test(raw) ? Number(raw) : Number.NaN;
+  if (!Number.isSafeInteger(value) || value < min || value > max) throw new HttpError(400, "bad-input", `${key} must be an integer from ${min} to ${max}`);
+  return value;
+}
+
+function dispatchIdParam(raw: string): string {
+  let id: string;
+  try { id = decodeURIComponent(raw); } catch { throw new HttpError(400, "bad-input", "Invalid dispatch id"); }
+  if (!/^d-[0-9]+$/.test(id)) throw new HttpError(400, "bad-input", `not a dispatch id: ${id}`);
+  return id;
+}
+
 function queryOf(req: IncomingMessage): URLSearchParams {
   return new URL(req.url ?? "/", "http://127.0.0.1").searchParams;
 }
@@ -194,6 +231,8 @@ function serveAsset(res: ServerResponse, path: string, head: boolean): void {
 }
 
 export async function startServer(options: ServerOptions = {}): Promise<ServerHandle> {
+  const store = currentStore();
+  if (store) await store.transaction((tx) => applyCatalogBundles(tx, options.catalogBundles ?? readCatalogBundles()));
   const host = options.host ?? "127.0.0.1";
   const clients = new Set<ServerResponse>();
   const broadcast = (event: string, data: unknown): void => {
@@ -202,7 +241,12 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
   };
   let port = 0;
   const consoleUrl = () => `http://${host}:${port}/`;
-  const drivers = createDriverRegistry({ runner: options.runner ?? runnerFromEnv, emit: (e: DriverEvent) => broadcast("driver", e), owner: "ui", consoleUrl });
+  const drivers = createDriverRegistry({ runner: options.runner ?? runnerFromEnv, emit: (e: DriverEvent) => broadcast("driver", e), onLog: (e) => broadcast("log", e), owner: "ui", consoleUrl, designQuery: options.designQuery });
+  const assertSessionOwner = async (id: string, allowInterrupted = false): Promise<void> => {
+    const ownership = (await consoleDriverState(drivers, id, consoleUrl())).ownership;
+    if (ownership.kind === "external" || (ownership.kind === "interrupted" && !allowInterrupted)) throw new HttpError(409, "driver-active", "Manage this design session in its owning console, or explicitly resume an interrupted session");
+    if (ownership.kind !== "interrupted") await assertNoForeignDriver(id, process.pid);
+  };
   const startedAt = new Date().toISOString();
 
   const debounce = new Map<string, NodeJS.Timeout>();
@@ -218,6 +262,12 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
   const routes: Route[] = [
     { method: "GET", pattern: /^\/api\/sandboxes$/, handler: () => sandboxInventory() },
     { method: "POST", pattern: /^\/api\/sandboxes\/capacity$/, handler: ({ body }) => setSandboxLimit(body.limit, body.expectedLimit) },
+    { method: "GET", pattern: /^\/api\/local\/capacity$/, handler: () => ({ limit: localDispatchLimit(), configurable: localDispatchConfigurable(), ...drivers.capacity() }) },
+    { method: "POST", pattern: /^\/api\/local\/capacity$/, handler: async ({ body }) => {
+      const out = await setLocalDispatchLimit(body.limit, body.expectedLimit);
+      drivers.capacityChanged();
+      return out;
+    } },
     { method: "GET", pattern: /^\/api\/agent-versions$/, handler: () => agentVersionChoices() },
     { method: "GET", pattern: /^\/api\/agent-roster$/, handler: () => agentRoster() },
     { method: "POST", pattern: /^\/api\/agents$/, handler: async ({ body }) => {
@@ -283,7 +333,7 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
       pattern: /^\/api\/jobs\/([^/]+)$/,
       handler: async ({ params }) => {
         const id = jobIdParam(params[0]);
-        return { job: loadJob(id), plan: readPlanJson(id), records: listRecords(id), pr: hasRecord(join(jobDir(id), "pr.md")), worktreePresent: existsSync(loadJob(id).worktree), driver: await runningState(drivers, id, consoleUrl()) };
+        return { interactive: loadJob(id).designSession ? { ...loadJob(id).designSession, needsMigration: !interactiveDesigner(loadJob(id).agentConfigurations?.["sociotechnic-designer"]), fingerprint: interactiveFingerprint(loadJob(id)), files: artifactFiles(loadJob(id)) } : null, job: loadJob(id), plan: readPlanJson(id), records: listRecords(id), pr: hasRecord(join(jobDir(id), "pr.md")), worktreePresent: existsSync(loadJob(id).worktree), driver: await runningState(drivers, id, consoleUrl()) };
       },
     },
     {
@@ -296,6 +346,30 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
       },
     },
     { method: "GET", pattern: /^\/api\/jobs\/([^/]+)\/driver$/, handler: ({ params }) => consoleDriverState(drivers, jobIdParam(params[0]), consoleUrl()) },
+    { method: "GET", pattern: /^\/api\/jobs\/([^/]+)\/log$/, handler: ({ req, params }) => {
+      const query = queryOf(req);
+      return drivers.logPage(jobIdParam(params[0]), intQuery(query, "after", 0, 0, Number.MAX_SAFE_INTEGER), intQuery(query, "limit", 200, 1, 1000));
+    } },
+    {
+      method: "POST",
+      pattern: /^\/api\/jobs\/([^/]+)\/dispatches\/([^/]+)\/interrupt$/,
+      handler: async ({ params, body }) => {
+        const id = jobIdParam(params[0]);
+        const dispatch = dispatchIdParam(params[1]);
+        const note = str(body, "note", false)?.trim() || null;
+        engine.assertInterruptible(loadJob(id), dispatch);
+        const running = drivers.interrupt(id, dispatch, note);
+        if (running !== null) return running;
+        const ownership = (await consoleDriverState(drivers, id, consoleUrl())).ownership;
+        if (ownership.kind === "external") throw new HttpError(409, "driver-active", "Interrupt this dispatch in the console that owns the run");
+        if (ownership.kind !== "none") throw new HttpError(409, "driver-active", "The previous driver stopped; continue the run to recover before interrupting");
+        const out = await mutateJob(id, async (job) => {
+          await assertNoForeignDriver(id, process.pid);
+          return engine.interrupt(job, dispatch, note);
+        });
+        return { job: out.job, dispatch: out.dispatch, outcome: out.outcome, note: out.note, terminated: false };
+      },
+    },
     {
       method: "POST",
       pattern: /^\/api\/jobs$/,
@@ -330,6 +404,7 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
           }
         }
         const pinned = await pinAgentVersions(overrides, undefined, assignments);
+        if (body.workflow === "design" && !interactiveDesigner(pinned.configurations["sociotechnic-designer"])) throw new HttpError(400, "bad-design", "Select the interactive designer release for a new design conversation");
         if (body.initialize === true) prepareRepository(repoPath, baseBranch);
         if (githubRepository !== null) publishRepository(repoPath, baseBranch, githubRepository);
         return createJobOperation(async () => {
@@ -417,6 +492,7 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
       handler: async ({ params }) => {
         const id = jobIdParam(params[0]);
         drivers.stop(id);
+        if (await readJob(id, (job) => !!job.designSession)) await drivers.settled(id);
         if (await readJob(id, (job) => job.execution?.kind === "docker-sandbox")) await drivers.settled(id);
         return mutateJob(id, (job) => engine.stopJob(job));
       },
@@ -467,6 +543,93 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
       },
     },
     {
+      method: "POST", pattern: /^\/api\/jobs\/([^/]+)\/design-session\/messages$/,
+      handler: async ({ params, body }) => {
+        const id = jobIdParam(params[0]);
+        await assertSessionOwner(id);
+        if (await readJob(id, (job) => job.designSession?.messages.some((message) => message.id === body.messageId))) {
+          await mutateJob(id, (job) => enqueueDesignMessage(job, body.message, body.messageId, body.images));
+          return { driver: drivers.state(id) };
+        }
+        if (drivers.isRunning(id)) {
+          if (await readJob(id, (job) => job.designSession?.state !== "waiting")) throw new HttpError(409, "driver-active", "Interrupt the current response before sending another message");
+          drivers.stop(id); await drivers.settled(id);
+        }
+        const queued = await mutateJob(id, (job) => enqueueDesignMessage(job, body.message, body.messageId, body.images));
+        return { driver: queued ? await drivers.run(id, "conversation", []) : drivers.state(id) };
+      },
+    },
+    {
+      method: "POST", pattern: /^\/api\/jobs\/([^/]+)\/design-session\/answer$/,
+      handler: async ({ params, body }) => {
+        const id = jobIdParam(params[0]);
+        await assertSessionOwner(id);
+        await answerDesignQuestion(id, body.questionId, body.answers);
+        return { recorded: true };
+      },
+    },
+    {
+      method: "POST", pattern: /^\/api\/jobs\/([^/]+)\/design-session\/interrupt$/,
+      handler: async ({ params }) => {
+        const id = jobIdParam(params[0]);
+        await assertSessionOwner(id);
+        drivers.stop(id); await drivers.settled(id);
+        return { interrupted: true };
+      },
+    },
+    {
+      method: "POST", pattern: /^\/api\/jobs\/([^/]+)\/design-session\/migrate$/,
+      handler: async ({ params, body }) => {
+        const id = jobIdParam(params[0]);
+        if (body.confirmed !== true) throw new HttpError(400, "bad-input", "Explicit designer migration is required");
+        if (drivers.isRunning(id)) throw new HttpError(409, "driver-active", "The session is already running");
+        await assertSessionOwner(id, true);
+        await mutateJob(id, async (job) => {
+          session().commitGuards = [async () => { await assertSessionOwner(id, true); if (drivers.isRunning(id)) throw new HttpError(409, "driver-active", "The session is already running"); }];
+          await migrateUnusedDesigner(job);
+        });
+        return { migrated: true, driver: await drivers.run(id, "run", ["planned"]) };
+      },
+    },
+    {
+      method: "POST", pattern: /^\/api\/jobs\/([^/]+)\/design-session\/resume$/,
+      handler: async ({ params }) => {
+        const id = jobIdParam(params[0]);
+        if (drivers.isRunning(id)) throw new HttpError(409, "driver-active", "The session is already running");
+        await assertSessionOwner(id, true);
+        await mutateJob(id, (job) => {
+          const d = job.designSession;
+          if (!d || !["ready", "failed", "interrupted", "working", "waiting"].includes(d.state) || job.status === "stopped") throw new HttpError(409, "illegal-transition", "This session cannot be resumed here");
+          d.state = "ready"; d.error = null;
+          if (!d.input) d.input = { id: crypto.randomUUID(), text: "Continue our design conversation from the last completed step. If a question was interrupted, present it again; do not invent an answer." };
+          if (["design-input", "designing"].includes(job.status)) job.status = "designing";
+        });
+        return { driver: await drivers.run(id, "conversation", []) };
+      },
+    },
+    {
+      method: "POST", pattern: /^\/api\/jobs\/([^/]+)\/design-session\/handoff$/,
+      handler: async ({ params, body }) => {
+        const id = jobIdParam(params[0]);
+        if (drivers.isRunning(id)) throw new HttpError(409, "driver-active", "Finish the current response before returning the work");
+        await assertSessionOwner(id);
+        await mutateJob(id, (job) => approveInteractiveDesign(job, body.digest));
+        const planning = await readJob(id, (job) => job.status === "planning");
+        return { returned: true, driver: planning ? await drivers.run(id, "run", ["planned"]) : drivers.state(id) };
+      },
+    },
+    {
+      method: "POST", pattern: /^\/api\/jobs\/([^/]+)\/design-session\/approve$/,
+      handler: async ({ params, body }) => {
+        const id = jobIdParam(params[0]);
+        if (drivers.isRunning(id)) throw new HttpError(409, "driver-active", "Finish or interrupt the current response before approving");
+        await assertSessionOwner(id);
+        if (body.confirmed !== true) throw new HttpError(400, "bad-input", "Explicit design approval is required");
+        await mutateJob(id, (job) => approveInteractiveDesign(job, body.digest));
+        return { approved: true, driver: await drivers.run(id, "run", ["planned"]) };
+      },
+    },
+    {
       method: "POST", pattern: /^\/api\/jobs\/([^/]+)\/design-response$/,
       handler: async ({ params, body }) => {
         const id = jobIdParam(params[0]);
@@ -474,7 +637,7 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
         await assertNoForeignDriver(id, process.pid);
         const digest = str(body, "digest", true) ?? "";
         const out = await mutateJob(id, (job) => engine.respondDesign(job, digest, body.response));
-        return { ...out, driver: await drivers.run(id, "run", ["planned"]) };
+        return out;
       },
     },
     { method: "POST", pattern: /^\/api\/jobs\/([^/]+)\/pause$/, handler: ({ params }) => drivers.pause(jobIdParam(params[0])) },
@@ -502,6 +665,38 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
     if (method === "GET" || method === "HEAD") {
       if (path === "/" || path === "/legacy") return serveIndex(res, path === "/legacy", method === "HEAD");
       if (path.startsWith("/assets/")) return serveAsset(res, path, method === "HEAD");
+      const download = /^\/api\/jobs\/([^/]+)\/records\/(.+)$/.exec(path);
+      if (download && queryOf(req).get("download") === "1") {
+        const id = jobIdParam(download[1]);
+        return readJob(id, () => sendRecordDownload(res, id, download[2], method === "HEAD"));
+      }
+      const designImage = /^\/api\/jobs\/([^/]+)\/design-images\/(.+)$/.exec(path);
+      if (designImage) {
+        const id = jobIdParam(designImage[1]);
+        return readJob(id, (job) => {
+          const file = decodeURIComponent(designImage[2]);
+          const image = job.designSession?.messages.flatMap((message) => message.images ?? []).find((item) => item.record === file);
+          const record = image ? session().records.get(file) : null;
+          if (!image || !record) throw new HttpError(404, "not-found", "Unknown conversation image");
+          const bytes = record.encoding === "base64" ? Buffer.from(record.text, "base64") : Buffer.from(record.text);
+          res.writeHead(200, { "content-type": image.mediaType, "cache-control": "no-store", "x-content-type-options": "nosniff", "content-security-policy": "default-src 'none'" });
+          res.end(method === "HEAD" ? undefined : bytes);
+        });
+      }
+      const interactiveAsset = /^\/api\/jobs\/([^/]+)\/design-artifacts\/(.+)$/.exec(path);
+      if (interactiveAsset) {
+        const id = jobIdParam(interactiveAsset[1]);
+        return readJob(id, (job) => {
+          const file = decodeURIComponent(interactiveAsset[2]);
+          if (!artifactFiles(job).includes(file)) throw new HttpError(404, "not-found", "Unknown design artifact");
+          const record = session().records.get(file);
+          if (!record) throw new HttpError(404, "not-found", "Unknown design artifact");
+          const bytes = record.encoding === "base64" ? Buffer.from(record.text, "base64") : Buffer.from(record.text);
+          const type = { ".html": "text/html; charset=utf-8", ".png": "image/png", ".webp": "image/webp", ".jpg": "image/jpeg", ".jpeg": "image/jpeg" }[extname(file)] ?? "text/plain; charset=utf-8";
+          res.writeHead(200, { "content-type": type, "cache-control": "no-store", "x-content-type-options": "nosniff", "content-security-policy": "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; base-uri 'none'" });
+          res.end(method === "HEAD" ? undefined : bytes);
+        });
+      }
       const preview = /^\/api\/jobs\/([^/]+)\/design-assets\/(.+)$/.exec(path);
       if (preview) {
         const id = jobIdParam(preview[1]);
@@ -531,7 +726,7 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
       if (route.method !== method) continue;
       const m = route.pattern.exec(path);
       if (m === null) continue;
-      const body = mutating ? await readBody(req) : {};
+      const body = mutating ? await readBody(req, /^\/api\/jobs\/[^/]+\/design-session\/messages$/.test(path) ? 64 * 1024 * 1024 : MAX_BODY) : {};
       const jobMatch = /^\/api\/jobs\/([^/]+)/.exec(path);
       const invoke = () => route.handler({ req, res, params: m.slice(1), body });
       const out = jobMatch ? await readJob(jobIdParam(jobMatch[1]), invoke) : await invoke();
@@ -565,13 +760,14 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
     await stopWatch();
     clearInterval(ping);
     for (const t of debounce.values()) clearTimeout(t);
-    await drivers.shutdown();
+    try { await drivers.shutdown(); } finally {
     for (const c of clients) c.end();
     clients.clear();
     await new Promise<void>((r) => {
       server.close(() => r());
       server.closeAllConnections();
     });
+    }
   };
 
   return { url, port, drivers, close };

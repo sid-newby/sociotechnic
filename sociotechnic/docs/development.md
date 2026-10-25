@@ -82,6 +82,24 @@ and prints the retained screenshot directory. `SOCIOTECHNIC_BROWSER_PROOF` can
 choose that directory. Run `task test:pg` separately for real ownership locks and
 cross-connection notifications.
 
+### Interactive design browser verification
+
+After `task build`, run the command below with the installed `agent-browser`
+CLI and Chrome. It starts an isolated console with deterministic SDK events and
+the actual installed Impeccable executable. It exercises native questions,
+preview selection in a separate tab, revision in the same session, draft
+and image retention after a network failure, a 390px viewport and Markdown handoff into
+the normal plan hold. No provider is called. The script closes its named browser
+session and preview services and removes its temporary repository.
+
+```bash
+SOCIOTECHNIC_TEST_IMPECCABLE_SKILL=/absolute/path/to/impeccable node sociotechnic/scripts/verify-interactive-design.mjs
+```
+
+`SOCIOTECHNIC_BROWSER_PROOF` selects the retained proof directory. See the
+[recorded verification](evidence/interactive-design.md), including the limits
+of fixture screenshots. Run `task test:pg` for database persistence coverage.
+
 ## Development
 
 For contribution scope, issue reports and PR expectations, read
@@ -212,9 +230,10 @@ browser interaction was exercised.
 | Contributor CI and PR-driven repository releases | [CI workflow](../../.github/workflows/ci.yml), [shared checks](../../.github/workflows/checks.yml), [release workflow](../../.github/workflows/release.yml), [release script](../../.github/scripts/release.cjs), [changelog preparation](../../.github/scripts/changelog.cjs), [setup and recovery](releasing.md) | `task checks` includes `task test:release` ([safety tests](../../.github/scripts/release.test.cjs) and [changelog tests](../../.github/scripts/changelog.test.cjs)) for exact push-to-PR resolution, version reservations, backfills, pre-merge changelog validation and safe retries; hosted CI and repository settings require GitHub verification; PostgreSQL/live-model checks remain separate |
 | Capability roster, team awareness and bounded advisor consultation | [agent-roster.ts](../src/agent-roster.ts), [agent-versions.ts](../src/agent-versions.ts), [engine.ts](../src/engine.ts), [plan.ts](../src/plan.ts), [driver guidance](agent-discovery.md) | [agent-discovery.test.ts](../tests/agent-discovery.test.ts): actual prompts, future-agent discovery, locks, advisor retries, blocked builder, nested-worker awareness and PostgreSQL auxiliary bindings |
 | CLI commands and console bridge | [cli.ts](../src/cli.ts), [console-client.ts](../src/console-client.ts) | [run.test.ts](../tests/run.test.ts), [ensure.test.ts](../tests/ensure.test.ts), [e2e.test.ts](../tests/e2e.test.ts) |
+| Per-dispatch interrupt, local dispatch limit, driver log streaming and record download | [driver.ts](../ui/driver.ts), [server.ts](../ui/server.ts), [local-capacity.ts](../src/local-capacity.ts), [engine.ts](../src/engine.ts), [cli.ts](../src/cli.ts) | [interrupt.test.ts](../tests/interrupt.test.ts) and [ui.test.ts](../tests/ui.test.ts): interrupt routes and refusals, queued dispatches under a limit, log paging, download headers; PostgreSQL coverage through `task test:pg` |
 | Workflow and legal transitions | [engine.ts](../src/engine.ts), [job.ts](../src/job.ts) | [job.test.ts](../tests/job.test.ts), [e2e.test.ts](../tests/e2e.test.ts) |
 | Plans, tiers and generated briefs | [plan.ts](../src/plan.ts), [brief.ts](../src/brief.ts), [roles.ts](../src/roles.ts), [initialization seeds](../seeds/agents.json) | [plan.test.ts](../tests/plan.test.ts), [agents.test.ts](../tests/agents.test.ts), [e2e.test.ts](../tests/e2e.test.ts) |
-| Fable design ceremony | [design.ts](../src/design.ts), [packet schema](../src/design-packet.ts), [designer brief](../src/design-brief.ts), [engine.ts](../src/engine.ts), [design tools](../ui/design-tools.ts), [guard](../hooks/guard-design.sh), [console](../ui/web/src/components/design.tsx), [workflow guide](design-ceremony.md) | [design.test.ts](../tests/design.test.ts), agent/API suites; isolated live-tool and browser verification |
+| Design agent chat | [agent Markdown](../global/agents/sociotechnic-designer.md), [session state](../src/design-session.ts), [SDK runner](../ui/design-session-runner.ts), [installed command discovery](../ui/impeccable.ts), [engine](../src/engine.ts), [chat UI](../ui/web/src/components/design.tsx), [images](../ui/web/src/components/design-images.tsx), [guide](design-ceremony.md) | [design.test.ts](../tests/design.test.ts), `task test:pg`, fixture browser journey and separate live evidence |
 | Bundled project starters, house-special recommendation and UI standards | [scaffolds/](../scaffolds/), [portable UI skill](../scaffolds/react-nest/template/.agents/skills/scaffold-ui/SKILL.md), [selection and maintenance](scaffolds.md), [contract section 14.1](../CONTRACTS.md#141-bundled-project-scaffold) | [design.test.ts](../tests/design.test.ts) checks conditional scaffold guidance, custom stack choice, reference integrity and digest binding; validate a disposable copy using its frozen lockfile and documented checks; verify the browser/API flow before adoption |
 | Database agent catalog, creation, pinned assignments, builder tier profiles and versions | [agent-versions.ts](../src/agent-versions.ts), [pure data](../src/agent-version-data.ts), [catalog profiles](../src/agent-catalog.ts), [schema](../src/db/schema.sql), [creation form](../ui/web/src/components/add-agent.tsx), [shared settings](../ui/web/src/components/agent-settings.tsx), [engine.ts](../src/engine.ts), [driver.ts](../ui/driver.ts), [runner.ts](../ui/runner.ts), [agent-versions.tsx](../ui/web/src/components/agent-versions.tsx), [version-overrides.tsx](../ui/web/src/components/version-overrides.tsx) | [builder-profiles.test.ts](../tests/builder-profiles.test.ts), [agent-catalog-db.test.ts](../tests/agent-catalog-db.test.ts), [dbpg.test.ts](../tests/dbpg.test.ts), [agent-versions.test.ts](../tests/agent-versions.test.ts); browser publication, stale recovery, draft discard and legacy selection |
 | Global agent library and feedback provenance | [agent-catalog.ts](../src/agent-catalog.ts), [agent-library.ts](../src/agent-library.ts), [db/listing.ts](../src/db/listing.ts), [baseline attribution](../src/db/backfill-agent-versions.ts), [server.ts](../ui/server.ts), [agent-library.tsx](../ui/web/src/components/agent-library.tsx), [agent-identity.tsx](../ui/web/src/components/agent-identity.tsx), [library-model.ts](../ui/web/src/library-model.ts) | [agent-library.test.ts](../tests/agent-library.test.ts), [agent-version-backfill.test.ts](../tests/agent-version-backfill.test.ts); fixture browser search, paging, feedback, navigation, keyboard and responsive checks |

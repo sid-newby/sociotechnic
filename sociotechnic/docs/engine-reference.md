@@ -63,9 +63,9 @@ stateDiagram-v2
   state "design-input" as design_input
   new --> designing: explicit design workflow
   planning --> designing: needs-design
-  designing --> design_input: validated packet
-  design_input --> designing: answer, select, revise
-  design_input --> planning: approve composition
+  designing --> design_input: Claude awaits human input
+  design_input --> designing: reply or resume session
+  design_input --> planning: approve design artifacts
   planning --> researching: needs-research (once)
   researching --> planning
   planning --> planned: valid plan pinned
@@ -106,7 +106,7 @@ provider bindings are separate from their Claude prompt definitions.
 
 | Role (agent name) | Model | Effort | Tools | Writes | Timeout |
 | --- | --- | --- | --- | --- | --- |
-| `sociotechnic-designer` | claude-fable-5-1 | xhigh | Read, Grep, Glob, Write, WebSearch, WebFetch, Context7, scoped Impeccable | Current design packet and preview round | 40 min |
+| `sociotechnic-designer` | claude-fable-5-1 | xhigh | Read, Grep, Glob, Write/Edit, Skill, AskUserQuestion, WebSearch, WebFetch, Context7, native Impeccable | Isolated design workspace and native session | 40 active min/query |
 | `sociotechnic-planner` | fable | xhigh | Read, Grep, Glob, Write, WebSearch, WebFetch, Context7 | `plan.json` (+ optional `plan.md`) | 25 min |
 | `sociotechnic-researcher` | gpt-6-luna (Codex) | high | Read, Grep, Glob, Write, WebSearch, WebFetch, Context7 | `research/<n>-<slug>.md` | 15 min |
 | `sociotechnic-builder` (COMPLEX) | opus | high | Read, Grep, Glob, Bash, Edit, Write, WebSearch, WebFetch, Context7 | commits + `round-N/build.md` | 60 min |
@@ -376,9 +376,9 @@ sociotechnic/bin/sociotechnic reopen 20261023-add-a-login-page
 
 Nothing else changes. The dispatches the stop aborted stay `failed` with the note "stopped by human", so the next `step` retries the interrupted step as the next attempt. That attempt counts against `retriesPerStep`. A job already past that bound parks as `needs-human`, and you `override` it like any other retry.
 
-When changes were kept, the retry block of the builder's brief says so and lists the files. The builder inspects them, keeps what is sound and commits before it writes its record. This is the one exception to the builder's clean-tree rule.
+When changes were kept, the retry block of the builder's brief says so and lists the files. The builder inspects them, keeps what is sound and commits before it writes its record. This is the one exception to the builder's clean-tree rule. A build attempt you [interrupted](#interrupted-dispatches) is retried the same way.
 
-In the console, the human gate panel for a `stopped` job shows Reopen, Reopen and discard changes (behind a confirm), and Clean. In a session, type `/sociotechnic reopen <job>`, then `run` through either skill's shared console driver.
+In the React console, the human gate panel for a `stopped` job shows Reopen run, which keeps uncommitted changes, and Remove worktree (Remove sandbox and worktree for a Docker Sandbox run). Reopen and discard changes (behind a confirm) is in `/legacy`; every client can discard with `reopen <job> --discard` or `POST /api/jobs/:id/reopen` with `{ "discard": true }`. In a session, type `/sociotechnic reopen <job>`, then `run` through either skill's shared console driver.
 
 ## Loop bounds
 
@@ -388,16 +388,52 @@ Every bound is enforced by the engine. Past a bound the job moves to `needs-huma
 | --- | --- | --- | --- |
 | `rounds` | 3 | build + checks + reviews (+ approver) cycles | `loop-bound:rounds` |
 | `dispatchesPerRound` | 10 | every agent spawn in a round, including retries. Plan and research count in round 0 | `loop-bound:dispatchesPerRound` |
-| `retriesPerStep` | 1 | re-dispatches of one step after a malformed, stale, failed or timed-out record | `retry-bound:<step>` |
+| `retriesPerStep` | 1 | re-dispatches of one step after a malformed, stale, failed, timed-out or interrupted record | `retry-bound:<step>` |
 
 - **Retries.** A retry spawns a fresh agent as `attempt + 1`, with the reason in its brief.
-- **Timeouts.** Each dispatch has `deadlineAt = startedAt + role timeout` (see the roles table). `step` reports overdue dispatches as `stop`. The driver stops them and calls `finish --outcome timeout`, which counts as a failed attempt.
+- **Timeouts.** Each dispatch has `deadlineAt = startedAt + role timeout` (see the roles table). `step` reports overdue dispatches as `stop`. The driver stops them and calls `finish --outcome timeout`, which counts as a failed attempt. With a [local concurrency limit](cli-reference.md#local-concurrency-limit), time spent waiting for a slot counts too: a dispatch whose deadline passes in the queue is recorded `timeout` with the note "deadline reached while waiting for a local dispatch slot" and never launches.
+- **Interrupts.** An interrupted dispatch counts as a failed attempt, the same as one a stop aborted. See [Interrupted dispatches](#interrupted-dispatches).
 - **Overrides accumulate.** Effective cap = `caps[bound]` plus the number of overrides for that bound. Overrides never reset. `rework` grants one `rounds` override after a build, or one `retriesPerStep` override for a failed round-zero planner with no pinned plan. Planning feedback stays in human history and the next planner brief; the console holds again at `planned`.
 - **No resume.** No agent is ever resumed. Every dispatch gets a generated brief that names files to read and inlines only what is small: the changed-files list, CHANGES findings, failing check tails, the retry reason.
 
 ```bash
 sociotechnic/bin/sociotechnic override 20261023-add-a-login-page rounds 'one more pass is fine'
 ```
+
+### Interrupted dispatches
+
+`interrupt <job> <dispatch> [note]` (or the console route) ends one unfinished
+dispatch. The engine records:
+
+| Field | Value |
+| --- | --- |
+| `dispatches[].outcome` | `"interrupted"` |
+| `dispatches[].note` | your trimmed note, or `null` |
+| `dispatches[].parsed` | the record parsed as `finish` does; usually malformed, since the agent stopped early |
+| `human[]` | `{ action: "interrupt", note: "<dispatch>" }` or `{ action: "interrupt", note: "<dispatch>: <note>" }` |
+
+Status, the plan, gates and the other dispatches do not change. Only `interrupt`
+records this outcome; `finish --outcome interrupted` is refused.
+
+Retry accounting follows the stop rule. When the step's other dispatches settle,
+the next `step` re-dispatches the interrupted step as `attempt + 1` with the
+retry reason `interrupted by human: <note>`, and that attempt counts against
+`retriesPerStep` and `dispatchesPerRound`. With the default `retriesPerStep` of
+1, a second interrupt of the same step parks the job:
+
+```text
+retry-bound:plan (1 + 0 overrides): interrupted by human
+```
+
+To keep another attempt, raise the bound before it trips. `override` is accepted
+in any non-terminal status and changes status only at `needs-human`:
+
+```bash
+sociotechnic/bin/sociotechnic override 20261023-add-a-login-page retriesPerStep 'one more research attempt'
+```
+
+Interrupting is refused for a finished or unknown dispatch and for Docker Sandbox
+runs (`sandbox-interrupt`), because their dispatches share one sandbox.
 
 ## Configuration
 
@@ -447,6 +483,7 @@ Globs support `**`, `*` and `?`, matched against repo-relative paths with forwar
 | `SOCIOTECHNIC_FAKE_AGENT` | With `SOCIOTECHNIC_RUNNER=fake`: path of a script run as `<script> <agent> <prompt-file>` for each dispatch. Exit 0 is `ok`, non-zero is `failed` |
 | `SOCIOTECHNIC_CLAUDE` | Overrides the SDK's `pathToClaudeCodeExecutable`. Otherwise the SDK resolves its own, then `claude` on PATH |
 | `SOCIOTECHNIC_CLAUDE_CONFIG` | Path of the Claude config file the SDK driver reads `mcpServers.context7` from. Default `~/.claude.json`. A missing entry logs a `warn` and the dispatch runs without Context7 |
+| `SOCIOTECHNIC_LOCAL_MAX_DISPATCHES` | Fixes the local concurrency limit (an integer from 1 to 64) for every console of this installation and makes `POST /api/local/capacity` refuse changes. Unset uses `.sociotechnic/local-settings.json`, or no limit when that file is absent. See [local concurrency limit](cli-reference.md#local-concurrency-limit) |
 | `SOCIOTECHNIC_DATABASE_URL` | State-store connection URL. Default `postgres://localhost:5433/sociotechnic`. Passwords are redacted when the URL is printed. The value `off` disables database access and makes job operations fail; it does not enable a file-backed job mode. |
 | `SOCIOTECHNIC_TEST_DATABASE_URL` | Tests only. When set, `dbpg.test.ts` runs against that server in a throwaway database. Unset skips it |
 | `SOCIOTECHNIC_TIMEOUT_MINUTES_OVERRIDE` | Tests only. Shortens every dispatch deadline |
@@ -562,24 +599,31 @@ branch or uncommitted edit from database records.
 Details, record viewing, design previews, generated PR text and agent-library
 history read the database. Committed changes publish database notifications;
 the console refreshes current state after reconnect so missed notifications do
-not leave stale evidence. SSE ping and transient live driver activity remain.
+not leave stale evidence. SSE ping and transient live driver activity remain,
+including `log` events for every driver line; those lines live only in the
+console process that wrote them and are not job records.
 Uncommitted staging changes do not become completed-record events.
 
-## Design ceremony
+## Interactive design
 
-`job.design` is optional for compatibility with existing jobs. Its discriminated
-state is `generating`, `waiting` or `approved`; job statuses `designing` and
-`design-input` identify execution and human waiting before plan pinning.
-Interview, direction and preview decisions use fresh Fable/xhigh dispatches.
-The scoped Impeccable tool runs only in the current isolated preview round;
-`guard-design.sh` denies application writes, prior rounds and engine state.
+New design work uses `job.designSession`: generic ready, working, waiting,
+interrupted, failed and approved states. Job statuses `designing` and
+`design-input` describe execution and human waiting; they do not prescribe
+Impeccable's design phases. Each human message resumes the exact SDK session.
+No designer packet dispatch or automatic missing-tool retry is created.
 
-Approval fingerprints cover packets, preview files, earlier decisions and the
-selected scaffold source. Final plans require the exact `designDigest`.
-Dispatch and retry bounds include ceremony work in round zero; overrides and
-stop/reopen retain their existing meanings. Designer waits have no active model
-deadline. [Design ceremony](design-ceremony.md) documents packets, responses,
-asset isolation, installed-skill resolution, image availability and verification.
+The native agent's prompt comes from its Markdown file. Bash and Skill execute
+the installed /impeccable command normally, including its own preview windows.
+PostgreSQL retains native SDK transcripts, messages, images and returned work.
+Driver leases guard writes. HANDOFF.md and samples return to the caller, which
+decides the next step. Its snapshot binds `plan.designDigest` when used for
+planning. Follow-up assignments and chat after handoff reuse the same session
+without automatically advancing a build. Human waits suspend active deadlines.
+Historical `job.design` packets remain supported for reading and approved
+implementation integrity, not further packet generation.
+
+See [interactive design](design-ceremony.md) for local installation, recovery,
+images, Markdown handoff, native windows and separate live verification evidence.
 
 ## Agent library evidence and provenance
 

@@ -1,0 +1,137 @@
+# Console redesign plan
+
+The run console is rebuilt as the shadcn `dashboard-01` block on the existing
+Vite workspace, with the driver and API work that makes its controls real.
+Brief: [console-redesign-brief.md](console-redesign-brief.md). Product truth:
+[PRODUCT.md](../PRODUCT.md). Conventions: the scaffold's
+[UI skill](../sociotechnic/scaffolds/react-nest/template/.agents/skills/scaffold-ui/SKILL.md),
+[AGENTS.md](../AGENTS.md) and [CLAUDE.md](../CLAUDE.md).
+
+## How the work runs
+
+| Role | Who | Does |
+| --- | --- | --- |
+| Commander | This Claude session | Writes briefs, reviews every PR, merges, cleans worktrees, keeps docs honest |
+| Builders | Opus subagents, one per wave, each in its own git worktree | Implement, run checks, commit, push, open the PR, report back |
+| Owner | Sid | Chooses release labels, merges the design-session PR, tests live runs |
+
+Cadence per wave: branch in a worktree, build, run the checks, commit, push,
+open a PR with the repository template, commander review, fixes, merge, then
+`main` synchronized and the branch and worktree removed. No wave merges its
+own PR. Each PR names its `docsImpact` and carries its changelog notes.
+
+Checks that count: `task typecheck`, `task build`, `task test` (fake agents),
+`task test:release`, `task audit`. `task test:pg` when storage changes. The
+browser verification scripts and a screenshot refresh when the console changes.
+
+## Waves
+
+### Wave 0: land the branch
+
+Commit the product-context reset and the brief on
+`codex/interactive-design-session`, push, open the PR to `main`. The owner
+merges. Everything after branches from there.
+
+### Wave 1: foundation
+
+Worktree branch `console/foundation`. Scope: `sociotechnic/ui/web/` only.
+
+- Dependencies at exact versions under the pnpm policy: `shadcn`,
+  `tw-animate-css`, `recharts`, `@tanstack/react-table`. The 24-hour release
+  quarantine decides the exact numbers; record them in the PR.
+- `src/index.css` adopts the scaffold's contract: `tw-animate-css` and
+  `shadcn/tailwind.css` imports, the full `@theme inline` map, the shadcn
+  neutral `:root` and `.dark` values, `.dark` driven by a class on `<html>`.
+- Theme module: presets as data (`shadcn-neutral` plus the TweakCN presets,
+  vendored from the registry JSON with the Apache-2.0 notice added to
+  `THIRD_PARTY_NOTICES.md`), a provider that sets `data-theme` and the `dark`
+  class, persistence in `localStorage`, dark by default. The shadcnthemer
+  presets wait until their license is confirmed.
+- Components through the installed CLI from `sociotechnic/ui/web`:
+  `pnpm exec shadcn add sidebar breadcrumb separator card badge button sheet
+  drawer dialog tabs table select dropdown-menu command input textarea checkbox
+  toggle-group tooltip sonner chart progress scroll-area skeleton avatar label`.
+  Review the generated files; keep `cn` from the `cn` package.
+- The existing views keep compiling and rendering on the new tokens. No
+  layout changes yet.
+- Done when `task typecheck`, `task build`, `task test` and `task audit` pass,
+  the console serves with the neutral dark theme, and the theme switcher is
+  reachable from the header.
+- docsImpact: `sociotechnic/docs/development.md` (web workspace dependencies
+  and theme module), `THIRD_PARTY_NOTICES.md`, `CHANGELOG.md` Unreleased.
+
+### Wave 2: the run page
+
+Worktree branch `console/run-page`. Starts after wave 1 merges.
+
+- `AppSidebar` (collapsible off-canvas, ⌘B): wordmark text, New run, command
+  palette button, Runs, Agents, History, Sandboxes, Inbox counts, runs in the
+  selected group, Settings, Get help, Search, user footer.
+- `SiteHeader`: trigger, breadcrumb, status badge, theme switcher.
+- `DecisionBar`: one sentence, one line, Read (sheet), primary action, the
+  rest quiet. Status rules come from the existing action logic in
+  `components/actions.tsx`; keep every gate and ownership check.
+- `SectionCards`: Agent time, Tokens, Estimated cost, and the moment card.
+- `TokenBurnChart`: shadcn chart over Recharts, stacked areas per dispatch,
+  cache reads, range toggle, tooltip. Data from recorded usage; live from the
+  SSE refresh.
+- `RunTable`: TanStack table with tabs Dispatches, Records, Log, Decisions;
+  rows open sheets with the record viewer (formatted, raw, download).
+- Remove the Overview, Activity, Analysis and Agents tabs and the stage strip.
+  New run, Agent library and Sandboxes keep working on the new primitives.
+- Done when the demo store renders every status, the browser verification
+  scripts pass, `task checks` passes, and the three states (planned, working,
+  needs-human) match the prototype.
+- docsImpact: `README.md` web guide and screenshots, `development.md` feature
+  map, `sociotechnic/CONTRACTS.md` console section, `cli-reference.md`
+  console lifecycle, `CHANGELOG.md`.
+
+### Wave 3: driver and API parity
+
+Worktree branch `engine/parity`. Can run beside wave 2; touches
+`sociotechnic/ui/server.ts`, `sociotechnic/ui/driver.ts`,
+`sociotechnic/ui/runner.ts`, `sociotechnic/src/cli.ts`, tests and contracts.
+
+- Per-dispatch interrupt: an AbortController per dispatch, a route that
+  cancels one dispatch and records it, the run keeps its place.
+- Local concurrency cap: a configurable limit over the dispatch fan-out, a
+  setting the console can change, default equal to today's behavior.
+- Log streaming: driver log lines as SSE events; the 200-line cap becomes a
+  paged buffer.
+- Record download: `Content-Disposition` on the record route.
+- Fix the reopen discard flag and the PR-text-without-push path in the
+  console client; expose step, hold-after-status, raise-bound-early and
+  restore-without-continue through routes that exist.
+- Done when the contract tests cover each new route and the driver behavior,
+  `task test` and `task test:pg` pass, and `cli-reference.md` and
+  `CONTRACTS.md` describe the routes.
+
+### Wave 4: history, agents, settings
+
+Worktree branch `console/history`. After waves 2 and 3.
+
+- History view: per run and across runs, tokens by role per round, cost over
+  time, elapsed per dispatch, errors and wins by category, drill-down to the
+  dispatch and record.
+- Agent library absorbs the old in-run Agents tab as an "in run" filter;
+  provenance links on every count.
+- Settings: sandbox capacity, theme, default holds, local concurrency cap.
+
+### Wave 5: finish
+
+- Impeccable finish review against the direction contract; fixes.
+- `DESIGN.md` written by the Impeccable documenter from the shipped console.
+- Screenshot set refreshed; README, feature map, contracts and references
+  checked against the code.
+- A builder guide at `sociotechnic/docs/console-ui.md`: stack, tokens, theme
+  presets, installed components, how to add a view, how to run the checks.
+- `CHANGELOG.md` release notes and the next version.
+
+## Risks
+
+- The pnpm quarantine can refuse the newest releases; pin what it allows.
+- `shadcn add` fetches from the registry; the worktree needs network once.
+- The shadcnthemer license is unverified; those presets stay out until known.
+- Per-dispatch interrupt changes recorded outcomes; the contract must say how
+  an interrupted dispatch counts against retries.
+- The legacy console at `/legacy` keeps its controls until wave 3 lands.

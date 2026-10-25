@@ -3,7 +3,7 @@ import { requireStore } from "./db/store.ts";
 import type { JobLease } from "./db/store.ts";
 import { SociotechnicError } from "./errors.ts";
 export type DriverOwner = "ui" | "cli";
-export type DriverLock = { pid: number; startedAt: string; mode: "run" | "step"; owner: DriverOwner; token?: string; host?: string; consoleUrl?: string };
+export type DriverLock = { pid: number; startedAt: string; mode: "run" | "step" | "conversation"; owner: DriverOwner; token?: string; host?: string; consoleUrl?: string };
 const local = new Map<string, JobLease>();
 const settledOwners = new Map<string,string>();
 export function pidAlive(pid: number): boolean { try { process.kill(pid,0); return true; } catch { return false; } }

@@ -1,302 +1,289 @@
 import assert from "node:assert/strict";
-import { execFileSync, spawn, spawnSync } from "node:child_process";
-import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
-import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { createHash, randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { after, before, test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { designAsset, designFingerprint, designWriteAllowed, parseDesignPacket, scaffoldFingerprint } from "../src/design.ts";
-import { designToolArgs } from "../ui/design-tools.ts";
-import { parsePlanText } from "../src/plan.ts";
+import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import type { Job } from "../src/job.ts";
 import { createMemoryStore, createPgStore, setStore } from "../src/db/store.ts";
-import { initializeAgentVersions } from "../src/agent-versions.ts";
-import { mutateJob, readJob } from "../src/job-store.ts";
-import { readJson, readText, writeTextAtomic } from "../src/record-store.ts";
+import { initializeAgentVersions, pinAgentVersions } from "../src/agent-versions.ts";
+import { createJobOperation, mutateJob, readJob } from "../src/job-store.ts";
+import { newDesignJob, startDesign } from "../src/engine.ts";
+import { parsePlanText } from "../src/plan.ts";
+import { readJson, writeTextAtomic } from "../src/record-store.ts";
 import { jobDir } from "../src/paths.ts";
 import { testDatabase } from "./pg-fixture.ts";
-import { designDigest } from "../src/design.ts";
-import type { ServerHandle } from "../ui/server.ts";
 import { startServer } from "../ui/server.ts";
-import { fakeRunner, sdkOptions } from "../ui/runner.ts";
-import { roleOf } from "../src/roles.ts";
-import { planBrief } from "../src/brief.ts";
-import { designBrief } from "../src/design-brief.ts";
+import type { ServerHandle } from "../ui/server.ts";
+import { fakeRunner } from "../ui/runner.ts";
+import { fixtureDesignQuery } from "./fixtures/interactive-design.ts";
+import { designWriteAllowed, parseDesignPacket, scaffoldFingerprint } from "../src/design.ts";
+import { approveInteractiveDesign, interactiveFingerprint, previewUrl, newInteractiveDesign } from "../src/design-session.ts";
+import { nativeImpeccable, runNative } from "../ui/impeccable.ts";
+import type { DesignQuery } from "../ui/design-session-runner.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const root = mkdtempSync(join(tmpdir(), "sociotechnic-design-"));
-const home = join(root, "home");
-mkdirSync(home);
-let server: ServerHandle;
-const database = await testDatabase("design");
+const root = mkdtempSync(join(tmpdir(), "sociotechnic-interactive-design-"));
+const home = join(root, "home"); mkdirSync(home);
+const skill = join(root, "skill");
+mkdirSync(join(skill, "scripts/bin", `${process.platform}-${process.arch}`), { recursive: true });
+writeFileSync(join(skill, "SKILL.md"), "---\nname: impeccable\ndescription: Deterministic fixture skill\nversion: fixture\n---\nDeterministic skill fixture.\n");
+writeFileSync(join(skill, "VERSION"), "fixture\n");
+writeFileSync(join(skill, "scripts/impeccable"), "#!/bin/sh\nprintf 'fixture\\n'\n");
+const binary = join(skill, "scripts/bin", `${process.platform}-${process.arch}`, "impeccable");
+writeFileSync(binary, "#!/bin/sh\nprintf 'fixture\\n'\n"); chmodSync(binary, 0o755);
+const database = await testDatabase("interactive_design");
 const store = database ? createPgStore(database) : createMemoryStore();
-const oldHome = process.env.SOCIOTECHNIC_HOME, oldUrl = process.env.SOCIOTECHNIC_DATABASE_URL;
+const old = { home: process.env.SOCIOTECHNIC_HOME, skill: process.env.SOCIOTECHNIC_IMPECCABLE_SKILL };
+let server: ServerHandle;
+let calls = 0;
+let injected: DesignQuery | undefined;
+const query: DesignQuery = async function* (args) { calls++; yield* (injected ?? fixtureDesignQuery)(args); };
+const start = () => startServer({ port: 0, runner: () => fakeRunner(join(here, "fixtures/fake-agent.mjs")), designQuery: query });
+before(async () => { process.env.SOCIOTECHNIC_HOME = home; process.env.SOCIOTECHNIC_IMPECCABLE_SKILL = skill; setStore(store); await initializeAgentVersions(store, [], []); server = await start(); });
+after(async () => { await server.close(); await store.close(); setStore(undefined); for (const [key, value] of [["SOCIOTECHNIC_HOME", old.home], ["SOCIOTECHNIC_IMPECCABLE_SKILL", old.skill]]) if (typeof key === "string") { if (value === undefined) delete process.env[key]; else process.env[key] = value; } rmSync(root, { recursive: true, force: true }); });
 let sequence = 0;
-function git(cwd: string, ...args: string[]): string {
-  return execFileSync("git", ["-c", "user.name=design-test", "-c", "user.email=test@example.invalid", "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", ...args], { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
-}
-before(async () => {
-  process.env.SOCIOTECHNIC_HOME = home;
-  process.env.SOCIOTECHNIC_DATABASE_URL = database ?? "off";
-  setStore(store);
-  if (!database) await initializeAgentVersions(store, [], []);
-  git(home, "init", "-q", "-b", "main");
-  writeFileSync(join(home, "README.md"), "# fixture home\n");
-  git(home, "add", "."); git(home, "commit", "-qm", "init");
-  const scaffold = join(home, "sociotechnic/scaffolds/react-nest/template");
-  mkdirSync(scaffold, { recursive: true }); writeFileSync(join(scaffold, "package.json"), '{"private":true}\n');
-  server = await startServer({ port: 0, runner: () => fakeRunner(join(here, "fixtures/fake-agent.mjs")) });
-});
-after(async () => { await server.close(); await store.close(); setStore(undefined); if (oldHome === undefined) delete process.env.SOCIOTECHNIC_HOME; else process.env.SOCIOTECHNIC_HOME = oldHome; if (oldUrl === undefined) delete process.env.SOCIOTECHNIC_DATABASE_URL; else process.env.SOCIOTECHNIC_DATABASE_URL = oldUrl; rmSync(root, { recursive: true, force: true }); });
-
-async function call(path: string, body?: unknown): Promise<{ status: number; data: Record<string, unknown> }> {
-  const r = await fetch(new URL(path, server.url), body === undefined ? {} : { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-  return { status: r.status, data: await r.json() };
-}
-async function settle(id: string): Promise<Job> {
-  const end = Date.now() + 20_000;
-  while (Date.now() < end) {
-    if (!server.drivers.isRunning(id)) return readJob(id, (job) => job);
-    await sleep(20);
+function git(cwd: string, ...args: string[]): string { return execFileSync("git", ["-c", "user.name=Design test", "-c", "user.email=test@example.invalid", "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", ...args], { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim(); }
+async function call(path: string, body?: unknown) { const response = await fetch(new URL(path, server.url), body === undefined ? {} : { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }); return { status: response.status, data: await response.json() }; }
+async function create(legacy = false) {
+  const repo = join(root, `repo-${++sequence}`); mkdirSync(repo); git(repo, "init", "-q", "-b", "main");
+  writeFileSync(join(repo, "README.md"), "# Research target\n"); git(repo, "add", "."); git(repo, "commit", "-qm", "init");
+  if (legacy) {
+    const pinned = await pinAgentVersions({ "sociotechnic-designer": "1.0.0" });
+    return (await createJobOperation(() => newDesignJob(repo, "Design a research workspace", null, pinned))).job;
   }
-  throw new Error("Fixture driver did not settle");
+  const result = await call("/api/jobs", { repo, feature: "Design a research workspace", workflow: "design" }); assert.equal(result.status, 200, JSON.stringify(result.data));
+  return String(result.data.job);
 }
-async function create(workflow = "design", feature = "Design a research notebook", product?: string) {
-  const repo = join(root, `repo-${++sequence}`); mkdirSync(repo);
-  git(repo, "init", "-q", "-b", "main");
-  writeFileSync(join(repo, "README.md"), "# target\n");
-  writeFileSync(join(repo, ".sociotechnic.json"), JSON.stringify({ checks: [{ name: "fixture", run: 'node -e "process.exit(0)"', timeoutSeconds: 10 }] }));
-  if (product) writeFileSync(join(repo, "PRODUCT.md"), product);
-  git(repo, "add", "."); git(repo, "commit", "-qm", "init");
-  const r = await call("/api/jobs", { repo, feature, ...(workflow ? { workflow } : {}) });
-  assert.equal(r.status, 200, JSON.stringify(r.data));
-  const id = String(r.data.job);
-  await call(`/api/jobs/${id}/run`, { hold: ["planned"] });
-  return settle(id);
+async function until(id: string, predicate: (job: Job) => boolean) {
+  for (let n = 0; n < 100; n++) { const j = await readJob(id, (job) => job); if (predicate(j)) return j; await sleep(15); }
+  throw new Error(`Fixture did not reach expected state: ${JSON.stringify({session:await readJob(id, (j) => j.designSession), driver:server.drivers.state(id), calls})}`);
 }
-async function respond(id: string, response: unknown, status = 200) {
-  const job = await readJob(id, (job) => job), design = job.design;
-  assert.equal(design?.state, "waiting");
-  if (!design || design.state !== "waiting") throw new Error("No pending design");
-  const r = await call(`/api/jobs/${id}/design-response`, { digest: design.digest, response });
-  assert.equal(r.status, status, JSON.stringify(r.data));
-  return settle(id);
+async function settled(id: string) { await server.drivers.settled(id); return readJob(id, (j) => j); }
+async function completeInterview(id: string) {
+  assert.equal((await call(`/api/jobs/${id}/run`, { hold: ["planned"] })).status, 200);
+  const j = await until(id, (j) => !!j.designSession?.question);
+  const question = j.designSession?.question; assert.ok(question);
+  assert.equal((await call(`/api/jobs/${id}/design-session/answer`, { questionId: question.id, answers: { [question.questions[0].question]: "Researchers" } })).status, 200);
+  return settled(id);
 }
-const answer = { action: "answer", answers: { audience: "Practitioners preparing a research interview." }, stack: "existing" };
 
-test("same run: interview, directions, three previews, explicit approval, pinned plan, then build", async () => {
-  let j = await create(); const id = j.id;
-  assert.equal(j.status, "design-input"); assert.equal(j.plan, null); assert.equal(j.round, 0);
-  assert.equal(j.dispatches[0].model, "claude-fable-5-1");
-  assert.equal(git(j.worktree, "rev-parse", "HEAD"), j.base.commit);
-  assert.equal(git(j.worktree, "status", "--porcelain"), "");
-  const stale = await call(`/api/jobs/${id}/design-response`, { digest: "old", response: answer });
-  assert.equal(stale.status, 409);
-  await respond(id, { ...answer, answers: {} }, 400);
-  j = await respond(id, answer);
-  assert.equal(j.design?.state === "waiting" ? j.design.packet.phase : "", "directions");
-  const d = j.design;
-  assert.ok(d && d.state === "waiting" && d.packet.phase === "directions");
-  if (!d || d.state !== "waiting" || d.packet.phase !== "directions") throw new Error("Missing directions");
-  const asset = await fetch(new URL(`/api/jobs/${id}/design-assets/${d.packet.options[0].preview}?digest=${encodeURIComponent(d.digest)}`, server.url));
-  assert.equal(asset.status, 200); assert.match(asset.headers.get("content-security-policy") ?? "", /^sandbox;/);
-  assert.match(await asset.text(), /Static prototype/);
-  await respond(id, { action: "approve", optionId: "option-1", confirmed: true }, 400);
-  j = await respond(id, { action: "select", optionId: "option-2" });
-  assert.equal(j.design?.state === "waiting" ? j.design.packet.phase : "", "previews");
-  assert.equal(j.plan, null); assert.equal(existsSync(join(j.worktree, "src/feature.txt")), false);
-  await respond(id, { action: "select", optionId: "option-1" }, 400);
-  await respond(id, { action: "approve", optionId: "option-1" }, 400);
-  j = await respond(id, { action: "approve", optionId: "option-1", confirmed: true });
-  assert.equal(j.status, "planned"); assert.equal(j.round, 0);
-  assert.ok(j.design?.state === "approved");
-  if (!j.design || j.design.state !== "approved") throw new Error("Not approved");
-  const plan = await readJob(id, () => readJson(join(jobDir(id), "plan.json")));
-  assert.ok(plan && typeof plan === "object" && "designDigest" in plan);
-  assert.equal(plan.designDigest, designDigest(j.design));
-  assert.equal(j.human.filter((h) => h.action === "design-approve").length, 1);
-  await call(`/api/jobs/${id}/run`, {}); j = await settle(id);
-  assert.equal(j.status, "ready", JSON.stringify({ error: server.drivers.state(id).error, status: j.status })); assert.equal(existsSync(join(j.worktree, "src/feature.txt")), true);
-  assert.equal(j.design?.state, "approved");
+test("native questions reach the human, waiting does no work, and replies retain the session", async () => {
+  const id = await create(), before = calls;
+  assert.equal((await readJob(id, (j) => j)).agentVersions?.["sociotechnic-designer"], "1.2.0", "Console startup upgrades a baseline-only catalog before new-run selection");
+  await call(`/api/jobs/${id}/run`, {});
+  const waiting = await until(id, (j) => !!j.designSession?.question), q = waiting.designSession?.question; assert.ok(q);
+  assert.equal(waiting.dispatches.length, 0); assert.equal(waiting.plan, null);
+  await sleep(80); assert.equal(calls, before + 1);
+  assert.equal((await call(`/api/jobs/${id}/design-session/answer`, { questionId: "stale", answers: {} })).status, 409);
+  assert.equal((await call(`/api/jobs/${id}/design-session/answer`, { questionId: q.id, answers: {} })).status, 400);
+  await call(`/api/jobs/${id}/design-session/answer`, { questionId: q.id, answers: { [q.questions[0].question]: "Researchers" } });
+  let j = await settled(id); const sessionId = j.designSession?.id;
+  assert.equal(j.designSession?.state, "waiting"); assert.equal(j.designSession?.messages.length, 2); assert.equal(git(j.worktree, "status", "--porcelain"), "");
+  const messageId = randomUUID();
+  assert.equal((await call(`/api/jobs/${id}/design-session/messages`, { message: "Make it denser", messageId })).status, 200);
+  j = await settled(id); assert.equal(j.designSession?.id, sessionId); assert.equal(j.dispatches.length, 0);
+  assert.match(j.designSession?.messages.at(-1)?.text ?? "", /retained our previous conversation/);
+  const count = calls;
+  await call(`/api/jobs/${id}/design-session/messages`, { message: "Make it denser", messageId });
+  assert.equal(calls, count, "A repeated HTTP send must not redispatch");
+  assert.equal(j.designSession?.usage.turns, 4);
+  assert.equal(j.designSession?.usage.input, 20); assert.equal(j.designSession?.usage.output, 40);
 });
 
-test("planner can request the ceremony; ordinary feature runs retain their plan hold", async () => {
-  const major = await create("", "AUTO_DESIGN_FIXTURE major UI change");
-  assert.equal(major.status, "design-input"); assert.equal(major.dispatches[0].agent, "sociotechnic-planner");
-  const ordinary = await create("", "Add a utility function");
-  assert.equal(ordinary.status, "planned"); assert.equal(ordinary.design, undefined);
-  assert.equal(parsePlanText('{"status":"needs-design","reason":"major UI"}', false).kind, "needs-design");
-  assert.equal(parsePlanText('{"status":"needs-design","reason":"again"}', false, true).kind, "malformed");
+test("an unused retired designer migrates in place with atomic release provenance", async () => {
+  const id = await create(true), before = calls;
+  await call(`/api/jobs/${id}/run`, {});
+  const failed = await settled(id);
+  assert.equal(failed.designSession?.state, "failed"); assert.equal(calls, before);
+  assert.equal((await call(`/api/jobs/${id}`)).data.interactive.needsMigration, true);
+  assert.equal((await call(`/api/jobs/${id}/design-session/migrate`, {})).status, 400);
+  assert.equal((await call(`/api/jobs/${id}/design-session/migrate`, { confirmed: true })).status, 200);
+  const waiting = await until(id, (j) => !!j.designSession?.question);
+  assert.equal(waiting.designSession?.id, failed.designSession?.id);
+  assert.equal(waiting.feature, failed.feature);
+  assert.equal(waiting.designReleaseMigration?.from, "1.0.0"); assert.equal(waiting.designReleaseMigration?.to, "1.2.0");
+  assert.equal(waiting.agentVersions?.["sociotechnic-designer"], "1.2.0");
+  assert.deepEqual(waiting.dispatches, failed.dispatches);
+  const q = waiting.designSession?.question; assert.ok(q);
+  await call(`/api/jobs/${id}/design-session/answer`, { questionId: q.id, answers: { [q.questions[0].question]: "Researchers" } });
+  await settled(id);
+  assert.equal((await call(`/api/jobs/${id}/design-session/migrate`, { confirmed: true })).status, 400, "An initialized designer cannot be rebound");
+  await assert.rejects(mutateJob(id, (job) => { if (job.designReleaseMigration) job.designReleaseMigration.from = "0.9.0"; }), /migration is immutable/);
+  assert.equal((await readJob(id, (j) => j)).designReleaseMigration?.from, "1.0.0");
+  assert.ok(await readJob(id, () => readJson(join(jobDir(id), "design/release-migration.json"))));
 });
 
-test("missing UI scaffolds get the optional house special recommendation through human stack choice", async () => {
-  const input = { feature: "Build a new UI", repo: root, planPath: "plan.json", planMdPath: "plan.md", researchFiles: [], allowResearch: true, easyTierMaxFiles: 8, retryReason: null };
-  const planner = planBrief({ ...input, allowDesign: true });
-  assert.match(planner, /If none exists, use needs-design/);
-  assert.match(planner, /React \+ NestJS house special/);
-  assert.match(planner, /Respect an explicitly requested scaffold/);
-  assert.doesNotMatch(planBrief({ ...input, allowDesign: false }), /house special/);
-  const job = await create();
-  if (!job.design || job.design.state !== "waiting") throw new Error("Missing interview");
-  const designer = designBrief({ ...job, design: { ...job.design, state: "generating", steering: null, next: "interview" } }, root, null);
-  assert.match(designer, /If none exists, always recommend the bundled React \+ NestJS house special/);
-  assert.match(designer, /The human chooses the stack through the console/);
-  const chosen = await respond(job.id, { ...answer, stack: "custom", customStack: "Use the requested Svelte scaffold" });
-  assert.deepEqual(chosen.design?.stack, { kind: "custom", description: "Use the requested Svelte scaffold" });
-  assert.equal(chosen.plan, null);
-  assert.equal(git(chosen.worktree, "rev-parse", "HEAD"), chosen.base.commit);
+test("server restart resumes from the opaque PostgreSQL transcript instead of rebuilding history", async () => {
+  const id = await create(); let j = await completeInterview(id); const sessionId = j.designSession?.id; assert.ok(sessionId);
+  const raw = await readJob(id, () => readJson(join(jobDir(id), `design/transcripts/${sessionId}/main.json`))); assert.ok(Array.isArray(raw));
+  await server.close(); server = await start();
+  const workspace = join(home, ".sociotechnic/design-sessions", sessionId);
+  writeFileSync(join(workspace, "uncommitted.html"), "This file never reached the database");
+  await call(`/api/jobs/${id}/design-session/messages`, { message: "Make it denser after restart", messageId: randomUUID() });
+  j = await settled(id); assert.equal(j.designSession?.id, sessionId); assert.match(j.designSession?.messages.at(-1)?.text ?? "", /2 prior transcript entries/);
+  assert.equal(existsSync(join(workspace, "uncommitted.html")), true, "A native chat must preserve working files between turns");
 });
 
-test("revision preserves the run, waits without a dispatch, and stop/reopen returns to the decision", async () => {
-  let j = await create(); const count = j.dispatches.length;
-  await call(`/api/jobs/${j.id}/run`, {}); j = await settle(j.id);
-  assert.equal(j.dispatches.length, count);
-  await call(`/api/jobs/${j.id}/stop`, {});
-  await call(`/api/jobs/${j.id}/reopen`, {});
-  assert.equal(await readJob(j.id, (job) => job.status), "design-input");
-  j = await respond(j.id, { action: "revise", note: "Ask about content instead." });
-  assert.equal(j.design?.iteration, 2); assert.equal(j.human.some((h) => h.action === "design-revise"), true);
-});
-
-test("changed preview bytes block approval and implementation; revision can recover the current showcase", async () => {
-  let j = await create(); j = await respond(j.id, answer);
-  j = await respond(j.id, { action: "select", optionId: "option-1" });
-  const d = j.design; assert.ok(d && d.state === "waiting" && d.packet.phase === "previews");
-  if (!d || d.state !== "waiting" || d.packet.phase !== "previews") throw new Error("No preview");
-  const changedPreview = d.packet.options[0].preview;
-  await mutateJob(j.id, () => writeTextAtomic(join(jobDir(j.id), changedPreview), "<h1>Changed after presentation</h1>"));
-  await respond(j.id, { action: "approve", optionId: "option-1", confirmed: true }, 400);
-  j = await respond(j.id, { action: "revise", note: "Regenerate the changed preview." });
-  assert.ok(j.design && j.design.state === "waiting");
-  if (j.design?.state === "waiting") assert.match(j.design.packet.strategy, /Regenerate the changed preview/);
-  j = await respond(j.id, { action: "approve", optionId: "option-2", confirmed: true });
-  assert.equal(j.status, "planned");
-  const approved = j.design;
-  if (!approved || approved.state !== "approved" || approved.packet.phase !== "previews") throw new Error("No approval");
-  await mutateJob(j.id, () => writeTextAtomic(join(jobDir(j.id), approved.packet.options[1].preview), "changed again"));
-  await call(`/api/jobs/${j.id}/run`, {}); j = await settle(j.id);
-  assert.equal(j.status, "needs-human"); assert.match(j.statusReason, /design-approval-invalid/);
-  assert.equal(j.round, 0);
-});
-
-test("bundled scaffold selection pins the maintained source and detects later changes", async () => {
-  let j = await create(); j = await respond(j.id, { ...answer, stack: "react-nest" });
-  assert.ok(j.design?.stack?.kind === "react-nest");
-  const file = join(home, "sociotechnic/scaffolds/react-nest/template/package.json");
-  const original = readFileSync(file);
+test("images reach the SDK as image blocks, survive history and deduplicate retries", async () => {
+  const id = await create(); await completeInterview(id);
+  const data = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jv1sAAAAASUVORK5CYII=";
+  let seen = false;
+  injected = async function* (args) {
+    const messages: SDKUserMessage[] = [];
+    if (typeof args.prompt !== "string") for await (const message of args.prompt) {
+      messages.push(message);
+      if (Array.isArray(message.message.content)) for (const block of message.message.content) if (block.type === "image" && block.source.type === "base64") {
+        assert.equal(block.source.media_type, "image/png"); assert.equal(block.source.data, data); seen = true;
+      }
+    }
+    async function* replay() { yield* messages; }
+    yield* fixtureDesignQuery({ ...args, prompt: replay() });
+  };
   try {
-    writeFileSync(file, '{"private":true,"changed":true}');
-    await respond(j.id, { action: "select", optionId: "option-1" }, 400);
-  } finally { writeFileSync(file, original); }
+    const body = { message: "", messageId: randomUUID(), images: [{ name: "reference.png", mediaType: "image/png", data }] };
+    assert.equal((await call(`/api/jobs/${id}/design-session/messages`, body)).status, 200);
+    const job = await settled(id); assert.equal(seen, true);
+    const image = job.designSession?.messages.find((message) => message.id === body.messageId)?.images?.[0]; assert.ok(image);
+    const response = await fetch(new URL(`/api/jobs/${id}/design-images/${encodeURIComponent(image.record)}`, server.url));
+    assert.equal(response.headers.get("content-type"), "image/png"); assert.ok(Buffer.from(await response.arrayBuffer()).equals(Buffer.from(data, "base64")));
+    const count = calls;
+    await call(`/api/jobs/${id}/design-session/messages`, body); assert.equal(calls, count);
+    const mismatch = await call(`/api/jobs/${id}/design-session/messages`, { ...body, images: [{ ...body.images[0], name: "different.png" }] }); assert.equal(mismatch.status, 409);
+    assert.equal((await call(`/api/jobs/${id}/design-session/messages`, { message: "bad image", messageId: randomUUID(), images: [{ name: "bad.png", mediaType: "image/png", data: Buffer.from("not an image").toString("base64") }] })).status, 400);
+    await server.close(); server = await start();
+    const restored = await readJob(id, (j) => j.designSession?.messages.find((message) => message.id === body.messageId)?.images?.[0]); assert.deepEqual(restored, image);
+  } finally { injected = undefined; }
 });
 
-test("preview and write boundaries reject traversal, symlinks, prior rounds and engine state", () => {
-  const folder = join(root, "boundary"); const artifacts = join(folder, "design/atelier/round-1"); mkdirSync(artifacts, { recursive: true });
-  const record = join(folder, "design/round-1.json");
-  assert.equal(designWriteAllowed(join(artifacts, "new/preview.html"), record, artifacts), true);
-  assert.equal(designWriteAllowed(join(folder, "job.json"), record, artifacts), false);
-  assert.equal(designWriteAllowed(join(folder, "design/atelier/round-2/preview.html"), record, artifacts), false);
-  const outside = join(root, "outside"); mkdirSync(outside); writeFileSync(join(outside, "secret.html"), "secret");
-  symlinkSync(outside, join(artifacts, "link"));
-  assert.equal(designWriteAllowed(join(artifacts, "link/new.html"), record, artifacts), false);
-  // Canonical previews are database records; the staging write guard rejects filesystem symlinks.
-  assert.equal(designWriteAllowed(join(artifacts, "link/secret.html"), record, artifacts), false);
-  assert.throws(() => designAsset(folder, "design/atelier/round-1/../../job.json"), /relative/);
-  const input = { cwd: folder, tool_input: { file_path: join(folder, "job.json") } };
-  const guard = spawnSync(process.execPath, [join(here, "../src/design-guard.ts")], { input: JSON.stringify(input), env: { ...process.env, SOCIOTECHNIC_DESIGN_RECORD: record, SOCIOTECHNIC_DESIGN_ARTIFACTS: artifacts }, encoding: "utf8" });
-  assert.equal(guard.status, 2);
-});
-
-test("scoped tool validates executable arguments and SDK receives structured scope, not prompt-derived paths", () => {
-  const scope = join(root, "tool-scope"); mkdirSync(scope);
-  assert.deepEqual(designToolArgs("context", [], scope), ["context"]);
-  const refs = join(root, "reference-images"); mkdirSync(refs); writeFileSync(join(refs, "incumbent.png"), "fixture");
-  assert.deepEqual(designToolArgs("generate-image", ["--ref", join(refs, "incumbent.png"), "--out", "comp.png", "--prompt-file", "prompt.txt"], scope, [refs]), ["generate-image", "--ref", join(refs, "incumbent.png"), "--out", "comp.png", "--prompt-file", "prompt.txt"]);
-  assert.throws(() => designToolArgs("generate-image", ["--ref", join(refs, "incumbent.png"), "--out", "comp.png", "--prompt-file", "prompt.txt"], scope), /current design round/);
-  assert.throws(() => designToolArgs("serve-question", ["--start"], scope), /not allowed/);
-  assert.throws(() => designToolArgs("generate-image", ["--out", "../escape.png", "--prompt-file", "prompt.txt"], scope), /current design round/);
-  const entry = { id: "d-1", agent: "sociotechnic-designer", model: "claude-fable-5-1", effort: "xhigh", deadlineAt: new Date().toISOString(), record: "design/round-1.json", prompt: "Current record: /malicious/job.json", designScope: { record: join(scope, "round-1.json"), artifacts: scope, receipt: join(scope, "receipt.json") } };
-  const options = sdkOptions(entry, roleOf(entry.agent), resolve(here, "../.."), new AbortController(), null);
-  assert.equal(options.env?.SOCIOTECHNIC_DESIGN_RECORD, entry.designScope.record);
-  assert.ok(options.mcpServers?.design);
-  assert.equal(roleOf(entry.agent).tools.includes("Bash"), false);
-});
-
-test("packet validation rejects incomplete showcases and repeated preview files", () => {
-  assert.throws(() => parseDesignPacket({ phase: "directions", title: "x", strategy: "x", product: "# Product", options: [] }), /three alternatives/);
-  const option = { id: "one", title: "x", thesis: "x", rationale: "x", risk: "x", preview: "same.html" };
-  assert.throws(() => parseDesignPacket({ phase: "previews", title: "x", strategy: "x", product: "# Product", options: [option, { ...option, id: "two" }, { ...option, id: "three" }] }), /own preview/);
-  assert.throws(() => designFingerprint(root, "../job.json"), /record path/);
-});
-
-test("a valid agent packet without a current context receipt exhausts its bounded retries", async () => {
-  const j = await create("design", "MISSING_DESIGN_CONTEXT_FIXTURE");
-  assert.equal(j.status, "needs-human");
-  assert.equal(j.plan, null); assert.equal(j.round, 0);
-  assert.equal(j.dispatches.length, 2);
-  assert.match(j.statusReason, /retry-bound:design.*Impeccable context/);
-  const accepted = await call(`/api/jobs/${j.id}/accept`, {});
-  assert.equal(accepted.status, 409);
-});
-
-test("CLI records a human response file and the same job continues through the shared driver", { skip: database === null ? "SOCIOTECHNIC_TEST_DATABASE_URL is not set" : false }, async () => {
-  const j = await create(); const d = j.design;
-  if (!d || d.state !== "waiting") throw new Error("No interview");
-  const file = join(root, `human-response-${sequence}.json`);
-  writeFileSync(file, JSON.stringify({ ...answer, stack: "custom", customStack: "SvelteKit on the existing host" }));
-  const result = spawnSync(process.execPath, [join(here, "../src/cli.ts"), "design-respond", j.id, "--digest", d.digest, "--response", file], { env: process.env, encoding: "utf8" });
-  assert.equal(result.status, 0, result.stdout + result.stderr);
-  assert.equal(JSON.parse(result.stdout).status, "designing");
-  await call(`/api/jobs/${j.id}/run`, { hold: ["planned"] });
-  const continued = await settle(j.id);
-  assert.equal(continued.id, j.id);
-  assert.equal(continued.design?.stack?.kind, "custom");
-  assert.equal(continued.status, "design-input");
-});
-
-test("the real MCP process initializes through a symlink and records a scoped context receipt", async () => {
-  const scope = join(root, "mcp-round"); mkdirSync(scope);
-  const skill = join(root, "fixture-impeccable"); mkdirSync(join(skill, "scripts"), { recursive: true });
-  writeFileSync(join(skill, "SKILL.md"), "# Fixture skill\n");
-  const launcher = join(skill, "scripts/impeccable");
-  writeFileSync(launcher, '#!/bin/sh\nprintf "fixture context\\n"\n'); chmodSync(launcher, 0o755);
-  const entry = join(root, "symlinked-design-tools.ts"); symlinkSync(join(here, "../ui/design-tools.ts"), entry);
-  const receipt = join(root, "mcp-receipt.json");
-  const child = spawn(process.execPath, [entry], { env: { ...process.env, SOCIOTECHNIC_IMPECCABLE_SKILL: skill, SOCIOTECHNIC_HOME: home, SOCIOTECHNIC_DESIGN_ARTIFACTS: scope, SOCIOTECHNIC_DESIGN_RECEIPT: receipt, SOCIOTECHNIC_DISPATCH: "d-mcp" }, stdio: ["pipe", "pipe", "pipe"] });
+test("assistant image references are saved and displayed from canonical bytes", async () => {
+  const id = await create();
+  const data = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jv1sAAAAASUVORK5CYII=";
+  injected = async function* ({ options }) {
+    const sid = options.sessionId; assert.ok(sid && options.cwd);
+    yield { type: "system", subtype: "init", session_id: sid, skills: ["impeccable"] };
+    const target = options.additionalDirectories?.[0]; assert.ok(target);
+    const image = join(target, "sample.png"); writeFileSync(image, Buffer.from(data, "base64"));
+    yield { type: "assistant", uuid: randomUUID(), message: { content: [{ type: "text", text: `Here is the sample.\n![Sample](sample.png)\n![Sample again](file://${image})` }] } };
+    yield { type: "result", subtype: "success", is_error: false, num_turns: 1 };
+  };
   try {
-    await new Promise<void>((done, reject) => {
-      let buffer = "", errors = "";
-      const timer = setTimeout(() => reject(new Error(`MCP timeout: ${errors}`)), 5000);
-      child.stderr.on("data", (data: Buffer) => { errors += data.toString(); });
-      child.once("error", (error) => { clearTimeout(timer); reject(error); });
-      child.once("exit", (code) => { clearTimeout(timer); if (code !== 0) reject(new Error(`MCP exited ${code}: ${errors}`)); });
-      child.stdout.on("data", (data: Buffer) => {
-        buffer += data.toString();
-        for (;;) {
-          const end = buffer.indexOf("\n"); if (end < 0) break;
-          const message = JSON.parse(buffer.slice(0, end)); buffer = buffer.slice(end + 1);
-          if (message.id === 2) { clearTimeout(timer); if (message.result.isError) reject(new Error(JSON.stringify(message))); else done(); }
-        }
-      });
-      child.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize" }) + "\n");
-      child.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "impeccable", arguments: { verb: "context", args: [] } } }) + "\n");
-    });
-    const result = JSON.parse(readFileSync(receipt, "utf8"));
-    assert.equal(result.contextLoaded, true); assert.equal(result.dispatch, "d-mcp");
-  } finally { child.stdin.end(); child.kill(); }
+    await call(`/api/jobs/${id}/run`, {}); const job = await settled(id);
+    const message = job.designSession?.messages.at(-1), image = message?.images?.[0]; assert.ok(image);
+    assert.equal(message?.images?.length, 1);
+    assert.equal(message?.text, "Here is the sample.");
+    const response = await fetch(new URL(`/api/jobs/${id}/design-images/${encodeURIComponent(image.record)}`, server.url));
+    assert.equal(response.status, 200); assert.ok(Buffer.from(await response.arrayBuffer()).equals(Buffer.from(data, "base64")));
+  } finally { injected = undefined; }
 });
 
-test("each isolated context starts from target docs and later uses the selected product record", async () => {
-  const original = "# Product\nExisting target-specific truth.\n";
-  let j = await create("design", "Extend the existing product", original);
-  assert.equal(await readJob(j.id, () => readText(join(jobDir(j.id), "design/atelier/round-1/PRODUCT.md"))), original);
-  j = await respond(j.id, answer);
-  assert.equal(await readJob(j.id, () => readText(join(jobDir(j.id), "design/atelier/round-2/PRODUCT.md"))), original);
-  j = await respond(j.id, { action: "select", optionId: "option-1" });
-  assert.match(await readJob(j.id, () => readText(join(jobDir(j.id), "design/atelier/round-3/PRODUCT.md"))) ?? "", /local research notebook/);
-  assert.equal(readFileSync(join(j.worktree, "PRODUCT.md"), "utf8"), original);
+test("the conversation remains usable after returning its Markdown work product", async () => {
+  const id = await create(); await completeInterview(id);
+  const digest = await readJob(id, interactiveFingerprint);
+  assert.equal((await call(`/api/jobs/${id}/design-session/handoff`, { digest })).status, 200);
+  let job = await settled(id); assert.equal(job.status, "planned"); const sessionId = job.designSession?.id;
+  assert.ok(job.designSession?.approval?.document?.endsWith("/HANDOFF.md"));
+  const dispatches = job.dispatches.length;
+  assert.equal((await call(`/api/jobs/${id}/design-session/messages`, { message: "Review the result for quality", messageId: randomUUID() })).status, 200);
+  job = await settled(id); assert.equal(job.status, "planned"); assert.equal(job.designSession?.id, sessionId); assert.equal(job.dispatches.length, dispatches);
+  assert.match(job.designSession?.messages.at(-1)?.text ?? "", /retained our previous conversation/);
+});
+
+test("a caller can request another assignment in the same design conversation", async () => {
+  assert.equal(parsePlanText(JSON.stringify({ status: "needs-design", reason: "Compare the two prototype navigation patterns" }), false, true).kind, "needs-design");
+  const id = await create(); const initial = await completeInterview(id);
+  await mutateJob(id, (job) => {
+    approveInteractiveDesign(job, interactiveFingerprint(job));
+    startDesign(job, "Compare the two prototype navigation patterns");
+  });
+  await call(`/api/jobs/${id}/run`, {});
+  const job = await settled(id);
+  assert.equal(job.designSession?.id, initial.designSession?.id);
+  assert.ok(job.designSession?.messages.some((message) => message.role === "tool" && message.text.includes("Compare the two prototype")));
+  assert.match(job.designSession?.messages.at(-1)?.text ?? "", /retained our previous conversation/);
+});
+
+test("the house starter reaches the designer and changed starter bytes invalidate approval", async () => {
+  const template = join(home, "sociotechnic/scaffolds/react-nest/template");
+  mkdirSync(join(template, ".agents/skills/scaffold-ui"), { recursive: true });
+  writeFileSync(join(template, "readme.md"), "# Pinned house starter\n");
+  writeFileSync(join(template, ".agents/skills/scaffold-ui/SKILL.md"), "# Portable UI guide\n");
+  git(home, "init", "-q", "-b", "main"); git(home, "add", "sociotechnic/scaffolds"); git(home, "commit", "-qm", "fixture starter");
+  let supplied = false;
+  injected = async function* (args) {
+    assert.ok(args.options.additionalDirectories?.includes(template));
+    assert.ok(typeof args.options.systemPrompt === "object" && "append" in args.options.systemPrompt);
+    assert.match(args.options.systemPrompt.append ?? "", /Pinned React\/Nest starter revision:/);
+    supplied = true;
+    yield* fixtureDesignQuery(args);
+  };
+  try {
+    const id = await create(); const job = await completeInterview(id);
+    assert.equal(supplied, true); assert.ok(job.designSession?.starter);
+    assert.equal(job.designSession.starter.digest, scaffoldFingerprint(home));
+    const digest = await readJob(id, interactiveFingerprint);
+    writeFileSync(join(template, "readme.md"), "# Changed starter\n");
+    const approval = await call(`/api/jobs/${id}/design-session/approve`, { digest, confirmed: true });
+    assert.equal(approval.status, 400); assert.match(JSON.stringify(approval.data), /starter changed/);
+    assert.equal((await readJob(id, (j) => j)).designSession?.approval, null);
+    writeFileSync(join(template, "readme.md"), "# Pinned house starter\n");
+    assert.equal((await call(`/api/jobs/${id}/design-session/approve`, { digest, confirmed: true })).status, 200);
+    const planned = await settled(id);
+    assert.equal(planned.status, "planned");
+    const brief = planned.dispatches.find((d) => d.step === "plan")?.execution?.envelope.prompt;
+    assert.ok(brief); assert.ok(brief.includes(template));
+    assert.ok(brief.includes(job.designSession.starter.digest));
+  } finally { injected = undefined; rmSync(join(home, "sociotechnic"), { recursive: true, force: true }); }
+});
+
+test("interruption preserves the session and can resume without a fresh design attempt", async () => {
+  const id = await create(); await completeInterview(id);
+  await call(`/api/jobs/${id}/design-session/messages`, { message: "hold response", messageId: randomUUID() });
+  await until(id, (j) => j.designSession?.state === "working");
+  await call(`/api/jobs/${id}/design-session/interrupt`, {});
+  let j = await settled(id); assert.equal(j.designSession?.state, "interrupted");
+  await call(`/api/jobs/${id}/design-session/resume`, {}); j = await settled(id); assert.equal(j.designSession?.state, "waiting");
+});
+
+test("explicit approval binds artifacts, stale fingerprints fail and planning stops at its normal hold", async () => {
+  const id = await create(); const j = await completeInterview(id); assert.ok(j.designSession);
+  const response = await call(`/api/jobs/${id}`); const fingerprint = response.data.interactive.fingerprint;
+  assert.equal((await call(`/api/jobs/${id}/design-session/approve`, { digest: fingerprint })).status, 400);
+  await mutateJob(id, () => writeTextAtomic(join(jobDir(id), `design/session/${j.designSession?.id}/workspace/DESIGN.md`), "# Changed design\n"));
+  assert.equal((await call(`/api/jobs/${id}/design-session/approve`, { digest: fingerprint, confirmed: true })).status, 409);
+  const current = await readJob(id, interactiveFingerprint);
+  const approved = await call(`/api/jobs/${id}/design-session/approve`, { digest: current, confirmed: true }); assert.equal(approved.status, 200, JSON.stringify(approved.data));
+  const planned = await settled(id); assert.equal(planned.status, "planned"); assert.equal(planned.round, 0); assert.equal(planned.designSession?.state, "approved");
+  assert.equal(planned.dispatches.some((d) => d.step === "build"), false);
+  assert.equal(planned.plan?.digest != null, true);
+});
+
+test("missing Impeccable and unsupported Docker fail before invoking the query", async () => {
+  const id = await create(), count = calls;
+  process.env.SOCIOTECHNIC_IMPECCABLE_SKILL = join(root, "missing");
+  await call(`/api/jobs/${id}/run`, {}); const j = await settled(id);
+  assert.equal(j.designSession?.state, "failed"); assert.match(j.designSession?.error ?? "", /not installed/); assert.equal(calls, count);
+  process.env.SOCIOTECHNIC_IMPECCABLE_SKILL = skill;
+  const result = await call("/api/jobs", { repo: j.repo, feature: "Docker design", workflow: "design", execution: { kind: "docker-sandbox", cpus: 4, memoryGiB: 8, parallelAgents: 1 } }); assert.equal(result.status, 400); assert.equal(calls, count);
+});
+
+test("workspace and URL boundaries reject traversal, symlinks and unsafe navigation", () => {
+  const scope = join(root, "scope"); mkdirSync(scope); symlinkSync(root, join(scope, "outside"));
+  assert.equal(previewUrl("javascript:alert(1)"), null); assert.equal(previewUrl("http://secret@example.com/"), null); assert.equal(previewUrl("http://127.0.0.1:5000/"), "http://127.0.0.1:5000/");
+  assert.equal(designWriteAllowed(join(scope, "outside/escape"), join(scope, "record"), scope), false);
+  assert.equal(newInteractiveDesign("reason").state, "ready");
+});
+
+test("the native command references the installed skill and historical packets remain readable", () => {
+  const scope = join(root, "pin-test"); mkdirSync(scope);
+  const pinned = nativeImpeccable(home, scope);
+  assert.equal(pinned.digest, createHash("sha256").update(readFileSync(join(pinned.root, "SKILL.md"))).digest("hex"));
+  assert.equal(realpathSync(join(scope, ".claude/skills/impeccable")), realpathSync(skill));
+  assert.equal(parseDesignPacket({ title: "History", strategy: "Historical interview", product: "", phase: "interview", questions: [{ id: "audience", prompt: "Who uses this?" }] }).phase, "interview");
 });
 
 test("the copied scaffold retains pinned UI references and guidance changes invalidate its digest", () => {
@@ -321,25 +308,92 @@ test("the copied scaffold retains pinned UI references and guidance changes inva
   writeFileSync(join(skill, "SKILL.md"), readFileSync(join(skill, "SKILL.md"), "utf8") + "\nChanged guidance.\n");
   assert.notEqual(scaffoldFingerprint(portable), before);
 });
+test("actual installed Impeccable serves, accepts, updates and stops its own decision page without a model", { skip: !process.env.SOCIOTECHNIC_TEST_IMPECCABLE_SKILL }, async () => {
+  const installed = process.env.SOCIOTECHNIC_TEST_IMPECCABLE_SKILL; assert.ok(installed);
+  const scope = join(root, "real-native"); mkdirSync(scope);
+  process.env.SOCIOTECHNIC_IMPECCABLE_SKILL = installed;
+  const native = nativeImpeccable(home, scope);
+  process.env.SOCIOTECHNIC_IMPECCABLE_SKILL = skill;
+  const key = `integration-${randomUUID()}`;
+  const payload = { title: "Native integration fixture", question: "Choose a direction", options: [{ id: "reading", label: "Reading desk", thesis: "A reading workspace", palette: ["#172033", "#ffffff"], materials: ["paper"], viewport: "A notebook and reading pane", risk: "Less dense" }], followup: true };
+  writeFileSync(join(scope, "question.json"), JSON.stringify(payload));
+  try {
+    const output = await runNative(native, scope, ["serve-question", "--start", "--key", key, "--payload", "question.json", "--no-open"]);
+    const url = output.match(/QUESTION URL: (http:\/\/[^\s]+)/)?.[1]; assert.ok(url, output);
+    const page = await (await fetch(url)).text(); assert.match(page, /Reading desk/);
+    const answer = await fetch(new URL(`/answer?key=${encodeURIComponent(key)}`, url), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ optionId: "reading", steer: "Use denser rows" }) }); assert.equal(answer.status, 200);
+    const response = await runNative(native, scope, ["serve-question", "--wait", "--key", key]); assert.match(response, /ANSWER:/); assert.match(response, /reading/); assert.match(response, /denser/);
+    writeFileSync(join(scope, "question.json"), JSON.stringify({ ...payload, title: "Revised direction", options: [{ ...payload.options[0], label: "Dense reading desk" }] }));
+    await runNative(native, scope, ["serve-question", "--update", "--key", key, "--payload", "question.json"]);
+    assert.match(await (await fetch(url)).text(), /Dense reading desk/);
+  } finally { await runNative(native, scope, ["serve-question", "--stop", "--key", key]); }
+});
 
+test("a transcript persistence failure aborts the query and is not retried", async () => {
+  const id = await create(), count = calls;
+  let observedAbort = false;
+  injected = async function* ({ options }) {
+    const sessionId = options.sessionId; assert.ok(sessionId); assert.ok(options.sessionStore);
+    yield { type: "system", subtype: "init", session_id: sessionId, skills: ["impeccable"] };
+    let failed = false;
+    setStore({ ...store, async transaction(fn) { if (!failed) { failed = true; throw new Error("Injected database write failure"); } return store.transaction(fn); } });
+    try { await options.sessionStore.append({ projectKey: `design-${sessionId}`, sessionId }, [{ type: "user", uuid: randomUUID() }]); }
+    catch (e) { observedAbort = options.abortController?.signal.aborted === true; throw e; }
+    finally { setStore(store); }
+  };
+  try {
+    await call(`/api/jobs/${id}/run`, {}); const job = await settled(id);
+    assert.equal(job.designSession?.state, "failed"); assert.match(job.designSession?.error ?? "", /database write failure/); assert.equal(observedAbort, true); assert.equal(calls, count + 1);
+  } finally { injected = undefined; setStore(store); }
+});
 
-test("local preview poison cannot change committed fingerprints, served bytes or approval", async () => {
-  let job = await create();
-  job = await respond(job.id, answer);
-  job = await respond(job.id, { action: "select", optionId: "option-1" });
-  const design = job.design;
-  assert.ok(design && design.state === "waiting" && design.packet.phase === "previews");
-  if (!design || design.state !== "waiting" || design.packet.phase !== "previews") throw new Error("No current preview");
-  const preview = design.packet.options[0].preview;
-  const before = await readJob(job.id, () => designFingerprint(jobDir(job.id), design.record));
-  const path = join(jobDir(job.id), preview);
-  mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, "<h1>Uncommitted poisoned file</h1>");
-  const after = await readJob(job.id, () => designFingerprint(jobDir(job.id), design.record));
-  assert.equal(after.digest, before.digest);
-  const response = await fetch(new URL(`/api/jobs/${job.id}/design-assets/${preview}?digest=${encodeURIComponent(design.digest)}`, server.url));
-  assert.equal(response.status, 200);
-  assert.doesNotMatch(await response.text(), /poisoned file/);
-  job = await respond(job.id, { action: "approve", optionId: "option-1", confirmed: true });
-  assert.equal(job.status, "planned");
+test("the SDK uses the agent Markdown file and native tools without an Impeccable MCP", async () => {
+  const id = await create();
+  let checked = false;
+  injected = async function* (args) {
+    assert.ok(Array.isArray(args.options.tools) && args.options.tools.includes("Bash") && args.options.tools.includes("Skill"));
+    assert.equal(args.options.mcpServers?.impeccable, undefined);
+    assert.ok(typeof args.options.systemPrompt === "object" && "append" in args.options.systemPrompt);
+    assert.match(args.options.systemPrompt.append ?? "", /normal,\s+turn-based conversation/);
+    assert.ok(!args.options.systemPrompt.append?.includes("mcp__impeccable__run"));
+    checked = true;
+    yield* fixtureDesignQuery(args);
+  };
+  try {
+    await completeInterview(id);
+    assert.equal(checked, true);
+  } finally { injected = undefined; }
+});
+
+test("another console cannot answer or interrupt this session even in the same process", async () => {
+  const id = await create(); await call(`/api/jobs/${id}/run`, {});
+  const j = await until(id, (j) => !!j.designSession?.question); assert.ok(j.designSession?.question);
+  const observer = await start();
+  try {
+    const response = await fetch(new URL(`/api/jobs/${id}/design-session/answer`, observer.url), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ questionId: j.designSession.question.id, answers: { [j.designSession.question.questions[0].question]: "Editors" } }) });
+    assert.equal(response.status, 409);
+    const interrupt = await fetch(new URL(`/api/jobs/${id}/design-session/interrupt`, observer.url), { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }); assert.equal(interrupt.status, 409);
+    assert.equal(server.drivers.isRunning(id), true);
+  } finally { await observer.close(); await call(`/api/jobs/${id}/design-session/interrupt`, {}); await settled(id); }
+});
+
+test("a durably recorded answer is replayed to the same native tool request after interruption", async () => {
+  const id = await create();
+  injected = async function* ({ prompt, options }) {
+    const sid = options.resume ?? options.sessionId; assert.ok(sid); assert.ok(options.sessionStore); assert.ok(options.canUseTool);
+    yield { type: "system", subtype: "init", session_id: sid, skills: ["impeccable"] };
+    if (typeof prompt !== "string") for await (const m of prompt) await options.sessionStore.append({ projectKey: `design-${sid}`, sessionId: sid }, [{ type: "user", uuid: m.uuid, message: m.message }]);
+    const answer = await options.canUseTool("AskUserQuestion", { questions: [{ header: "Direction", question: "Keep the reading direction?", multiSelect: false, options: [{ label: "Keep it", description: "Continue with reading" }] }] }, { signal: options.abortController?.signal ?? new AbortController().signal, toolUseID: "toolu_durable_answer", requestId: "request-durable" });
+    assert.ok(answer && answer.behavior === "allow");
+    if (!options.resume) throw new Error("Fixture crash after the human answer");
+    assert.deepEqual(answer.updatedInput?.answers, { "Keep the reading direction?": "Keep it" });
+    yield { type: "result", subtype: "success", is_error: false, num_turns: 1, modelUsage: {} };
+  };
+  try {
+    await call(`/api/jobs/${id}/run`, {});
+    const waiting = await until(id, (j) => !!j.designSession?.question); assert.equal(waiting.designSession?.question?.id, "toolu_durable_answer");
+    await call(`/api/jobs/${id}/design-session/answer`, { questionId: "toolu_durable_answer", answers: { "Keep the reading direction?": "Keep it" } });
+    let j = await settled(id); assert.equal(j.designSession?.state, "failed"); assert.deepEqual(j.designSession?.answers.toolu_durable_answer, { "Keep the reading direction?": "Keep it" });
+    await call(`/api/jobs/${id}/design-session/resume`, {}); j = await settled(id); assert.equal(j.designSession?.state, "waiting"); assert.equal(j.designSession?.question, null); assert.equal(j.designSession?.messages.filter((m) => m.role === "user").length, 1);
+  } finally { injected = undefined; }
 });

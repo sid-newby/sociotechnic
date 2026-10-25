@@ -77,12 +77,11 @@ new dispatch from recommendation prose. See [agent discovery](docs/agent-discove
    the engine then runs one Luna researcher per question and dispatches the
    planner again.
 4. Before pinning, the planner may request `needs-design` for major UI work.
-   Explicit `workflow: "design"` starts with the Fable designer instead. The
-   designer interviews through console packets, explores directions and presents
-   three composition previews. Human responses continue the same run; only an
-   explicit composition approval enables final planning. The engine fingerprints
-   the evidence, binds the selected scaffold and requires `designDigest` in the
-   final plan. See [design ceremony](docs/design-ceremony.md).
+   Explicit `workflow: "design"` starts a Local interactive Claude session using
+   the actual pinned Impeccable skill. The console hosts conversation and native
+   questions; Impeccable owns its separate preview page. Human replies resume
+   the same session. Explicit approval fingerprints saved artifacts for final
+   `designDigest` planning. Do not write packets or invent human answers.
 5. The engine validates the plan, pins its digest, and the tier picks the
    builder: COMPLEX on Opus, EASY on Sonnet, BULK on Haiku, COMMENTS on Sonnet.
    COMMENTS uses the comment-cleaner coordinator and fresh Sonnet/high Sicko workers
@@ -111,11 +110,19 @@ Bounds: rounds, dispatches per round, retries per step, and a deadline per
 dispatch. Past any bound the job parks as `needs-human` with the bound named.
 An override lifts one bound by one and is remembered forever.
 
+A human may interrupt one unfinished dispatch with `interrupt <job> <dispatch>
+[note]`. The owning console's driver aborts only that agent, records it
+`interrupted` with the note and a human entry, and lets the rest of the step
+finish. The next step retries it as a failed attempt under the retry bound,
+with the note as the retry reason. Drivers never interrupt on their own, and
+Docker Sandbox runs refuse it. Local dispatches may wait for an installation
+concurrency slot; that wait counts against their deadlines.
+
 ## Human gates
 
 | Status | What it means | Actions |
 | --- | --- | --- |
-| `design-input` | the current interview, direction or composition decision is waiting | answer/select/approve/revise through design response, stop |
+| `design-input` | the interactive design conversation awaits human input | reply, answer native question, open previews, approve artifacts, stop |
 | `planned` (held) | the plan is pinned and nothing has been built | continue, stop |
 | `ready` | approver APPROVED at the gate head; merge locally to test the change in the main checkout | merge (local, worktree kept), accept, rework, pr (local text), stop |
 | `needs-human` | parked: a bound, a BLOCKED build, a policy flag, an escalation, or a malformed record past its retries | merge (local), accept, rework, override then run, stop |
@@ -212,15 +219,21 @@ run a job at a time, `step` from elsewhere is refused while it owns the job, and
 completions. Never force past a live driver; pause it in the console or wait for
 a gate. Local lock or staging files cannot grant ownership.
 
-## Design ceremony drivers
+## Interactive design drivers
 
-The designer is a guarded, shell-free Fable/xhigh role with an explicitly
-registered Impeccable MCP tool. It writes only its assigned packet and isolated
-preview round. The driver does not answer questions, choose stacks/directions,
-open a second approval channel or infer approval. `design-input` is a real human
-wait. The console records a response under the normal job lock and then starts
-the shared driver on the same job; CLI sessions record `design-respond` and call
-`run` afterward. Approval of design never authorizes acceptance or publication.
+The local designer is a normal Claude Code agent whose system prompt comes from
+the project-owned agent Markdown file linked into Claude's global agents. The
+SDK resumes its history, including native image inputs. Bash and Skill execute
+the installed /impeccable command normally; there is no Impeccable MCP adapter
+and no suppression of native window opening. The assignment sets the scope.
+`design-input` is a genuine human wait. Conversation replies resume the exact
+session. PostgreSQL owns opaque transcripts and artifact snapshots, protected by
+the existing driver lease. HANDOFF.md and any samples or prototypes return to
+the caller, which decides the next step. A planner can request a follow-up in the
+same chat. Returning work does not close the conversation or run a builder.
+Docker design is refused before designer inference.
+Historical packet evidence remains readable; its response command is retired.
+Design approval never authorizes build acceptance or publication.
 
 ## Agent release provenance
 
@@ -228,7 +241,7 @@ New jobs pin the latest semantic release of each role at creation; the console m
 record explicit legacy overrides and eligible role-to-agent assignments. New dispatches include their frozen version,
 actual agent identity, role template, model/effort, tools, limits and definition. Drivers use that snapshot, never a newly
 published release in its place. Old jobs without a version map keep baseline roles.
-SDK definitions execute with the same write/design guard scripts. Codex reader
+Task SDK definitions retain their existing write guards; interactive design uses workspace-bound SDK hooks. Codex reader
 versions, including compatible planner, review, conformance and approval templates,
 may choose the OpenAI models in `src/agent-models.ts` with the model-specific effort choices in that module and their
 fixed reader tools. Ordinary build templates also support Codex with shell/edit

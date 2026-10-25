@@ -49,7 +49,7 @@ before(async () => {
   process.env.SOCIOTECHNIC_HOME = home;
   process.env.SOCIOTECHNIC_DATABASE_URL = database ?? "off";
   const { startServer } = await import("../ui/server.ts");
-  server = await startServer({ port: 0 });
+  server = await startServer({ port: 0, catalogBundles: [] });
 });
 
 after(async () => {
@@ -96,7 +96,7 @@ test("archive is reversible, persistent console metadata and preserves job recor
     assert.equal((await list()).find((job) => job.id === id)?.archived, true);
     const event = await reader.read();
     assert.match(new TextDecoder().decode(event.value), /event: jobs/);
-    const restarted = await startServer({ port: 0 });
+    const restarted = await startServer({ port: 0, catalogBundles: [] });
     try {
       const jobs = (await (await fetch(new URL("/api/jobs", restarted.url))).json()).jobs as Json[];
       assert.equal(jobs.find((job) => job.id === id)?.archived, true);
@@ -206,6 +206,38 @@ test("traversal is refused with 400 and unknown jobs or records are 404", async 
   assert.equal(unknown.status, 404);
   assert.equal(unknown.body.code, "not-found");
   assert.equal((await getJson(`/api/jobs/${id}/records/round-9/none.md`)).status, 404);
+});
+
+test("record download returns exact bytes with type and attachment headers; the JSON form is unchanged", async () => {
+  const stored = (path: string) => (store.records(id)).then((rows) => rows.find((row) => row.path === path));
+  const build = await fetch(new URL(`/api/jobs/${id}/records/round-1/build.md?download=1`, server.url));
+  assert.equal(build.status, 200);
+  assert.equal(build.headers.get("content-type"), "text/markdown; charset=utf-8");
+  assert.equal(build.headers.get("content-disposition"), `attachment; filename="round-1-build.md"; filename*=UTF-8''round-1-build.md`);
+  assert.equal(build.headers.get("x-content-type-options"), "nosniff");
+  assert.equal(build.headers.get("content-security-policy"), "sandbox; default-src 'none'");
+  assert.equal(await build.text(), (await stored("round-1/build.md"))?.text);
+  const plan = await fetch(new URL(`/api/jobs/${id}/records/plan.json?download=1`, server.url));
+  assert.equal(plan.headers.get("content-type"), "application/json; charset=utf-8");
+  assert.equal((await fetch(new URL(`/api/jobs/${id}/records/round-1/diff.patch?download=1`, server.url))).headers.get("content-type"), "text/x-diff; charset=utf-8");
+  const bytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00, 0xff, 0xfe, 0x0a]);
+  await store.transaction((tx) => tx.upsertRecord(id, recordRow("design/preview one.png", bytes)));
+  const image = await fetch(new URL(`/api/jobs/${id}/records/${encodeURIComponent("design/preview one.png")}?download=1`, server.url));
+  assert.equal(image.status, 200);
+  assert.equal(image.headers.get("content-type"), "image/png");
+  assert.equal(image.headers.get("content-disposition"), `attachment; filename="design-preview_one.png"; filename*=UTF-8''design-preview%20one.png`);
+  assert.deepEqual(Buffer.from(await image.arrayBuffer()), bytes);
+  await store.transaction((tx) => tx.upsertRecord(id, recordRow("plan.json.superseded-by-d-004", Buffer.from("{}\n"))));
+  assert.equal((await fetch(new URL(`/api/jobs/${id}/records/plan.json.superseded-by-d-004?download=1`, server.url))).headers.get("content-type"), "application/json; charset=utf-8");
+  const json = await getJson(`/api/jobs/${id}/records/round-1/build.md`);
+  assert.deepEqual(Object.keys(json.body).sort(), ["path", "text"]);
+  assert.equal((await getJson(`/api/jobs/${id}/records/round-1/build.md?download=0`)).body.path, "round-1/build.md");
+  assert.equal((await getJson(`/api/jobs/${id}/records/round-9/none.md?download=1`)).status, 404);
+  assert.equal((await getJson(`/api/jobs/${id}/records/%2e%2e%2f%2e%2e%2fjobs?download=1`)).status, 400);
+  const head = await fetch(new URL(`/api/jobs/${id}/records/round-1/build.md?download=1`, server.url), { method: "HEAD" });
+  assert.equal(head.status, 200);
+  assert.equal(head.headers.get("content-length"), String((await stored("round-1/build.md"))?.bytes));
+  await store.transaction(async (tx) => { await tx.deleteRecord(id, "design/preview one.png"); await tx.deleteRecord(id, "plan.json.superseded-by-d-004"); });
 });
 
 test("mutating requests: foreign Origin is 403, missing JSON content type is 400", async () => {

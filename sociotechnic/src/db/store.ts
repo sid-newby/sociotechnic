@@ -33,6 +33,7 @@ export type StoreTx = {
   agentVersions: (agent?: string) => Promise<AgentVersionRow[]>;
   insertAgentVersion: (row: AgentVersionRow) => Promise<void>;
   linkAgentVersions: (job: string, versions: Readonly<Record<string, string>>, assignments?: Readonly<Record<string, string>>) => Promise<void>;
+  rebindUnusedDesigner: (job: string, agent: string, from: string, to: string) => Promise<void>;
   storedJob: (id: string) => Promise<Job | null>;
   upsertJob: (job: Job) => Promise<void>;
   recordMetas: (id: string) => Promise<RecordMeta[]>;
@@ -239,6 +240,10 @@ function pgTx(c: PgQueryable): StoreTx {
         if ((row.rows[0]?.version !== version || row.rows[0]?.agent !== agent)) throw new SociotechnicError("agent-version-conflict", `Run ${job} changed pinned ${agent} version`);
       }
     },
+    async rebindUnusedDesigner(job, agent, from, to) {
+      const changed = await c.query("update job_agent_versions set version = $4 where job_id = $1 and slot = 'sociotechnic-designer' and agent = $2 and version = $3 returning slot", [job, agent, from, to]);
+      if (changed.rows.length !== 1) throw new SociotechnicError("agent-version-conflict", "The unused designer binding changed before migration");
+    },
     async storedJob(id) {
       const r = await c.query("select job from jobs where id = $1 for update", [id]);
       return r.rows.length === 0 ? null : (r.rows[0].job as Job);
@@ -442,6 +447,11 @@ export function createMemoryStore(): Store {
         if (found && found !== `${agent}@${version}`) throw new SociotechnicError("agent-version-conflict", `Run ${job} changed pinned ${agent} version`);
         state.agentLinks.set(key, `${agent}@${version}`);
       }
+    },
+    rebindUnusedDesigner: async (job, agent, from, to) => {
+      const key = JSON.stringify([job, "sociotechnic-designer"]);
+      if (state.agentLinks.get(key) !== `${agent}@${from}` || !state.agentVersions.has(JSON.stringify([agent, to]))) throw new SociotechnicError("agent-version-conflict", "The unused designer binding changed before migration");
+      state.agentLinks.set(key, `${agent}@${to}`);
     },
     storedJob: async (id) => {
       const row = state.jobs.get(id);

@@ -104,7 +104,7 @@ test("failed first adoption rolls back; concurrent publication has one winner", 
 });
 
 test("creation API preserves origin checks and validates assignments before repository initialization", async () => {
-  const server = await startServer({ port: 0 });
+  const server = await startServer({ port: 0, catalogBundles: [] });
   const post = (path: string, body: unknown, origin?: string) => fetch(new URL(path, server.url), { method: "POST", headers: { "content-type": "application/json", ...(origin ? { origin } : {}) }, body: JSON.stringify(body) });
   try {
     assert.equal((await post("/api/agents", draft(), "https://foreign.invalid")).status, 403);

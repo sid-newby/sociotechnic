@@ -58,18 +58,18 @@ For [comment and docblock cleanup](sociotechnic/docs/comment-cleanup.md), choose
 
 ## Design before implementation
 
-For a new interface or major UI change, choose **Design ceremony** in **New run**.
-Fable reads the existing product and design context, interviews you about gaps,
-and offers the bundled React/NestJS starter alongside your existing or preferred
-stack. It then presents design directions and three composition previews.
-Inspect them, request another pass when needed, and explicitly approve the
-design to implement. Each decision continues the same run automatically.
+Choose **Design conversation** in **New run** and use **Local** execution. This
+is a normal Claude Code agent with the installed `/impeccable` command. Talk back
+and forth, attach or paste images, and let Impeccable open its native preview
+windows. The conversation and its images remain in history.
 
-The final implementation plan follows your approval and is held for review.
-Ordinary feature runs can also enter the ceremony when the planner identifies
-major UI work. Small fixes retain the normal planning path. Preview formats are
-labeled; image compositions require configured image generation, while HTML
-prototypes are available without it. [Design ceremony details](sociotechnic/docs/design-ceremony.md).
+The assignment may call for a plan, samples, prototypes, a page or a critique.
+The agent prepares Markdown in `HANDOFF.md`; **Return work** sends it and its
+artifacts to the caller. For initial design work, the planner reads that result
+and decides what comes next. The chat stays available for follow-up. Ordinary
+feature planning can also request design, including another specific assignment.
+Docker design sessions are not yet supported.
+[Interactive design details](sociotechnic/docs/design-ceremony.md).
 
 ## Follow the work
 
@@ -207,7 +207,7 @@ Agents commit changes on the job branch. You decide when to test, accept, publis
 
 | Run status | Your next decision |
 | --- | --- |
-| **Your design decision** | Answer the interview, choose a direction, approve a composition or request another pass |
+| **Your design decision** | Continue the chat, answer native questions, share images or return the Markdown work product |
 | **Planned** | Read the pinned plan, then choose **Continue build**, or stop and start again with a revised request |
 | **Ready** | Inspect the evidence. Choose **Merge locally** to test in your normal checkout, or test in the job worktree, then **Accept** or **Request rework** |
 | **Needs your attention** | Read the reason, blockers and policy flags. Request rework, raise the named bound when appropriate, or test and accept after reviewing the evidence |

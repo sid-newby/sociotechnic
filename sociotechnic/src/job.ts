@@ -1,3 +1,4 @@
+import type { InteractiveDesign } from "./design-session.ts";
 import { join } from "node:path";
 import type { Execution } from "./execution.ts";
 import type { DesignCeremony } from "./design.ts";
@@ -36,8 +37,8 @@ export const STATUSES = [
 export type Status = (typeof STATUSES)[number];
 export type Step = "plan" | "research" | "design" | "build" | "review" | "approve";
 export type Bound = keyof Caps;
-export type Outcome = "ok" | "failed" | "timeout";
-export type HumanAction = "accept" | "rework" | "stop" | "override" | "merge" | "merge-remote" | "reopen" | "pr-push" | "design-answer" | "design-select" | "design-revise" | "design-approve";
+export type Outcome = "ok" | "failed" | "timeout" | "interrupted";
+export type HumanAction = "accept" | "rework" | "stop" | "override" | "merge" | "merge-remote" | "reopen" | "pr-push" | "interrupt" | "design-answer" | "design-select" | "design-revise" | "design-approve" | "design-migrate" | "design-handoff";
 
 export const BOUNDS: readonly Bound[] = ["rounds", "dispatchesPerRound", "retriesPerStep"];
 export const HUMAN_REVIEW_KEY = "review-human";
@@ -92,6 +93,7 @@ export type Dispatch = {
 };
 
 export type Job = {
+  designReleaseMigration?: { session: string; from: string; to: string; at: string };
   execution?: Execution;
   performanceHistory?: PerformanceHistoryEntry[];
   archived?: boolean;
@@ -126,6 +128,7 @@ export type Job = {
   localMerge?: LocalMerge;
   pr?: PrRecord;
   design?: DesignCeremony;
+  designSession?: InteractiveDesign;
   commentCleanup?: { inventoryDigest: string };
 };
 
@@ -490,6 +493,12 @@ export function finishDispatch(job: Job, id: string, outcome: Outcome, parsed: P
   d.usage = usage ?? null;
   d.note = note;
   job.updatedAt = now;
+  return d;
+}
+
+export function interruptDispatch(job: Job, id: string, parsed: Parsed | null, usage: unknown, note: string | null, now: string): Dispatch {
+  const d = finishDispatch(job, id, "interrupted", parsed, usage, note, now);
+  addHuman(job, "interrupt", note === null ? id : `${id}: ${note}`, now);
   return d;
 }
 

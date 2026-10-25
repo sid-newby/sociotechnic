@@ -43,6 +43,10 @@ async function operation<T>(id: string | null, fn: (job: Job | null) => T | Prom
         const current = await tx.storedJob(job.id);
         if (jobJson(current) !== jobJson(previous) || canonicalJson((await tx.records(job.id)).sort((a,b)=>a.path.localeCompare(b.path))) !== canonicalJson(snapshot.records.sort((a,b)=>a.path.localeCompare(b.path)))) throw new SociotechnicError("stale-job", "Job changed during this operation; refresh before retrying");
         await validateJobAgentVersions(tx, job, current);
+        if (job.designReleaseMigration && !current?.designReleaseMigration) {
+          const migration = job.designReleaseMigration;
+          await tx.rebindUnusedDesigner(job.id, job.agentAssignments?.["sociotechnic-designer"] ?? "sociotechnic-designer", migration.from, migration.to);
+        }
         await tx.upsertJob(job);
         await tx.linkAgentVersions(job.id, job.agentVersions ?? {}, job.agentAssignments);
         for (const dispatch of job.dispatches) if (dispatch.step === 'research' && dispatch.configuration?.version && dispatch.agent !== (job.agentAssignments?.['sociotechnic-researcher'] ?? 'sociotechnic-researcher')) {

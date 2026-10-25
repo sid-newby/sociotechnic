@@ -18,6 +18,7 @@ notes/
 
 .sociotechnic/jobs/
 .sociotechnic/staging/
+.sociotechnic/design-sessions/
 .sociotechnic/backups/
 .pnpm-store/
 .sociotechnic/sandboxes/
@@ -37,3 +38,4 @@ notes/
 .impeccable/critique/
 .impeccable/review/
 .impeccable/hook.cache.json
+.impeccable/questions/

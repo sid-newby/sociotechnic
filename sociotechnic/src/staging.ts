@@ -4,7 +4,7 @@ import { dirname, join, relative, resolve, sep } from "node:path";
 import { canonicalJson } from "./agent-version-data.ts";
 import type { DispatchOut } from "./engine.ts";
 import { verifyDriverLease } from "./driverlock.ts";
-import { finish } from "./engine.ts";
+import { finish, interrupt } from "./engine.ts";
 import { SociotechnicError } from "./errors.ts";
 import type { Outcome } from "./job.ts";
 import { mutateJob, readJob } from "./job-store.ts";
@@ -108,7 +108,7 @@ export async function ingestDispatch(id: string, stage: StagedDispatch, result: 
     if((await requireStore().driver(id))?.token!==stage.token || d.execution.owner!==stage.token)throw new SociotechnicError("ownership-lost","Stale driver completion rejected");
     if(d.execution.inputDigest!==hash(canonicalJson(stage.manifest)))throw new SociotechnicError("input-changed","Input manifest mismatch");
     for(const record of records)session().records.set(record.path,record);
-    const out=finish(job,d.id,result.outcome,result.usage,result.note);
+    const out=result.outcome==="interrupted"?interrupt(job,d.id,result.note,result.usage):finish(job,d.id,result.outcome,result.usage,result.note);
     d.execution={...d.execution,launch:"finished",completionDigest:digest};
     return out;
   });

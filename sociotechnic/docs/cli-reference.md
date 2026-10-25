@@ -157,7 +157,7 @@ human event. An interrupted request can be retried to reconcile an already
 merged PR. Local checkouts and worktrees stay as they are; synchronize the local
 base separately. Plain `merge <job>` continues to perform the local merge.
 
-In the console, the `ready` panel offers Merge locally first (behind a confirm that names your checkout), then Accept, Rework, Generate PR text (local) and Stop. The `merged-local` panel says the change is merged into your checkout to test there and offers Accept, Rework, Generate PR text and Stop. The `accepted` panel offers Push and open PR (behind a confirm that names the remote), Finish locally (or Merge locally when no local merge is recorded, behind a confirm), Generate PR text and Stop, and shows the pull request link once `pr` is recorded. The skill pushes only when you typed `--push`, never on the suggestion of an agent or a record.
+In the React console, the `ready` panel offers Merge locally first (behind a confirm that names your checkout), then Accept, Request rework and Stop run. The `merged-local` panel says the change is merged into your checkout to test there and offers Accept, Request rework and Stop run. The `accepted` panel offers Push and open PR (behind a confirm that names the branch and base), Finish locally (or Merge locally when no local merge is recorded, behind a confirm) and Stop run, then Merge PR on GitHub and the pull request link once `pr` is recorded. The React console has no local PR-text action. Generate `pr.md` without pushing with `pr <job>`, `POST /api/jobs/:id/pr` with `{ "push": false }`, or Generate PR text in `/legacy`, which offers it in the `ready`, `merged-local`, `accepted` and `merged` panels. The skill pushes only when you typed `--push`, never on the suggestion of an agent or a record.
 
 ## Run console
 
@@ -169,7 +169,7 @@ sociotechnic/bin/sociotechnic ui
 
 The server prints one JSON line `{ url, port, pid, sociotechnicHome }`, opens the URL in your browser and runs in the foreground until SIGINT or SIGTERM. Run `task build` first for the React console, or `task ui` to build and ensure a background server. Before a build exists, the server uses the original HTML console.
 
-The React console shows current-round checks, review exceptions, gate evidence and the next human decision together. Activity exposes dispatch history, live logs, elapsed time and deadlines. Analysis exposes every round, review findings, conformance, timing and reported usage. Agents shows role profiles and their history in the selected run. Record text wraps by default; Raw view preserves the original line layout. The CLI and `/legacy` retain restore and single-step controls.
+The React console shows current-round checks, review exceptions, gate evidence and the next human decision together. Activity exposes dispatch history, live logs, elapsed time and deadlines. Analysis exposes every round, review findings, conformance, timing and reported usage. Agents shows role profiles and their history in the selected run. Record text wraps by default; Raw view preserves the original line layout. Both consoles offer Recover worktree and continue when a run's worktree is missing; it calls `POST /api/jobs/:id/resume`, which restores the worktree and starts the driver. Restoring without continuing is the CLI `restore <job>`. Single-step is in `/legacy` (Step) and the CLI (`run <job> --step`, or `step <job>` without a driver).
 
 For frontend development, `task dev` first stops TCP listeners on ports 5173 and 4748, allowing five seconds for graceful shutdown before force-stopping any remaining listeners. It then starts a separate API at port 4748 and Vite at `http://127.0.0.1:5173`, opening the page when ready. Vite refuses to switch ports. It proxies `/api`, `/events` and `/legacy` to that API. Ctrl-C stops both processes. The production server on 4747 can keep running. Cleanup requires `lsof`.
 
@@ -211,7 +211,7 @@ flowchart LR
 
 | Command | Does | Output |
 | --- | --- | --- |
-| `ui --ensure [--port <n>] [--open] [--no-open]` | Makes the console available without blocking. When `/api/health` on the port already answers it returns at once. Otherwise it spawns the server detached (`node <cli> ui --port <n> --no-open`) and waits up to 5 s for health. It opens the URL only when it just started the server or when `--open` is given, never with `--no-open`, so a run never spawns a browser tab per command. `task ui` runs it | `{ url, port, pid, sociotechnicHome, running, started, opened }` |
+| `ui --ensure [--port <n>] [--open] [--no-open]` | Makes the console available without blocking. When `/api/health` on the port already answers it returns at once. Otherwise it spawns the server detached (`node <cli> ui --port <n> --no-open`) and waits up to 15 s for health after catalog initialization. It opens the URL only when it just started the server or when `--open` is given, never with `--no-open`, so a run never spawns a browser tab per command. `task ui` runs it | `{ url, port, pid, sociotechnicHome, running, started, opened }` |
 | `ui --stop [--port <n>]` | Sends SIGTERM to the pid that `/api/health` reports (or the pid file) and waits up to 5 s. `task ui:stop` runs it | `{ stopped, pid }` |
 
 Two files in `.sociotechnic/` belong to the daemon.
@@ -243,11 +243,28 @@ scroll independently from the detail pane, with the rail filters fixed above.
 
 Technical records open in a dialog with wrapped text and a raw-format toggle.
 Missing usage remains unreported, and timing summaries cover only the selected
-run. Restore and single-step controls remain in the legacy console or CLI.
+run. When a worktree is missing, Recover worktree and continue restores it and
+starts the driver.
+
+The React console does not yet offer these engine abilities; use the CLI, the
+HTTP API or `/legacy` where noted:
+
+| Ability | Reach it through |
+| --- | --- |
+| Single step | `run <job> --step`, `POST /api/jobs/:id/run` with `mode: "step"`, Step in `/legacy` |
+| Hold after a status other than `planned` | `run <job> --hold <status,...>`, `POST /api/jobs/:id/run` with `hold` |
+| Raise a bound before it trips | `override <job> <bound> <note>` or `POST /api/jobs/:id/override` in any non-terminal status |
+| Restore a worktree without continuing | `restore <job>` |
+| Reopen and discard uncommitted changes | `reopen <job> --discard`, `POST /api/jobs/:id/reopen` with `discard: true`, `/legacy` |
+| Generate PR text without pushing | `pr <job>`, `POST /api/jobs/:id/pr`, `/legacy` |
+| Download a record | `GET /api/jobs/:id/records/<path>?download=1` |
+| Interrupt one dispatch | `interrupt <job> <dispatch> [note]`, `POST /api/jobs/:id/dispatches/:dispatchId/interrupt` |
+| Local concurrency limit | `GET` and `POST /api/local/capacity` |
+| Streamed driver log | SSE `log` events and `GET /api/jobs/:id/log` |
 
 ### Legacy console
 
-`/legacy` retains the original HTML console, including restore, single-step controls, a database status dot and a help drawer showing [the driver contract](../AGENTS.md). Its header summarizes projects, jobs and running drivers. Jobs with pending session dispatches also count as running.
+`/legacy` retains the original HTML console, including Recover worktree and continue, single-step controls, Generate PR text, Reopen and discard changes, a database status dot and a help drawer showing [the driver contract](../AGENTS.md). Its header summarizes projects, jobs and running drivers. Jobs with pending session dispatches also count as running.
 
 ### Starting a run
 
@@ -367,6 +384,78 @@ For older UI owners without a URL, discovery checks only ports 4747 and 4748,
 requiring both the health PID and active-driver start time to match. Other hosts,
 CLI owners and unverified locations never receive a guessed link.
 
+### Interrupting one dispatch
+
+Stop ends every agent in a run. To end one agent and keep the run in place,
+interrupt that dispatch:
+
+```bash
+sociotechnic/bin/sociotechnic interrupt 20261025-add-login d-004 'Ask about src/ only'
+```
+
+```mermaid
+sequenceDiagram
+  participant H as Human
+  participant S as Console
+  participant D as Driver
+  participant E as Engine
+  H->>S: POST /dispatches/d-004/interrupt { note }
+  S->>D: abort d-004 only
+  D->>E: interrupt (outcome interrupted, human entry)
+  S-->>H: { outcome: "interrupted", terminated: true }
+  Note over D: d-005 keeps running
+  D->>E: step after the step settles
+  E-->>D: retry d-004's step as attempt + 1
+```
+
+- The dispatch is recorded `outcome: "interrupted"` with your trimmed note, and the job history gains `{ action: "interrupt", note: "d-004: Ask about src/ only" }`.
+- Other dispatches of the same step keep running. When they finish, the next `step` retries the interrupted step as `attempt + 1` with `interrupted by human: <note>` as the retry reason in the new brief, so the note steers the retry.
+- That retry counts against `retriesPerStep` and `dispatchesPerRound`, as a dispatch a stop aborted does. Past the retry bound the job parks at `retry-bound:<step>`. Run `override <job> retriesPerStep <note>` first, in any non-terminal status, to keep a further attempt.
+- Pause first if the run should stop before that retry instead of continuing.
+- A dispatch queued for a local slot is recorded without ever launching (`terminated: false`).
+- Interrupt refuses a finished or unknown dispatch (409 or 404), another console's run (409 `driver-active`; use its console), and Docker Sandbox runs (409 `sandbox-interrupt`), whose dispatches share one sandbox; stop those instead. A design conversation keeps its own interrupt route.
+
+### Local concurrency limit
+
+By default every dispatch of a step starts at once. To cap how many local
+dispatches one console runs at a time across its jobs:
+
+```bash
+curl -s http://127.0.0.1:4747/api/local/capacity
+# {"limit":null,"configurable":true,"running":0,"queued":0}
+curl -s -X POST -H 'content-type: application/json' \
+  -d '{"limit":2,"expectedLimit":null}' http://127.0.0.1:4747/api/local/capacity
+# {"limit":2}
+```
+
+The limit is stored in `.sociotechnic/local-settings.json`; send `limit: null` to
+remove it. `expectedLimit` must match the current value (409
+`stale-local-capacity` otherwise). `SOCIOTECHNIC_LOCAL_MAX_DISPATCHES` fixes the
+limit and makes the route refuse changes (409 `local-capacity-managed`). Extra
+dispatches wait in start order, appear in the driver's `queued` list, and see a
+changed limit within a second. Waiting counts against each dispatch's deadline:
+one whose deadline passes in the queue is recorded `timeout` without launching.
+Docker Sandbox runs keep their per-run parallel-agent slots instead.
+
+### Driver log streaming
+
+Every driver line is sent on `/events` as it is written:
+
+```text
+event: log
+data: {"jobId":"20261025-add-login","dispatchId":"d-004","seq":42,"at":"2026-10-25T15:04:05.000Z","level":"info","line":"d-004 sociotechnic-researcher -> Read src/app.ts"}
+```
+
+`seq` increases by one per line for each job in this console process.
+`dispatchId` is null for driver lines and the session id for design
+conversation lines. The console keeps each job's newest lines within 1 MiB
+(each line at most 8 KiB). Catch up with
+`GET /api/jobs/:id/log?after=<seq>&limit=<n>`, which returns the entries after
+`after` plus `first`, `last` and `more`; when `after + 1` is below `first`, the
+buffer has dropped lines you did not see. The driver state still carries the
+newest 200 lines, and the existing `jobs` and `driver` events are unchanged. A
+restarted console starts a new buffer at `seq` 1.
+
 ## Global command
 
 `/sociotechnic` can work in every Claude Code session on the machine, whatever the directory, not only in a session opened here. The global skill opens the run console and hands runs to the console's shared provider driver. Spec: [CONTRACTS.md section 15](../CONTRACTS.md).
@@ -470,7 +559,8 @@ Engine commands run as `sociotechnic/bin/sociotechnic <command> [args]`. Command
 | `inventory <repo> --scope <path> [--base <ref>]` | Read tracked source at a commit; locate supported comments, report exclusions/manual files and create bounded packets | Git-bound inventory JSON |
 | `verify-comments <repo> --base <sha> [--head <ref>]` | Compare supported files' ASTs, literals and protected directives | `{ blockers, flags }` |
 | `new <repo> [goal] --workflow comments --scope <path> [--base <branch>]` | Generate and pin a COMMENTS plan without a planner; returns held at planned | `NewResult & { status: "planned" }` |
-| `finish <job> <dispatch-id> [--outcome ok\|failed\|timeout] [--usage <json>] [--note <text>]` | Marks a dispatch finished and parses its record. The driver calls it. Do not call it twice for one dispatch. | `{ dispatch, outcome, parsed }` |
+| `finish <job> <dispatch-id> [--outcome ok\|failed\|timeout] [--usage <json>] [--note <text>]` | Marks a dispatch finished and parses its record. The driver calls it. Do not call it twice for one dispatch. It refuses `interrupted`, which only `interrupt` records | `{ dispatch, outcome, parsed }` |
+| `interrupt <job> <dispatch-id> [note...] [--port <n>]` | Ends one unfinished dispatch as `interrupted` with your note. When a console driver owns the job, the CLI sends the request to that console (its recorded URL, or `--port`), which aborts only that agent while the rest of the step continues. With no driver, it records the dispatch directly. See [Interrupting one dispatch](#interrupting-one-dispatch) | `{ job, dispatch, outcome: "interrupted", note, terminated }` |
 | `verdict <file> --role <role>` | Parses one record file with a role's contract. Debug aid. | the parsed record |
 | `agents` | Validates bundled initialization seeds against `roles.ts` | `{ ok, problems: [] }` |
 | `reopen <job> [--discard]` | From `stopped` only: back to `stoppedFrom`. See [Reopening a stopped job](engine-reference.md#reopening-a-stopped-job) | `{ job, status, worktree: "present" \| "restored", changes: "kept" \| "discarded" \| "none", files: [...] }` |
@@ -517,7 +607,7 @@ The driver never writes code, plans, reviews or decisions. It never resumes an a
 
 ### HTTP API
 
-The console's server exposes these routes on its loopback port. API responses are JSON; `/` and `/legacy` serve HTML, `/assets/:name` serves static files, and `/events` streams SSE. Errors are `{ "error", "code" }` with 400 (bad input), 404 (unknown job or record), 409 (illegal transition, or a driver already running) 403 (origin refused), and 503 (database disabled, unavailable or migration required).
+The console's server exposes these routes on its loopback port. API responses are JSON; `/` and `/legacy` serve HTML, `/assets/:name` serves static files, record downloads return the stored bytes, and `/events` streams SSE. Errors are `{ "error", "code" }` with 400 (bad input), 404 (unknown job or record), 409 (illegal transition, or a driver already running) 403 (origin refused), and 503 (database disabled, unavailable or migration required).
 
 | Method and path | Body | Returns |
 | --- | --- | --- |
@@ -528,11 +618,16 @@ The console's server exposes these routes on its loopback port. API responses ar
 | `GET /api/meta` | | `{ sociotechnicHome, roles, agents: { ok, problems }, agentsMd }` |
 | `GET /api/sandboxes` | | This installation’s retained sandbox names, owning run/status, initialization state, slot limit and whether capacity is configurable |
 | `POST /api/sandboxes/capacity` | `{ limit: 1..32, expectedLimit }` | Persist the installation slot limit under the admission lock; stale values return 409; explicit environment settings remain authoritative |
+| `GET /api/local/capacity` | | `{ limit, configurable, running, queued }`: the local dispatch limit (`null` is unlimited, the default), whether it can be changed here, and this console's running and queued local dispatches |
+| `POST /api/local/capacity` | `{ limit: 1..64 \| null, expectedLimit }` | `{ limit }`; persists the limit under the admission lock. 409 `stale-local-capacity` for a stale `expectedLimit`, 409 `local-capacity-managed` while `SOCIOTECHNIC_LOCAL_MAX_DISPATCHES` is set, 400 for an invalid limit |
 | `GET /api/jobs?project=<name\|path>&status=<s>` | | `{ source: "db", jobs: [ StatusLine & { feature, repo, branch, tier, updatedAt, driver, archived, worktreePresent } ] }`; both filters optional |
 | `GET /api/projects` | | `{ projects: [...] }`, same as the `projects` command |
 | `GET /api/db` | | the `db status` object |
 | `GET /api/jobs/:id` | | `{ job, plan, records: [ { path, bytes, mtime } ], pr: boolean, worktreePresent: boolean, driver }` |
 | `GET /api/jobs/:id/records/<path>` | | `{ path, text }`; the logical path must belong to the database job |
+| `GET /api/jobs/:id/records/<path>?download=1` | | The record's exact bytes, binary records included, as an attachment named after the record path with `/` replaced by `-`. `Content-Type` follows the extension (`.md`, `.json`, `.txt`, `.patch`, `.diff`, `.png`, `.jpg`, `.jpeg`, `.webp`; otherwise `application/octet-stream`). Same path checks and errors as the JSON form |
+| `GET /api/jobs/:id/log?after=<seq>&limit=<n>` | | `{ job, entries: [ { seq, at, level, dispatchId, line } ], first, last, more }`; `after` defaults to 0, `limit` to 200 (1 to 1000); 400 for other values |
+| `POST /api/jobs/:id/dispatches/:dispatchId/interrupt` | `{ note?: string }` | `{ job, dispatch, outcome: "interrupted", note, terminated }` once recorded. 409 `driver-active` (another owner), `dispatch-starting` (this driver has not queued it yet; retry), `illegal-transition` (already finished) or `sandbox-interrupt`; 404 unknown dispatch; 400 malformed id or note |
 | `POST /api/jobs` | `{ repo, feature?, base?, workflow?: "comments" \| "design", scope?: string[], execution?: { kind: "local" } \| { kind: "docker-sandbox", cpus?: number, memoryGiB?: number, parallelAgents?: number } }`; feature required for general runs, explicit scope required for comments | `NewResult`; explicit cleanup adds `status: "planned"` and dispatches no agent; Docker defaults to 4 CPUs, 8 GiB and 2 top-level agents |
 | `POST /api/jobs/:id/archive` | `{ archived: boolean }` | `{ id, archived }`; reversible database visibility for known runs, emits `jobs` |
 | `POST /api/jobs/:id/step` | `{ hold?: Status[] }` | step result |
@@ -549,7 +644,7 @@ The console's server exposes these routes on its loopback port. API responses ar
 | `POST /api/jobs/:id/resume` | `{ hold?: Status[] }` | recovers a missing worktree, then starts the driver in `run` mode; `{ restored: { worktree }, driver: DriverState }`; 409 when a driver is active |
 | `POST /api/jobs/:id/pause` | | `DriverState` (stops after in-flight dispatches) |
 | `GET /api/jobs/:id/driver` | | `DriverState` |
-| `GET /events` | | SSE: `jobs` `{ id }` on committed database job/record changes, `driver` `{ id, event, ... }`, `ping` every 15 s |
+| `GET /events` | | SSE: `jobs` `{ id }` on committed database job/record changes, `driver` `{ id, event, ... }`, `log` `{ jobId, dispatchId, seq, at, level, line }` per driver log line, `ping` every 15 s |
 
 Refusals:
 
@@ -558,29 +653,26 @@ Refusals:
 - A mutating request without `Content-Type: application/json` gets 400.
 - `finish` is not exposed.
 
-## Design ceremony commands and API
+## Interactive design commands and API
 
-Use `new <repo> <feature> --workflow design` to start directly with Fable's
-Impeccable ceremony. General feature planning can request `needs-design`
-automatically for major UI work. Comment cleanup is unchanged.
+`new <repo> <feature> --workflow design` creates a Local interactive design
+session. Ordinary planning can request `needs-design`. Continue through the
+console conversation; the native Impeccable skill owns its questions and preview
+page. Docker design is refused before designer inference.
 
-`design-respond <job> --digest <current-digest> --response <json-file>` records a
-human answer, direction selection, composition approval or revision. Then use
-`run <job> --hold planned` to continue the same job. The global/project skills
-perform that continuation; they must not invent a response. `design-input` is a
-human gate, never a signal to loop `run` until it passes.
+The conversation routes under `/api/jobs/:id/design-session/` are `messages`,
+`answer`, `interrupt`, `resume`, `handoff`, `migrate` and `approve` (kept for
+compatibility; new clients use `handoff`). Messages support native
+image blocks and IDs that deduplicate retries. HANDOFF.md and its artifact
+snapshot return to the caller. Initial planning retains the normal `planned`
+hold; subsequent chat can continue without running builders. Artifacts are available
+through `/api/jobs/:id/design-artifacts/<encoded-record-path>`, and conversation
+images through `/api/jobs/:id/design-images/<encoded-record-path>`.
 
-`POST /api/jobs` accepts `workflow: "design"`. The existing shared console
-presents the interview and showcase. `POST /api/jobs/:id/design-response` takes
-`{ digest, response }`, records the response under the normal mutation lock and
-continues the run with `hold: ["planned"]`. A stale digest or running driver is
-409. `GET /api/jobs/:id/design-assets/<path>?digest=<digest>` serves only the
-current validated showcase with a restrictive sandbox policy. No arbitrary
-filesystem asset endpoint is added.
-
-[Design ceremony](design-ceremony.md) defines all response shapes, tool setup,
-preview formats and limits. Human design approval is separate from accepting a
-build, pushing a PR and merging.
+The old `design-respond` command and `design-response` HTTP route are retired
+and return a visible error. Historical packet records and approved designs remain
+readable. [Interactive design](design-ceremony.md) defines request bodies,
+installation, session persistence, preview lifecycle and verification limits.
 
 ## Agent library API
 

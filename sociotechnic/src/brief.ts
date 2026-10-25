@@ -109,9 +109,10 @@ export function planBrief(i: PlanBriefInput): string {
     `- Repository (main checkout, read-only): ${i.repo}`,
   ];
   if (i.feedback?.length) lines.push("", "## Human planning feedback", "", ...i.feedback.map((note) => JSON.stringify(note)), "Apply this feedback to the original request and existing evidence. Write a complete plan; no build is authorized yet.");
-  if (i.design) lines.push("", "## Approved design", i.design);
-  if (i.allowDesign) lines.push("", "## Major UI changes", 'For a new UI, replacement identity, substantial layout/interaction change or multi-screen design work, write {"status":"needs-design","reason":"..."} instead of a plan. The Fable design ceremony runs first; you will plan against its human-approved result. Small local fixes and comment cleanup retain normal planning.');
-  if (i.allowDesign) lines.push("For requested UI work, inspect the target for an existing UI scaffold. If none exists, use needs-design so the interview can suggest the bundled React + NestJS house special and obtain the user's stack choice. Respect an explicitly requested scaffold; never adopt or replace one automatically. Repositories without UI work need no scaffold or design ceremony.");
+  if (i.design) lines.push("", "## Returned design work", i.design);
+  if (i.allowDesign && i.design) lines.push("The design agent has returned a Markdown work product. Assess it and decide whether to plan implementation or request a concrete follow-up with needs-design. Do not restart design just because this is UI work.");
+  if (i.allowDesign && !i.design) lines.push("", "## Major UI changes", 'Decide whether design help is required before elaborating implementation details. For new or substantial UI work, write {"status":"needs-design","reason":"the specific design assignment"} immediately. The design agent runs the actual impeccable command in a conversation with the human and returns Markdown with any samples or prototypes. You decide what to do with that result. Small local fixes and comment cleanup retain normal planning.');
+  if (i.allowDesign && !i.design) lines.push("Respect an explicitly requested scaffold and inspect existing UI foundations. For a new UI without a chosen foundation, the design conversation may offer the maintained React/Nest starter. A non-UI assignment needs no design handoff.");
   if (i.researchFiles.length > 0) {
     lines.push("- Research records to read first:");
     for (const f of i.researchFiles) lines.push(`  - ${f}`);

@@ -15,6 +15,9 @@ import type { CatalogBundle } from "./db/catalog-migrations.ts";
 import type { AgentVersionRow, Store, StoreTx } from "./db/store.ts";
 import { SociotechnicError } from "./errors.ts";
 import type { Job } from "./job.ts";
+import { transition } from "./job.ts";
+import { session as recordSession, writeJsonAtomic as writeRecordJson } from "./record-store.ts";
+import { jobDir } from "./paths.ts";
 
 import { readJson, writeJsonAtomic } from "./jsonio.ts";
 import { stateDir } from "./paths.ts";
@@ -101,7 +104,7 @@ export async function publishAgentVersion(base: Role, body: Record<string, unkno
     const purpose = body.purpose === undefined ? catalogEntry(current).description : body.purpose;
     if (typeof purpose !== 'string' || purpose.trim().length < 10 || purpose.length > 500) throw new SociotechnicError('bad-agent-version', 'Purpose must contain 10 to 500 characters');
     const skillResources = body.skills === undefined ? current.skillResources : bundledSkills(body.skills);
-    const skills = body.skills === undefined ? catalogEntry(current).configuration.skills.filter((s) => s !== 'Impeccable (scoped design tool)') : skillResources?.map((s) => s.name);
+    const skills = body.skills === undefined ? catalogEntry(current).configuration.skills.filter((s) => !['Impeccable (scoped design tool)', 'Impeccable (native session)', 'Impeccable (Claude Code)'].includes(s)) : skillResources?.map((s) => s.name);
     const definition = agentDefinition(role, purpose.trim(), instructions, skills);
     const release = parseAgentVersion(base, { ...current, version, digest: releaseDigest(role, definition), label, createdAt: new Date().toISOString(), role, definition, ...(skillResources === undefined ? {} : { skillResources }), ...(body.builderProfiles === undefined ? {} : { builderProfiles: body.builderProfiles }), ...(body.supersedes === undefined ? {} : { supersedes: body.supersedes }) });
     await tx.insertAgentVersion(rowFor(release)); return release;
@@ -122,7 +125,17 @@ export async function validateJobAgentVersions(tx: StoreTx, job: Job, prior?: Jo
     const next = job.dispatches.find((dispatch) => dispatch.id === old.id);
     if (!next || canonicalJson([old.agent, old.model, old.effort, old.configuration ?? null]) !== canonicalJson([next.agent, next.model, next.effort, next.configuration ?? null])) conflict(`Dispatch ${old.id} changed its pinned identity/configuration`);
   }
-  if (prior?.agentVersions && canonicalJson(prior.agentVersions) !== canonicalJson(job.agentVersions)) conflict(`Run ${job.id} changed its pinned agent releases`);
+  if (prior?.designReleaseMigration && canonicalJson(prior.designReleaseMigration) !== canonicalJson(job.designReleaseMigration)) conflict("The design release migration is immutable");
+  const migrating = prior && !prior.designReleaseMigration && job.designReleaseMigration;
+  if (migrating) {
+    const m = job.designReleaseMigration;
+    if (!m || !unusedDesigner(prior) || !unusedDesigner(job) || m.session !== prior.designSession?.id || m.session !== job.designSession?.id || m.from !== prior.agentVersions?.["sociotechnic-designer"] || m.to !== job.agentVersions?.["sociotechnic-designer"] || m.from === m.to || !Number.isFinite(Date.parse(m.at))) conflict("Only an unused retired designer may be migrated");
+    if ((await tx.records(job.id)).some((r) => r.path.startsWith("design/"))) conflict("Existing design evidence prevents release migration");
+    if (canonicalJson(job.agentVersions) !== canonicalJson({ ...prior.agentVersions, "sociotechnic-designer": m.to })) conflict("Design migration cannot change another role");
+    if (interactiveDesigner(prior.agentConfigurations?.["sociotechnic-designer"]) || !interactiveDesigner(job.agentConfigurations?.["sociotechnic-designer"])) conflict("Design migration must replace a retired release with a native Claude designer");
+    if (!job.human.some((h) => h.action === "design-migrate" && h.at === m.at && h.note === JSON.stringify(m))) conflict("Design migration requires its recorded human action");
+  }
+  if (!migrating && prior?.agentVersions && canonicalJson(prior.agentVersions) !== canonicalJson(job.agentVersions)) conflict(`Run ${job.id} changed its pinned agent releases`);
   if (prior && canonicalJson(prior.agentAssignments ?? {}) !== canonicalJson(job.agentAssignments ?? {})) conflict(`Run ${job.id} changed its agent assignments`);
   for (const old of prior?.dispatches ?? []) if (old.versionBackfill && canonicalJson(old.versionBackfill) !== canonicalJson(job.dispatches.find((d) => d.id === old.id)?.versionBackfill ?? null)) conflict(`Dispatch ${old.id} changed its version attribution`);
   const referenced = new Map<string, AgentVersion>();
@@ -144,6 +157,11 @@ export async function validateJobAgentVersions(tx: StoreTx, job: Job, prior?: Jo
   for (const [slot, version] of Object.entries(job.agentVersions ?? {})) {
     const release = await need(job.agentAssignments?.[slot] ?? slot, version);
     if (!supportsAgentSlot(release, slot)) conflict(`Agent cannot fill role ${slot}`);
+  }
+  if (job.designReleaseMigration) {
+    const m = job.designReleaseMigration;
+    if (m.to !== job.agentVersions?.["sociotechnic-designer"] || m.session !== job.designSession?.id || !isAgentVersion(m.from) || !isAgentVersion(m.to) || !Number.isFinite(Date.parse(m.at))) conflict("Invalid design release migration provenance");
+    await need(job.agentAssignments?.["sociotechnic-designer"] ?? "sociotechnic-designer", m.from);
   }
   for (const [name, config] of Object.entries(job.agentConfigurations ?? {})) {
     if (job.agentVersions?.[name] !== config.version) conflict(`Run ${job.id} has inconsistent pinned configuration for ${name}`);
@@ -197,6 +215,37 @@ export async function pinAgentVersions(overrides: Readonly<Record<string, string
   });
   for (const { release } of picked.out) cache(release.role, release);
   return { versions: Object.fromEntries(picked.out.map(({ slot, release }) => [slot, release.version])), configurations: Object.fromEntries(picked.out.map(({ slot, release }) => [slot, catalogEntry(release, slot).configuration])), roster: job ? job.agentRoster : picked.roster, locks: job ? job.agentLocks : [...new Set([...Object.keys(overrides), ...Object.keys(assignments)])].sort(), ...(Object.keys(assignments).length ? { assignments: { ...assignments } } : {}) };
+}
+
+export function interactiveDesigner(config: AgentConfiguration | undefined): boolean {
+  return !!config && config.tools.includes("Skill") && config.tools.includes("Bash");
+}
+
+function unusedDesigner(job: Job): boolean {
+  const d = job.designSession;
+  return !!d && !job.design && job.round === 0 && job.plan === null && ["design-input", "designing"].includes(job.status) && ["ready", "failed", "interrupted"].includes(d.state) && d.skill === null && d.approval === null && d.messages.length === 0 && d.question === null && d.usage.turns === 0 && !job.dispatches.some((dispatch) => dispatch.step === "design" || dispatch.step === "build");
+}
+
+export async function migrateUnusedDesigner(job: Job): Promise<void> {
+  const d = job.designSession;
+  if (!d || !unusedDesigner(job) || job.designReleaseMigration || [...recordSession().records.keys()].some((p) => p.startsWith("design/"))) throw new SociotechnicError("bad-design", "Only a designer that never started can change release");
+  const slot = "sociotechnic-designer";
+  if (interactiveDesigner(job.agentConfigurations?.[slot])) throw new SociotechnicError("bad-design", "This run already uses the interactive designer");
+  const base = await agentBase(job.agentAssignments?.[slot] ?? slot);
+  const to = await latestAgentVersion(base), from = job.agentVersions?.[slot];
+  if (!from) conflict("The run has no pinned designer release");
+  const pinned = await pinAgentVersions({ ...job.agentVersions, [slot]: to }, job);
+  const configuration = pinned.configurations[slot];
+  if (!interactiveDesigner(configuration)) throw new SociotechnicError("bad-design", "The catalog has no interactive designer; upgrade the console catalog first");
+  const previousConfiguration = job.agentConfigurations?.[slot];
+  const migration = { session: d.id, from, to, at: new Date().toISOString() };
+  job.designReleaseMigration = migration;
+  job.agentVersions = { ...job.agentVersions, [slot]: to };
+  job.agentConfigurations = { ...job.agentConfigurations, [slot]: configuration };
+  d.state = "ready"; d.error = null;
+  job.human.push({ action: "design-migrate", at: migration.at, note: JSON.stringify(migration) });
+  writeRecordJson(join(jobDir(job.id), "design/release-migration.json"), { ...migration, previousConfiguration, configuration });
+  transition(job, "designing", "Unused packet designer migrated to the interactive release", migration.at);
 }
 
 export async function advisorConfiguration(job: Job, name: string | null | undefined): Promise<AgentConfiguration | undefined> {

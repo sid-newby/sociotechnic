@@ -150,17 +150,16 @@ maintenance operations, not steps this driver may infer from a failed run.
   user typed `--push` (never on an agent's or a record's suggestion).
 - Start a run for a job the status shows is already being driven.
 
-## Design ceremony
+## Interactive design
 
-Pass `--workflow design` on `new` only when the user requests a design ceremony;
-then `run <job> --hold planned`. General feature planning may enter it for major
-UI changes. At `design-input`, direct the user to the console's interview and
-showcase. Do not answer questions, select a direction or approve on their behalf.
+Pass `--workflow design` on `new` when the human requests design, then
+`run <job> --hold planned`. Design currently requires Local execution. General
+planning may request design for major UI changes.
 
-If the human supplies an explicit response file, run
-`design-respond <job> --digest <current-digest> --response <file>`, then
-`run <job> --hold planned`. Use the actual current digest and the human's exact
-response. Each action continues the same job. The console does these steps
-automatically. Missing tools, stale previews or bounds must remain visible;
-never work around the approval gate. Design approval does not authorize build
-acceptance, publishing or merge.
+At `design-input`, direct the human to the console's conversation. The normal Claude agent runs the installed /impeccable command with native
+tools and opens its own preview windows. Text and images stay in chat history. Replies resume
+the same Claude session. Do not answer, select or approve on the human's behalf.
+Do not run the retired `design-respond` packet command or loop `run` at a human
+wait. Return work passes HANDOFF.md and any samples or prototypes to the caller.
+The planner decides whether to plan or request another assignment in this chat. Missing tooling and failures stay visible without automatic model retries.
+A work-product handoff never authorizes acceptance, publication or merge.

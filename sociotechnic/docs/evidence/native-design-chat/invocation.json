@@ -1,0 +1,23 @@
+{
+  "date": "2026-10-25",
+  "liveProvider": true,
+  "job": "20261025-stand-up-the-house-vite-5",
+  "session": "f1181a4c-8736-4a5d-9e7b-9bfc25f92eff",
+  "designerVersion": "1.2.0",
+  "nativeCommand": "/impeccable",
+  "commandExpansionRecorded": true,
+  "nativeContextCommand": "cd /Users/sidnewby/Prog/sociotechnic/.sociotechnic/worktrees/20261025-stand-up-the-house-vite-5 && /Users/sidnewby/.claude/skills/impeccable/scripts/impeccable context 2>&1 | head -200",
+  "agentSource": {
+    "path": "/Users/sidnewby/.claude/agents/sociotechnic-designer.md",
+    "digest": "1184b9860068119cd50d0d568a6eca8ec3e182924938a5ca6da550de2ebf4c5c"
+  },
+  "sourceMatchesCurrentFile": true,
+  "state": "waiting",
+  "questionHeaders": [
+    "Domain",
+    "Foundation",
+    "Templates"
+  ],
+  "customImpeccableMcp": false,
+  "nativePreviewObserved": false
+}

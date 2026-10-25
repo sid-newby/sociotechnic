@@ -1,5 +1,8 @@
 # Design ceremony verification
 
+This is historical evidence for the retired packet workflow. Current session
+integration evidence is recorded in [Interactive design verification](interactive-design.md).
+
 Verified on 2026-10-24 in isolated jobs and disposable target repositories.
 The tests exercised real engine state, Git worktrees, HTTP handlers, the shared
 driver and browser UI. Automated fixture previews are labeled as such; they are

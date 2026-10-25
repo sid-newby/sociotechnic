@@ -9,6 +9,7 @@ import { agentRoster, pinAgentVersions } from "./agent-versions.ts";
 import * as engine from "./engine.ts";
 import { mergeMethod, mergeRemote } from "./remote-merge.ts";
 import { driverSummary, postConsole } from "./console-client.ts";
+import { owningConsoleUrl } from "./driver-location.ts";
 import { SociotechnicError, IllegalTransition } from "./errors.ts";
 import { parseExecution } from "./execution.ts";
 import { exportCatalogBundle, checkCatalogBundles } from "./db/catalog-migrations.ts";
@@ -167,6 +168,7 @@ type OpenMode = "never" | "auto" | "always";
 
 const CLI_PATH = fileURLToPath(import.meta.url);
 const UI_WAIT_MS = 5_000;
+const UI_START_WAIT_MS = 15_000;
 const HEALTH_POLL_MS = 250;
 
 const uiPidFile = (): string => join(stateDir(), "ui.pid");
@@ -250,7 +252,7 @@ async function ensureUi(requested: number, open: OpenMode): Promise<EnsureResult
   } finally {
     closeSync(log);
   }
-  const deadline = Date.now() + UI_WAIT_MS;
+  const deadline = Date.now() + UI_START_WAIT_MS;
   while (Date.now() < deadline && !exited) {
     const h = await health(port);
     if (h !== null) {
@@ -260,7 +262,7 @@ async function ensureUi(requested: number, open: OpenMode): Promise<EnsureResult
     }
     await sleep(HEALTH_POLL_MS);
   }
-  throw new SociotechnicError("ui-start", `the console did not answer on port ${port} within 5 s; see ${join(stateDir(), "ui.log")}`);
+  throw new SociotechnicError("ui-start", `the console did not answer on port ${port} within ${UI_START_WAIT_MS / 1000} s; see ${join(stateDir(), "ui.log")}`);
 }
 
 async function stopUi(requested: number): Promise<{ stopped: boolean; pid: number | null }> {
@@ -323,6 +325,24 @@ async function runOnConsole(args: Args): Promise<unknown> {
   };
 }
 
+async function interruptDispatch(args: Args): Promise<unknown> {
+  const id = assertJobId(need(args, 0, "<job>"));
+  const dispatch = need(args, 1, "<dispatch-id>");
+  const note = rest(args, 2);
+  const owner = await driverState(id);
+  if (owner) {
+    const recorded = owner.owner === "ui" ? owningConsoleUrl(owner.consoleUrl, id) : null;
+    const port = args.flags.port !== undefined ? parsePort(args.flags.port) : recorded === null ? null : Number(new URL(recorded).port);
+    if (port === null) throw new SociotechnicError("driver-active", `Job ${id} is owned by a driver without a known console; interrupt it there or pass --port`);
+    return postConsole(port, `/api/jobs/${encodeURIComponent(id)}/dispatches/${encodeURIComponent(dispatch)}/interrupt`, { note });
+  }
+  const out = await mutate(id, async (job) => {
+    await assertNoForeignDriver(id, process.pid);
+    return engine.interrupt(job, dispatch, note);
+  });
+  return { job: out.job, dispatch: out.dispatch, outcome: out.outcome, note: out.note, terminated: false };
+}
+
 async function pauseOnConsole(args: Args): Promise<unknown> {
   const id = assertJobId(need(args, 0, "<job>"));
   const port = parsePort(args.flags.port);
@@ -371,6 +391,8 @@ export async function run(argv: readonly string[]): Promise<unknown> {
       return runOnConsole(args);
     case "pause":
       return pauseOnConsole(args);
+    case "interrupt":
+      return interruptDispatch(args);
     case "restore":
       return restoreJob(assertJobId(need(args, 0, "<job>")), args.flags.force === "true");
     case "jobs":
@@ -405,10 +427,8 @@ export async function run(argv: readonly string[]): Promise<unknown> {
       if (!isBound(bound)) usageError("bound must be rounds, dispatchesPerRound or retriesPerStep");
       return mutate(need(args, 0, "<job>"), (job) => engine.override(job, bound, rest(args, 2)));
     }
-    case "design-respond": {
-      const response: unknown = JSON.parse(readFileSync(resolve(needFlag(args, "response")), "utf8"));
-      return mutate(need(args, 0, "<job>"), (job) => engine.respondDesign(job, needFlag(args, "digest"), response));
-    }
+    case "design-respond":
+      throw new SociotechnicError("bad-design", "The packet response command is retired. Continue the interactive design conversation in the console.");
     case "rework":
       return mutate(need(args, 0, "<job>"), (job) => engine.rework(job, rest(args, 1)));
     case "accept":
@@ -454,7 +474,7 @@ export async function run(argv: readonly string[]): Promise<unknown> {
       return parseRecord(text, role.record);
     }
     case undefined:
-      return usageError("usage: sociotechnic <init|new|inventory|verify-comments|step|finish|status|override|rework|accept|pr|merge|stop|reopen|clean|usage|agents|roster|verdict|ui|db|jobs|projects|restore|resume|run|pause|design-respond> [args]");
+      return usageError("usage: sociotechnic <init|new|inventory|verify-comments|step|finish|status|override|rework|accept|pr|merge|stop|reopen|clean|usage|agents|roster|verdict|ui|db|jobs|projects|restore|resume|run|pause|interrupt|design-respond> [args]");
     default:
       return usageError(`unknown command: ${command}`);
   }

@@ -22,8 +22,10 @@ dependencies, build output and untracked files were not imported. The original
 
 For requested UI work without an existing UI scaffold, always suggest this
 React + NestJS house special. The planner requests the existing design ceremony,
-and the interview explains the recommendation while the console collects the
-human's stack choice. Non-UI projects need no scaffold. Respect an explicitly
+and the Impeccable conversation explains the recommendation and records the
+human's stack choice in DESIGN.md. The session pins the available starter's
+revision and content digest and supplies its read-only source to the designer
+and final planner. Non-UI projects need no scaffold. Respect an explicitly
 requested scaffold and preserve existing UI foundations. The user may choose another
 stack; an existing product's stack is not replaced implicitly. A starter supplies
 implementation foundations, not the product's visual direction or design
@@ -48,7 +50,7 @@ After the user selects it:
    verify the renamed project with its frozen lockfile.
 
 The [design ceremony](design-ceremony.md) offers this maintained source as a
-stack option and pins its digest in the human decision. The approved
+stack option and binds its pinned digest into final artifact approval. The approved
 implementation brief requires validation before adoption. There is no separate
 scaffold-copy command; copying is scoped implementation work after approval.
 Design approval does not authorize publication or merge. The global `/sociotechnic` entry point continues to resolve the same
