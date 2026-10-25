@@ -16,6 +16,21 @@ native command reports its loopback URL.
 
 ## Chat and images
 
+The designer is a working teammate for initial design, complex UI work,
+remediation, escalation and QA. Its simple agent Markdown stays the prompt;
+the runner explicitly invokes `/impeccable` at the start and resumes that same
+native session on subsequent turns. The chat UI carries this discussion and
+does not prescribe another design process.
+
+The thread owns its scroll area and anchors each sent human turn. Streaming
+follows the reply while you remain at the live edge; reading older messages
+pauses following. **Return to latest** catches up. Native questions appear in
+the thread, and the composer stays at its edge. Enter sends, Shift+Enter inserts
+a line, and input-method composition does not send. Failed sends retain text,
+images and the message's retry ID. Public lifecycle states distinguish working,
+waiting, interrupted, failed and returned work. Samples, prototypes, images
+opened for closer inspection and native previews use separate browser tabs.
+
 Reply in the chat, answer native questions, or choose in Impeccable's own window.
 Replies resume the same SDK session and retain its full history. A normal message
 can also interrupt a pending question to provide different text or images.
@@ -46,6 +61,13 @@ human can continue the same conversation for review or improvement without
 automatically starting the build pipeline. Returned work remains bound to its
 recorded digest; changed artifacts require another handoff before being used
 as the pipeline's current design context.
+
+The initial handoff goes to the planner, which assesses `HANDOFF.md` and the
+actual returned artifacts, pins `plan.designDigest` and holds for normal plan
+review. The builder receives the same work product, artifact paths and digest.
+If a later returned revision differs from that reviewed plan, the run parks
+before building or passing the review gate. The human must resolve planner
+assessment and plan review; chat never replans or starts implementation on its own.
 
 The maintained React/Nest starter is supplied as a reference with a source
 revision and digest. The assignment and human choose whether to use it. The
@@ -104,3 +126,10 @@ agent-file loading, image blocks, history, recovery and repeat caller assignment
 The fixture browser journey exercises the real native preview server and image
 uploads without calling a model. These checks are distinguished from
 [native invocation evidence](evidence/native-design-chat.md).
+
+`scripts/verify-interactive-design.mjs` exercises the built chat, native preview
+in a separate tab, image retry, anchored turns, real fixture streaming, older
+history, reconnect, keyboard/IME, interruption/resume, themes and narrow layout.
+It uses fake SDK events and the actual installed Impeccable command, with zero
+model calls. `tests/design.test.ts` also checks returned prototype bytes after
+staging loss, planner/builder digest agreement and stale-plan refusal.

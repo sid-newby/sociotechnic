@@ -12,9 +12,11 @@ import type { Job } from "../src/job.ts";
 import { createMemoryStore, createPgStore, setStore } from "../src/db/store.ts";
 import { initializeAgentVersions, pinAgentVersions } from "../src/agent-versions.ts";
 import { createJobOperation, mutateJob, readJob } from "../src/job-store.ts";
-import { newDesignJob, startDesign } from "../src/engine.ts";
+import { newDesignJob, startDesign, step } from "../src/engine.ts";
 import { parsePlanText } from "../src/plan.ts";
-import { readJson, writeTextAtomic } from "../src/record-store.ts";
+import { readJson, readText, writeTextAtomic } from "../src/record-store.ts";
+import { prepareDispatch } from "../src/staging.ts";
+import { acquireDriver, releaseDriver } from "../src/driverlock.ts";
 import { jobDir } from "../src/paths.ts";
 import { testDatabase } from "./pg-fixture.ts";
 import { startServer } from "../ui/server.ts";
@@ -193,6 +195,83 @@ test("the conversation remains usable after returning its Markdown work product"
   assert.match(job.designSession?.messages.at(-1)?.text ?? "", /retained our previous conversation/);
 });
 
+test("returned prototypes reach planner then builder at the same digest after staging loss", async () => {
+  const id = await create(); await completeInterview(id);
+  const digest = await readJob(id, interactiveFingerprint);
+  assert.equal((await call(`/api/jobs/${id}/design-session/handoff`, { digest })).status, 200);
+  const planned = await settled(id);
+  assert.equal(planned.status, "planned");
+  assert.equal(planned.dispatches.some((dispatch) => dispatch.step === "build"), false, "Normal plan review must hold");
+  const approval = planned.designSession?.approval; assert.ok(approval?.document);
+  const document = approval.document;
+  assert.ok(planned.designSession);
+  const prototype = approval.files.find((path) => path.endsWith("previews/desk.html")); assert.ok(prototype);
+  const planner = planned.dispatches.find((dispatch) => dispatch.step === "plan"); assert.ok(planner?.execution);
+  for (const value of [digest, approval.document, prototype]) assert.ok(planner.execution.envelope.prompt.includes(value));
+  const plan = await readJob(id, () => readJson(join(jobDir(id), "plan.json")));
+  assert.ok(plan && typeof plan === "object" && "designDigest" in plan);
+  assert.equal(plan.designDigest, digest);
+
+  rmSync(join(home, ".sociotechnic/staging", id), { recursive: true, force: true });
+  rmSync(join(home, ".sociotechnic/design-sessions", planned.designSession.id), { recursive: true, force: true });
+  const documentBytes = await readJob(id, () => readText(join(jobDir(id), document)));
+  const prototypeBytes = await readJob(id, () => readText(join(jobDir(id), prototype)));
+  assert.match(documentBytes ?? "", /Design work product/);
+  assert.match(prototypeBytes ?? "", /Research desk/);
+
+  // This explicit step represents the human continuing the reviewed plan.
+  const result = await mutateJob(id, (job) => step(job));
+  assert.equal(result.action, "dispatch");
+  if (result.action !== "dispatch") throw new Error("Expected builder dispatch after plan review");
+  const builder = result.dispatches.find((dispatch) => dispatch.record.endsWith("build.md")); assert.ok(builder);
+  for (const value of [digest, approval.document, prototype]) assert.ok(builder.prompt.includes(value));
+  const token = await acquireDriver(id, { pid: process.pid, startedAt: new Date().toISOString(), mode: "run", owner: "ui" });
+  try {
+    const stage = await prepareDispatch(id, builder, token);
+    assert.equal(readFileSync(join(stage.inputs, approval.document), "utf8"), documentBytes);
+    assert.equal(readFileSync(join(stage.inputs, prototype), "utf8"), prototypeBytes);
+    assert.ok(stage.entry.prompt.includes(join(stage.inputs, approval.document)));
+    assert.ok(stage.entry.prompt.includes(digest));
+    rmSync(stage.root, { recursive: true, force: true });
+  } finally { await releaseDriver(id, process.pid); }
+});
+
+test("missing or changed returned prototype bytes block the builder after planning", async () => {
+  for (const removed of [false, true]) {
+    const id = await create(); await completeInterview(id);
+    const digest = await readJob(id, interactiveFingerprint);
+    assert.equal((await call(`/api/jobs/${id}/design-session/handoff`, { digest })).status, 200);
+    const planned = await settled(id);
+    const prototype = planned.designSession?.approval?.files.find((path) => path.endsWith("previews/desk.html")); assert.ok(prototype);
+    if (removed) await store.transaction((tx) => tx.deleteRecord(id, prototype));
+    else await mutateJob(id, () => writeTextAtomic(join(jobDir(id), prototype), "Changed after return"));
+    const result = await mutateJob(id, (job) => step(job));
+    assert.equal(result.action, "human");
+    assert.equal(result.status, "needs-human");
+    if (result.action === "human") assert.match(result.reason, /design-approval-invalid/);
+    assert.equal(await readJob(id, (job) => job.dispatches.some((dispatch) => dispatch.step === "build")), false);
+  }
+});
+
+test("returning a revised design cannot send an older reviewed plan to the builder", async () => {
+  const id = await create(); await completeInterview(id);
+  const first = await readJob(id, interactiveFingerprint);
+  assert.equal((await call(`/api/jobs/${id}/design-session/handoff`, { digest: first })).status, 200);
+  await settled(id);
+  assert.equal((await call(`/api/jobs/${id}/design-session/messages`, { message: "Make it denser", messageId: randomUUID() })).status, 200);
+  await settled(id);
+  const revised = await readJob(id, interactiveFingerprint); assert.notEqual(revised, first);
+  assert.equal((await call(`/api/jobs/${id}/design-session/handoff`, { digest: revised })).status, 200);
+  const returned = await settled(id);
+  assert.equal(returned.status, "planned");
+  assert.equal(returned.dispatches.filter((dispatch) => dispatch.step === "plan").length, 1, "Follow-up chat never starts planning implicitly");
+  const result = await mutateJob(id, (job) => step(job));
+  assert.equal(result.action, "human");
+  assert.equal(result.status, "needs-human");
+  if (result.action === "human") assert.match(result.reason, /reviewed plan/);
+  assert.equal(await readJob(id, (job) => job.dispatches.some((dispatch) => dispatch.step === "build")), false);
+});
+
 test("a caller can request another assignment in the same design conversation", async () => {
   assert.equal(parsePlanText(JSON.stringify({ status: "needs-design", reason: "Compare the two prototype navigation patterns" }), false, true).kind, "needs-design");
   const id = await create(); const initial = await completeInterview(id);
@@ -357,7 +436,17 @@ test("the SDK uses the agent Markdown file and native tools without an Impeccabl
     assert.match(args.options.systemPrompt.append ?? "", /normal,\s+turn-based conversation/);
     assert.ok(!args.options.systemPrompt.append?.includes("mcp__impeccable__run"));
     checked = true;
-    yield* fixtureDesignQuery(args);
+    const prompt = args.prompt;
+    async function* inspectPrompt() {
+      if (typeof prompt === "string") throw new Error("Expected native user message blocks");
+      for await (const message of prompt) {
+        const content = message.message.content;
+        assert.ok(Array.isArray(content));
+        assert.ok(content.some((block) => block.type === "text" && block.text.startsWith("/impeccable ")), "Initial invocation must enter the real skill workflow");
+        yield message;
+      }
+    }
+    yield* fixtureDesignQuery({ ...args, prompt: inspectPrompt() });
   };
   try {
     await completeInterview(id);

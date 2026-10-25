@@ -15,7 +15,7 @@ function CodeBlock({ text, language }: { text: string; language?: string }) {
   const label = language || tree?.data?.language;
   return <div className="record-code-block">
     <div className="record-code-label">{label || "Plain text"}{!language && tree?.data?.language ? " · detected" : ""}</div>
-    <pre tabIndex={0} aria-label={`${label || "Plain text"} code`}><code>{tree ? tokens(tree.children) : text}</code></pre>
+    <pre tabIndex={0} role="group" aria-label={`${label || "Plain text"} code`}><code>{tree ? tokens(tree.children) : text}</code></pre>
   </div>;
 }
 
@@ -40,7 +40,7 @@ export const RecordContent = memo(function RecordContent({ path, text, raw }: { 
       },
       a({ href, children }) { return <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>; },
       img({ src, alt }) { return <a href={src} target="_blank" rel="noopener noreferrer">{alt || "Image"} (image)</a>; },
-      table({ children }) { return <div className="record-table" tabIndex={0} role="region" aria-label="Record table"><table>{children}</table></div>; },
+      table({ children }) { return <div className="record-table" tabIndex={0} role="group" aria-label="Record table"><table>{children}</table></div>; },
     }}>{text}</Markdown>
   </article>;
 });
