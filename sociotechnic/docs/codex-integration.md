@@ -13,7 +13,9 @@ and build identities with pinned Terraform and container instruction resources.
 Supported OpenAI choices are `gpt-6.1-sol`, `gpt-6-astra`, `gpt-6-sol`,
 `gpt-6-luna`, `gpt-5.6-sol`, `gpt-5.6-terra` and `gpt-5.6-luna`, centralized in
 `src/agent-models.ts`. They match the installed CLI's visible model catalog checked
-on October 24. All use high effort in this adapter. A listed model is not proof
+on October 24. Effort choices are low, medium, high, xhigh and max, plus ultra
+except on the two Luna models. The pinned value is passed to the CLI; adapter
+permissions and disabled child-agent features remain unchanged. A listed model is not proof
 of account access or live execution. See the [selection plan](agent-model-selection.md).
 
 ## Scope and implementation
@@ -150,7 +152,7 @@ Shell tools, plugins, child agents and arbitrary writes remain disabled.
 
 Only build templates whose tools fit the shell/edit/network adapter can select
 Codex; Agent coordinators and design tools remain unsupported. Builder processes
-still start with isolated configuration, saved ChatGPT login, high effort, fixed
+still start with isolated configuration, saved ChatGPT login, the pinned effort, fixed
 tools, disabled plugins/hooks/child agents, bounded lifetime/output and no provider
 fallback. Their shell workspace is the assigned worktree using workspace-write;
 no extra writable Git roots are added.

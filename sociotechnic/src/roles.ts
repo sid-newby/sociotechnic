@@ -1,21 +1,19 @@
 import { SociotechnicError } from "./errors.ts";
-import type { ClaudeModel, CodexModel } from "./agent-models.ts";
-export type { ClaudeModel, CodexModel } from "./agent-models.ts";
+import type { ClaudeModel, CodexModel, ClaudeEffort, Effort } from "./agent-models.ts";
+export type { ClaudeModel, CodexModel, Effort } from "./agent-models.ts";
 
 export type Model = ClaudeModel | CodexModel;
-export type Effort = "xhigh" | "high";
 export type RecordKind = "plan" | "design" | "research" | "build" | "review" | "conformance" | "decision";
 export type Tier = "COMPLEX" | "EASY" | "BULK" | "COMMENTS";
 
 export type Role = {
   readonly name: string;
-  readonly effort: Effort;
   readonly tools: readonly string[];
   readonly timeoutMinutes: number;
   readonly maxTurns: number;
   readonly record: RecordKind;
-} & ({ readonly provider: "claude"; readonly model: ClaudeModel } |
-  { readonly provider: "codex"; readonly model: CodexModel; readonly claudeModel: ClaudeModel });
+} & ({ readonly provider: "claude"; readonly model: ClaudeModel; readonly effort: ClaudeEffort } |
+  { readonly provider: "codex"; readonly model: CodexModel; readonly claudeModel: ClaudeModel; readonly effort: Effort });
 
 const READER_TOOLS = ["Read", "Grep", "Glob", "Write"] as const;
 const BUILDER_TOOLS = ["Read", "Grep", "Glob", "Bash", "Edit", "Write"] as const;

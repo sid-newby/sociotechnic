@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { SociotechnicError } from "./errors.ts";
 import type { Role } from "./roles.ts";
-import { CLAUDE_MODELS, CODEX_MODELS, isCodexModel, supportsCodex } from "./agent-models.ts";
+import { CLAUDE_MODELS, CODEX_MODELS, isClaudeEffort, isCodexModel, isModelEffort, supportsCodex } from "./agent-models.ts";
 
 import { parseSkillResources } from "./agent-skills.ts";
 import type { SkillResource } from "./agent-skills.ts";
@@ -36,7 +36,7 @@ export function versionRole(base: Role, value: unknown): Role {
   if (tools.some((t) => !base.tools.includes(t)) || new Set(tools).size !== tools.length || ["Read", "Grep", "Glob", "Write"].some((t) => !tools.includes(t))) fail("Tools must retain Read/Grep/Glob/Write and stay within the baseline allowance");
   if (base.tools.includes("mcp__design__impeccable") && !tools.includes("mcp__design__impeccable")) fail("Designer requires its scoped design tool");
   const codex = typeof v.model === "string" && isCodexModel(v.model);
-  const effort: Role["effort"] = v.effort === "high" || (!codex && v.effort === "xhigh") ? v.effort : fail("Unsupported effort for this provider");
+  const effort: Role["effort"] = typeof v.model === "string" && isModelEffort(v.model, v.effort) ? v.effort : fail("Unsupported effort for this model");
   const common = { effort, tools: base.tools.filter((t) => tools.includes(t)), maxTurns: limit(v.maxTurns, 250, "Turn/tool-call limit"), timeoutMinutes: limit(v.timeoutMinutes, 120, "Deadline") };
   if (codex) {
     if (!supportsCodex(base)) fail("Codex requires a compatible reader or ordinary builder template; design and worker tools require Claude");
@@ -46,9 +46,10 @@ export function versionRole(base: Role, value: unknown): Role {
     return { ...base, ...common, provider: "codex", model, claudeModel: base.model };
   }
   const model = CLAUDE_MODELS.find((m) => m === v.model) ?? fail("Unsupported model");
-  if (base.provider === "claude") return { ...base, ...common, model };
+  if (!isClaudeEffort(effort)) fail("Unsupported Claude effort");
+  if (base.provider === "claude") return { ...base, ...common, model, effort };
   const { claudeModel: _definitionModel, ...claudeBase } = base;
-  return { ...claudeBase, ...common, provider: "claude", model };
+  return { ...claudeBase, ...common, provider: "claude", model, effort };
 }
 export function releaseDigest(role: Role, definition: string) { return createHash("sha256").update(JSON.stringify({ schema: 1, role, definition })).digest("hex"); }
 

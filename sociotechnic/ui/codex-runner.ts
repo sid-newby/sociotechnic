@@ -92,7 +92,6 @@ export function codexRunner(context7: McpServerConfig | null = null): Runner {
       const subscriptionProxy = ctx.sandboxed ? sandboxSubscriptionProxy() : undefined;
       if (!supportsCodex(base) || !isCodexModel(entry.model)) throw new Error("Unsupported Codex role/model binding");
       const pinned = versionRole({ ...base, name: role.name }, { ...role, ...entry.configuration, model: entry.model, effort: entry.effort });
-      if (entry.effort !== "high") throw new Error("Codex roles require high effort");
       if (ctx.signal.aborted) return { outcome: "failed", usage: null, note: STOPPED_NOTE };
       if (Date.parse(entry.deadlineAt) <= Date.now()) return { outcome: "timeout", usage: null, note: "deadline reached" };
       const definition = parseFrontmatter(entry.configuration?.definition ?? bundledAgentDefinition(entry.configuration?.baseRole ?? role.name));

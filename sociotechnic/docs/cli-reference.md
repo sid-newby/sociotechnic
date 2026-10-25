@@ -562,7 +562,10 @@ The `models` list includes Claude and OpenAI/Codex choices for planning, researc
 review, conformance, approval and ordinary build templates. Design and Agent-worker
 templates list only Claude models. The selected model determines the provider on creation and
 publication; a provider field cannot bypass compatibility checks. Codex requires
-high effort and the template's complete adapter tool list. Supported IDs live in
+the template's complete adapter tool list. Effort is validated per model: low,
+medium, high, xhigh and max, plus ultra on Codex models other than Luna.
+The chosen effort is pinned and passed to the provider. Supported IDs and effort
+choices live in
 [`src/agent-models.ts`](../src/agent-models.ts); account access is checked by the
 provider when executing, with no automatic fallback.
 `POST` to the same path publishes

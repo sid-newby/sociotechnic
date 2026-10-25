@@ -592,9 +592,11 @@ policy. See [library API](cli-reference.md#agent-library-api) and the
 
 Add agent and Manage versions share grouped Claude and OpenAI/Codex choices for
 planning, research, review, conformance, approval and ordinary build templates. Model selection
-determines the provider. Codex requires high effort, fixed adapter tools, saved
+determines the provider. Codex requires fixed adapter tools, saved
 ChatGPT authentication and account access to the selected model. Switching in the
-form resets effort and tools to supported Codex settings. Design and Agent-worker
+form preserves effort when the new model supports it, otherwise uses high,
+and restores fixed tools for Codex. The shared model table defines effort choices
+for both editors and version validation; adapters forward the pinned effort. Design and Agent-worker
 templates remain Claude-only. Publication never changes an existing run's pins.
 
 PostgreSQL owns immutable releases in `agent_versions` and run bindings in

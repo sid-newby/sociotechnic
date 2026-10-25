@@ -3,6 +3,45 @@ export const CODEX_MODELS = ["gpt-6.1-sol", "gpt-6-astra", "gpt-6-sol", "gpt-6-l
 export type ClaudeModel = (typeof CLAUDE_MODELS)[number];
 export type CodexModel = (typeof CODEX_MODELS)[number];
 
+const CLAUDE_EFFORTS = ["low", "medium", "high", "xhigh", "max"] as const;
+const CODEX_EFFORTS = [...CLAUDE_EFFORTS, "ultra"] as const;
+export type ClaudeEffort = (typeof CLAUDE_EFFORTS)[number];
+export type Effort = (typeof CODEX_EFFORTS)[number];
+
+// Claude aliases follow the current direct Anthropic SDK models. Keep this
+// capability table aligned with provider documentation when changing model IDs.
+const MODEL_EFFORTS = {
+  "claude-fable-5-1": CLAUDE_EFFORTS,
+  fable: CLAUDE_EFFORTS,
+  opus: CLAUDE_EFFORTS,
+  sonnet: CLAUDE_EFFORTS,
+  haiku: CLAUDE_EFFORTS,
+  "gpt-6.1-sol": CODEX_EFFORTS,
+  "gpt-6-astra": CODEX_EFFORTS,
+  "gpt-6-sol": CODEX_EFFORTS,
+  "gpt-6-luna": CLAUDE_EFFORTS,
+  "gpt-5.6-sol": CODEX_EFFORTS,
+  "gpt-5.6-terra": CODEX_EFFORTS,
+  "gpt-5.6-luna": CLAUDE_EFFORTS,
+} satisfies Record<ClaudeModel | CodexModel, readonly Effort[]>;
+
+export function effortChoices(model: string): readonly Effort[] {
+  const entry = Object.entries(MODEL_EFFORTS).find(([name]) => name === model);
+  return entry?.[1] ?? [];
+}
+
+export function isModelEffort(model: string, effort: unknown): effort is Effort {
+  return effortChoices(model).some((value) => value === effort);
+}
+
+export function isClaudeEffort(effort: unknown): effort is ClaudeEffort {
+  return CLAUDE_EFFORTS.some((value) => value === effort);
+}
+
+export function effortForModel(model: string, effort: string): Effort {
+  return isModelEffort(model, effort) ? effort : "high";
+}
+
 export function isCodexModel(model: string): model is CodexModel {
   return CODEX_MODELS.some((value) => value === model);
 }
