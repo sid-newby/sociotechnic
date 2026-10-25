@@ -202,6 +202,18 @@ Activity identifies the pinned environment. Stopped sandbox runs reuse the
 existing destructive confirmation dialog and name both VM and worktree cleanup.
 No visual tokens or shared control ownership change for this experiment.
 
+New repository uses the same dialog and labeled input style for its GitHub
+destination, defaulting to the folder name. The description explains that Start
+creates a private repository and publishes the initial base before planning.
+Keep the draft on authentication, creation and push errors; prevent duplicate
+submits through the existing busy state. Feature or fix's Git initialization
+remains local. No new controls, tokens or theme variants are introduced.
+
+Record formatting failures stay inside the existing records dialog. Use the
+shared error state and Button for reload recovery, and show the unchanged source
+in the existing raw-record style. The close control, record navigation and raw
+toggle remain usable; a formatter failure must not replace the console.
+
 **Creative North Star: "The Run Console"**
 
 Sociotechnic is a product console for the owner supervising coding agents in local repositories. Its slate surfaces, blue actions, compact labels, and readable evidence keep the current run and the next human decision legible. Color-coded views, prominent measurements, and expandable numbered sequences make the console more expressive without replacing its established identity. The existing console and the owner's React scaffold establish this visual language; this document records that implementation.

@@ -24,6 +24,7 @@ const proxy: ProxyOptions = {
 export default defineConfig({
   define: { __APP_VERSION__: JSON.stringify(appVersion) },
   plugins: [react(), tailwindcss()],
+  optimizeDeps: { include: ["react-markdown", "remark-gfm", "lowlight"] },
   resolve: { alias: { "@": path.resolve(import.meta.dirname, "src") } },
   server: { host: "127.0.0.1", port: 5173, strictPort: true, proxy: { "/api": proxy, "/events": proxy, "/legacy": proxy } },
 });

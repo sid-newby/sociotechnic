@@ -2,7 +2,7 @@ import { lstatSync, mkdirSync, readdirSync, realpathSync, statSync, writeFileSyn
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { SociotechnicError } from "../src/errors.ts";
-import { git, gitOk } from "../src/git.ts";
+import { currentBranch, gh, ghReady, git, gitOk, remoteUrl, resolveCommit } from "../src/git.ts";
 
 const IGNORE = `# Local environment and secrets
 .env
@@ -102,4 +102,39 @@ export function prepareRepository(input: string, base: string | null): string {
     throw new SociotechnicError("git", `Could not create the initial commit. Check Git user.name and user.email and any commit-hook errors, then retry. Starter files were kept. ${error instanceof Error ? error.message : String(error)}`);
   }
   return path;
+}
+
+export function githubRepositoryName(value: unknown): string {
+  if (typeof value !== "string" || !/^(?:[a-zA-Z0-9][a-zA-Z0-9-]*\/)?[a-zA-Z0-9_.][a-zA-Z0-9_.-]*$/.test(value) || [".", ".."].includes(value.split("/").at(-1) ?? "")) {
+    throw new SociotechnicError("bad-input", "Enter a GitHub repository name or owner/repository.");
+  }
+  return value;
+}
+
+export function publishRepository(input: string, base: string | null, name: string): void {
+  const path = repositoryDirectory(input);
+  githubRepositoryName(name);
+  if (git(path, ["rev-parse", "--show-toplevel"]).trim() !== path) throw new SociotechnicError("not-a-repo", "Select the repository root before publishing a new repository.");
+  const branch = base ?? currentBranch(path);
+  if (!branch) throw new SociotechnicError("no-branch", "Choose a base branch before publishing.");
+  const head = resolveCommit(path, `refs/heads/${branch}`);
+  if (!ghReady(path)) throw new SociotechnicError("gh-unavailable", "GitHub setup needs authenticated gh. Run gh auth login, then retry. Local starter files were kept.");
+  const owner = name.includes("/") ? null : gh(path, ["api", "--hostname", "github.com", "user", "--jq", ".login"]).trim();
+  const destination = githubRepositoryName(owner === null ? name : `${owner}/${name}`);
+  const url = `https://github.com/${destination}`;
+  const origin = remoteUrl(path, "origin");
+  if (origin === null) {
+    gh(path, ["repo", "create", `github.com/${destination}`, "--private", "--source", path, "--remote", "origin"]);
+  } else if (![url, `${url}.git`, `git@github.com:${destination}`, `git@github.com:${destination}.git`, `ssh://git@github.com/${destination}`, `ssh://git@github.com/${destination}.git`].some((candidate) => candidate.toLowerCase() === origin.toLowerCase())) {
+    throw new SociotechnicError("bad-input", `origin already points to ${origin}. Choose its GitHub destination or use Feature or fix for an existing repository.`);
+  }
+  if (gh(path, ["repo", "view", url, "--json", "isPrivate", "--jq", ".isPrivate"]).trim() !== "true") throw new SociotechnicError("bad-input", "New repository setup requires a private GitHub repository. Nothing was pushed.");
+  const ref = `refs/heads/${branch}`;
+  const published = git(path, ["ls-remote", "--heads", "origin", ref]).trim();
+  if (published && published.split(/\s+/)[0] !== head) throw new SociotechnicError("base-changed", `GitHub's ${branch} is at another commit. Inspect it before starting; nothing was pushed.`);
+  try {
+    git(path, ["push", "--set-upstream", "origin", `${ref}:${ref}`]);
+  } catch (error) {
+    throw new SociotechnicError("git", `Could not publish ${branch} to ${url}. The repository and origin were kept; fix the push error and retry. ${error instanceof Error ? error.message : String(error)}`);
+  }
 }

@@ -33,7 +33,12 @@ The engine still resolves the repository root and committed base and creates an
 isolated job branch/worktree. CLI requirements, records, driver locks, bounds and
 human gates are unchanged. See [Starting a run](cli-reference.md#starting-a-run).
 New repository is a console setup preset, not an engine workflow. Folder creation
-and the remembered browser starting point are separate from job creation. UI
+and the remembered browser starting point are separate from job creation. Its
+explicit `githubRepository` setup creates a private GitHub remote and publishes
+the initial base before the engine cuts the job branch. Authentication or push
+failure prevents job creation; matching origins support retry without another
+remote creation. Ordinary `initialize` stays local. Publishing run changes still
+requires human acceptance and a separate push-and-PR action. UI
 work without an existing UI scaffold is routed through design so the interview
 can recommend the bundled React + NestJS house special; the human chooses the
 stack and approves the design before implementation. Non-UI projects need no

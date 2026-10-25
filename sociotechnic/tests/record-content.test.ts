@@ -1,13 +1,17 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 import { fileURLToPath } from "node:url";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createServer } from "../ui/web/node_modules/vite/dist/node/index.js";
 import { highlightCode, MAX_FORMAT_LENGTH, MAX_HIGHLIGHT_LENGTH, recordFormat } from "../ui/web/src/record-format.ts";
 
 let server: Awaited<ReturnType<typeof createServer>>;
+const cacheDir = mkdtempSync(join(tmpdir(), "sociotechnic-record-render-"));
 let render: (path: string, text: string, raw?: boolean) => string;
 before(async () => {
-  server = await createServer({ root: fileURLToPath(new URL("../ui/web", import.meta.url)), server: { middlewareMode: true, hmr: false, watch: null }, appType: "custom" });
+  server = await createServer({ root: fileURLToPath(new URL("../ui/web", import.meta.url)), cacheDir, server: { middlewareMode: true, hmr: false, watch: null }, appType: "custom" });
   const fixture = await server.ssrLoadModule("/tests/render-record.tsx");
   const renderRecord: unknown = fixture.renderRecord;
   assert.equal(typeof renderRecord, "function");
@@ -19,7 +23,7 @@ before(async () => {
     return html;
   };
 });
-after(async () => { await server?.close(); });
+after(async () => { await server?.close(); rmSync(cacheDir, { recursive: true, force: true }); });
 
 test("Markdown renders headings, lists, tables, inline code and fenced language aliases", () => {
   const html = render("build.md", '# Build report\n\n**Ready** with `config`\n\n- [x] Verified\n- item\n\n| Check | Result |\n| --- | --- |\n| build | pass |\n\n```ts\nconst value: number = 42;\n```');

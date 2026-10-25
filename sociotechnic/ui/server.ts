@@ -31,7 +31,7 @@ import { createDriverRegistry, mutateJob } from "./driver.ts";
 import type { Runner } from "./runner.ts";
 import { runnerFromEnv } from "./runner.ts";
 import { mergeMethod, mergeRemote } from "../src/remote-merge.ts";
-import { browseRepositories, createRepositoryDirectory, prepareRepository } from "./repositories.ts";
+import { browseRepositories, createRepositoryDirectory, githubRepositoryName, prepareRepository, publishRepository } from "./repositories.ts";
 
 const UI_DIR = dirname(fileURLToPath(import.meta.url));
 const INDEX_HTML = join(UI_DIR, "index.html");
@@ -303,6 +303,8 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
         if (body.workflow !== undefined && body.workflow !== "comments" && body.workflow !== "design") throw new HttpError(400, "bad-input", "workflow must be comments or design when provided");
         if (body.scope !== undefined && body.workflow !== "comments") throw new HttpError(400, "bad-input", "scope requires the comments workflow");
         if (body.initialize !== undefined && typeof body.initialize !== "boolean") throw new HttpError(400, "bad-input", "initialize must be a boolean");
+        const githubRepository = body.githubRepository === undefined ? null : githubRepositoryName(body.githubRepository);
+        if (githubRepository !== null && (body.initialize !== true || body.workflow !== undefined)) throw new HttpError(400, "bad-input", "GitHub repository setup requires initialize: true and ordinary feature planning.");
         if (body.workflow === "comments" && (!Array.isArray(body.scope) || !body.scope.length || body.scope.some((path) => typeof path !== "string" || !path.trim()))) throw new HttpError(400, "bad-input", "scope must contain file or directory paths");
         const repoPath = resolve(expandHome(repo.trim()));
         const baseBranch = base === null || base.trim() === "" ? null : base.trim();
@@ -325,6 +327,7 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
         }
         const pinned = await pinAgentVersions(overrides, undefined, assignments);
         if (body.initialize === true) prepareRepository(repoPath, baseBranch);
+        if (githubRepository !== null) publishRepository(repoPath, baseBranch, githubRepository);
         return createJobOperation(async () => {
         const out = body.workflow === "comments" ? await engine.newCommentJob(repoPath, feature, baseBranch, body.scope, undefined, pinned, execution) : body.workflow === "design" ? await engine.newDesignJob(repoPath, feature, baseBranch, pinned, execution) : await engine.newJob(repoPath, feature, baseBranch, undefined, undefined, pinned, execution);
         return out;

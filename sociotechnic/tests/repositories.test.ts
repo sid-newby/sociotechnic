@@ -11,6 +11,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import { prepareRepository } from "../ui/repositories.ts";
 import { startServer } from "../ui/server.ts";
+import { fakeGithub } from "./fixtures/github.ts";
 
 const root = realpathSync(mkdtempSync(join(tmpdir(), "sociotechnic-repositories-")));
 let server: Awaited<ReturnType<typeof startServer>>;
@@ -190,4 +191,87 @@ test("missing identity reports recovery and retry preserves the starter files", 
   assert.equal(readFileSync(join(path, "readme.md"), "utf8"), "tbd\n");
   prepareRepository(path, null);
   assert.equal(git(path, "rev-list", "--count", "HEAD"), "1");
+});
+
+test("new repository publishes its starter base before the run, then opens a PR after local merge and accept", async () => {
+  const fake = fakeGithub(directory());
+  const previous = { PATH: process.env.PATH, GIT_SSH_COMMAND: process.env.GIT_SSH_COMMAND };
+  Object.assign(process.env, fake.env);
+  try {
+    const path = directory();
+    writeFileSync(join(path, "private.txt"), "keep local");
+    const created = await call("/api/jobs", { repo: path, feature: "Add the feature file", initialize: true, githubRepository: "project" });
+    assert.equal(created.status, 200, JSON.stringify(created.body));
+    const bare = join(fake.remotes, "fixture-owner/project.git");
+    const initial = git(path, "rev-parse", "main");
+    assert.equal(git(bare, "rev-parse", "main"), initial);
+    assert.deepEqual(git(bare, "ls-tree", "--name-only", "main").split("\n"), [".gitignore", "readme.md"]);
+    assert.equal(git(path, "rev-parse", "--abbrev-ref", "main@{upstream}"), "origin/main");
+    assert.equal(git(bare, "branch", "--list", "sociotechnic/*"), "");
+    assert.equal(JSON.parse(readFileSync(fake.log, "utf8").trim().split("\n").find((line) => line.includes('"create"')) ?? "null").includes("--private"), true);
+    await call(`/api/jobs/${created.body.job}/run`, { mode: "run" });
+    const deadline = Date.now() + 20_000;
+    let running = true;
+    while (running && Date.now() < deadline) {
+      await sleep(50);
+      running = (await (await fetch(new URL(`/api/jobs/${created.body.job}/driver`, server.url))).json()).running;
+    }
+    assert.equal(running, false);
+    assert.deepEqual(await readJob(created.body.job, (job) => ({ status: job.status, reason: job.statusReason })), { status: "needs-human", reason: "gate-flags: no-checks-configured" });
+    rmSync(join(path, "private.txt"));
+    const merged = await call(`/api/jobs/${created.body.job}/merge`, { confirm: true });
+    assert.equal(merged.status, 200, JSON.stringify(merged.body));
+    assert.notEqual(git(path, "rev-parse", "main"), initial);
+    assert.equal((await call(`/api/jobs/${created.body.job}/accept`, {})).status, 200);
+    const published = await call(`/api/jobs/${created.body.job}/pr`, { push: true });
+    assert.equal(published.status, 200, JSON.stringify(published.body));
+    assert.equal(published.body.pushed, true);
+    assert.equal(git(bare, "rev-parse", "main"), initial, "PR publication must keep the starter base on GitHub");
+    assert.notEqual(git(bare, "diff", "main", created.body.branch), "");
+  } finally {
+    for (const [key, value] of Object.entries(previous)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
+  }
+});
+
+test("GitHub setup failures create no run and a failed push can retry without recreating the repository", async () => {
+  const fake = fakeGithub(directory());
+  const previous = { PATH: process.env.PATH, GIT_SSH_COMMAND: process.env.GIT_SSH_COMMAND };
+  Object.assign(process.env, fake.env);
+  try {
+    const path = directory();
+    const body = { repo: path, feature: "Publish setup", initialize: true, githubRepository: "fixture-owner/retry" };
+    for (const flag of ["FAKE_GITHUB_AUTH_FAILURE", "FAKE_GITHUB_CREATE_FAILURE", "FAKE_GITHUB_PUSH_FAILURE"]) {
+      process.env[flag] = "1";
+      try {
+        const failed = await call("/api/jobs", body);
+        assert.equal(failed.status, 400, JSON.stringify(failed.body));
+        assert.equal(failed.body.job, undefined);
+        assert.equal(git(path, "branch", "--list", "sociotechnic/*"), "");
+        assert.equal(git(path, "rev-list", "--count", "HEAD"), "1");
+      } finally { delete process.env[flag]; }
+    }
+    const created = await call("/api/jobs", body);
+    assert.equal(created.status, 200, JSON.stringify(created.body));
+    assert.equal(git(join(fake.remotes, "fixture-owner/retry.git"), "rev-parse", "main"), git(path, "rev-parse", "main"));
+    const creates = readFileSync(fake.log, "utf8").trim().split("\n").filter((line) => line.includes('"create"'));
+    assert.equal(creates.length, 2, "one failed creation and one successful creation; retry reuses origin");
+    process.env.FAKE_GITHUB_PUBLIC = "1";
+    try { assert.match((await call("/api/jobs", body)).body.error, /requires a private GitHub repository/); }
+    finally { delete process.env.FAKE_GITHUB_PUBLIC; }
+    assert.equal((await call("/api/jobs", { ...body, githubRepository: "fixture-owner/other" })).status, 400);
+    writeFileSync(join(path, "readme.md"), "changed\n"); git(path, "add", "readme.md"); git(path, "commit", "-m", "Local change");
+    const diverged = await call("/api/jobs", body);
+    assert.equal(diverged.body.code, "base-changed");
+    assert.notEqual(git(join(fake.remotes, "fixture-owner/retry.git"), "rev-parse", "main"), git(path, "rev-parse", "main"));
+  } finally {
+    for (const [key, value] of Object.entries(previous)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
+  }
+});
+
+test("invalid GitHub setup requests are rejected before local initialization", async () => {
+  for (const extra of [{ githubRepository: "bad/name/extra" }, { githubRepository: "--public" }, { githubRepository: {} }, { githubRepository: ".." }, { githubRepository: "ok", initialize: false }, { githubRepository: "ok", workflow: "design" }]) {
+    const path = directory();
+    assert.equal((await call("/api/jobs", { repo: path, feature: "Invalid request", initialize: true, ...extra })).status, 400);
+    assert.deepEqual(readdirSync(path), []);
+  }
 });
