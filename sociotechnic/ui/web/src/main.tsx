@@ -4,7 +4,6 @@ import App from "./App";
 import { AgentIdentityProvider } from "./components/agent-identity";
 import { ThemeProvider } from "./theme/provider";
 import "./index.css";
-import "./experience.css";
 import "./agent-library.css";
 
 const root = document.getElementById("root");

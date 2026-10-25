@@ -1,3 +1,4 @@
+import { returnFocus } from "../lib/focus";
 import { Component, lazy, Suspense, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Download } from "lucide-react";
@@ -57,10 +58,10 @@ export function RecordView({ jobId, path, mtime }: { jobId: string; path: string
   </div>;
 }
 
-export function RecordSheet({ detail, path, onClose }: { detail: Detail; path: string | null; onClose: () => void }) {
+export function RecordSheet({ detail, path, onClose, opener }: { detail: Detail; path: string | null; onClose: () => void; opener?: HTMLElement | null }) {
   const record = path ? detail.records.find((r) => r.path === path) : undefined;
   return <Sheet open={path !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
-    <SheetContent className="w-full gap-0 data-[side=right]:sm:max-w-2xl">
+    <SheetContent className="w-full gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-2xl" onCloseAutoFocus={(event) => { event.preventDefault(); returnFocus(opener); }}>
       <SheetHeader className="border-b pr-12">
         <SheetTitle className="break-all font-mono text-sm">{path}</SheetTitle>
         <SheetDescription>{record ? `${formatBytes(record.bytes)} · written ${record.mtime || "at an unrecorded time"}` : "Committed run record"}</SheetDescription>

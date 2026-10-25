@@ -17,7 +17,7 @@ The console is the intended main interface. The engine and semantically versione
 
 ![Run console overview with the run list, workflow stages, gate evidence and review summary.](assets/console/overview.png)
 
-Console screenshots use demonstration data and a consistent 1600 × 1000ish apeture.
+Console screenshots use demonstration data and predate the dashboard redesign.
 
 ## Start a run
 
@@ -64,7 +64,7 @@ is a normal Claude Code agent with the installed `/impeccable` command. Talk bac
 and forth, attach or paste images, and let Impeccable open its native preview
 windows. The conversation and its images remain in history.
 
-The assignment may call for a plan, samples, prototypes, a page or a critique.
+The design conversation replaces the dashboard cards while it waits for your input. Native questions, image attachments and **Open previews** stay with the conversation. The assignment may call for a plan, samples, prototypes, a page or a critique.
 The agent prepares Markdown in `HANDOFF.md`; **Return work** sends it and its
 artifacts to the caller. For initial design work, the planner reads that result
 and decides what comes next. The chat stays available for follow-up. Ordinary
@@ -74,35 +74,25 @@ Docker design sessions are not yet supported.
 
 ## Follow the work
 
-The workflow strip shows Plan, Build, Checks, Review, Gate, Approve and Human for the current round. These are recorded milestones, not a percentage complete. Open a stage to see its meaning and available evidence.
+The inbox groups runs into **Needs you**, **Working** and **Done**. Search or filter by project, and use **Show archived** to restore hidden runs. Archiving preserves records and does not stop active work.
 
-| View | Use it to |
-| --- | --- |
-| **Overview** | Read the plan, check results and review exceptions, inspect gate evidence, and make the next decision |
-| **Activity** | Follow live driver output, dispatch history, elapsed time and deadlines |
-| **Analysis** | Inspect each round's build, checks, findings, conformance, timing and recorded token usage |
-| **Agents** | See configured roles, models, effort, tools and each agent's history in the selected run |
+The run dashboard puts the next decision above four cards: **Agent time**, **Tokens**, **Estimated cost**, and the current plan, checks or approval. Open a card for its recorded evidence. The token chart shows completed dispatch reports in role colors; select a dispatch to inspect its measurements, model, effort, deadline and log. Missing usage stays unreported, and provider cost is an estimate.
 
 ![Activity view showing the demo run's completed dispatches, agent identities, verdicts and elapsed times.](assets/console/activity.png)
 
-Filter runs by project or status, or search the run list. Use the archive button beside a run to hide it. Check **Show archived** above the list to see archived runs and restore them. Archiving keeps the run and its records, and active runs continue working. On desktop, the run list and selected run scroll independently; the run filters stay visible. Open the plan, diff, approval or complete record list for supporting detail. Run records format Markdown headings, lists, tables and fenced code, and highlight JSON and diffs. Code blocks use their language label or detect common languages when unlabeled. Raw view preserves the original text and layout; Formatted view returns to reading.
+Use **Dispatches**, **Records**, **Log** and **Decisions** below the chart. Customize dispatch columns or download the filtered visible columns as CSV. Records open in a right-hand sheet with Formatted, Raw and Download controls. Earlier rounds remain available through Records and the round selector in the evidence sheet.
 
 ![Run records displaying the demo plan as formatted Markdown, with record navigation and a Raw view control.](assets/console/records.png)
 
-Each round records the build commit, configured checks and review verdicts. A lens whose path rules match no changed files reads **SKIPPED**. Missing checks and missing usage remain visible; neither is treated as a passing result or a reported zero.
+**Controls** offers Pause, Step once, hold after a chosen transition and raise a bound before it trips. The dispatch sheet can **Interrupt dispatch** with a note while its siblings continue. **Settings** holds local concurrency, sandbox capacity and theme. **Commands** (⌘K or Ctrl+K) lists the actions legal now and their CLI equivalents; ⌘B or Ctrl+B toggles the sidebar.
 
 ![Round evidence with build commit, checks, skipped lenses and passing review records.](assets/console/round.png)
 
-Analysis separates uncached input, output, cache read and cache write, with per-role totals, dispatch counts and median durations. These are reported measurements for the selected run. Historical SDK dollar estimates do not establish subscription charges.
+Checks and reviews retain their commit binding. Stale evidence never becomes a passing headline, skipped lenses remain **SKIPPED**, and missing measurements are never a reported zero.
 
 ![Analysis view showing recorded token totals and unavailable category measurements from the demo fixtures.](assets/console/analysis-ov.png)
 
-If a run is **Running in another console**, choose **Open owning console** to
-follow it and use its controls there. The current console keeps its records
-visible and refreshes ownership automatically. If the owning location is
-unknown, use the original console or CLI and choose **Refresh status** to check
-again. An interrupted driver is shown separately and uses the normal recovery
-controls.
+For an externally owned run, **Open owning console** takes you to its controls. Records stay readable here; **Refresh status** checks ownership again. Continue uses the normal recovery checks when a previous driver stopped or a runnable run lost its worktree.
 
 ## Agent library
 
@@ -110,7 +100,7 @@ For UI work that needs browser verification, choose the browser builder or brows
 builder-lite in New run's agent assignments. They use isolated browser sessions
 for rendered checks and diagnostics. [Setup and scope](sociotechnic/docs/browser-verification.md).
 
-Choose **Agent library**, beside **New run**, to browse the whole team across
+Choose **Agents** in the sidebar, to browse the whole team across
 projects and runs. Each role has a distinct icon shared with run profiles,
 activity and analysis. Search by role, model or description, then inspect when
 it is called, its model and effort, allowed tools, limits and explicit skill
@@ -204,7 +194,7 @@ planner behavior. The screenshot uses the committed demonstration run.
 
 ## Review and decide
 
-Agents commit changes on the job branch. You decide when to test, accept, publish and merge. The console offers actions appropriate to the run's current status.
+The decision bar names the current hold and its primary action. Choose **Read** for the plan, approval, diff or gate blockers in a sheet; secondary decisions stay in the quiet menu. Agents commit on the job branch; you decide when to test, accept, publish and merge.
 
 | Run status | Your next decision |
 | --- | --- |
@@ -220,7 +210,7 @@ Acceptance confirms that you tested the change. Publishing and GitHub merging ha
 
 **Merge locally** changes your base checkout. **Merge PR on GitHub** preserves it. After a GitHub merge, synchronize that checkout separately; local and remote merge histories can differ. [Publishing and merge details](sociotechnic/docs/cli-reference.md#publishing-after-accept) explain the underlying operations.
 
-Rework records your feedback for a fresh build and another review round. Stopping preserves the plan, history, branch, worktree and uncommitted edits. Reopening retries the interrupted step within the remaining bounds.
+Rework records feedback for a fresh build and review round. **Stop run** accepts an optional note and preserves work for reopening. **Reopen run** keeps edits unless you explicitly choose to discard them. **Prepare PR text** saves the record without publishing; **Push and open PR** and **Merge PR on GitHub** remain separate confirmed actions.
 
 ## How it works
 
@@ -276,10 +266,10 @@ Sociotechnic is an experiment under active development. Automated tests use fake
 
 ## Contributing and license
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md) to report a bug, propose a feature or open a
-pull request. Follow the [code of conduct](CODE_OF_CONDUCT.md) and use the
-[security policy](SECURITY.md) for vulnerability reports.
+Read [CONTRIBUTING.md](dox/CONTRIBUTING.md) to report a bug, propose a feature or open a
+pull request. Follow the [code of conduct](dox/CODE_OF_CONDUCT.md) and use the
+[security policy](dox/SECURITY.md) for vulnerability reports.
 
-Sociotechnic is licensed under [MIT](LICENSE). Bundled upstream material retains
-its own [licenses and notices](THIRD_PARTY_NOTICES.md). See the
+Sociotechnic is licensed under [MIT](dox/LICENSE). Bundled upstream material retains
+its own [licenses and notices](dox/THIRD_PARTY_NOTICES.md). See the
 [changelog](CHANGELOG.md) for releases.

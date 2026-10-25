@@ -34,7 +34,7 @@ export function useRunLog(jobId: string, subscribe: (listener: (event: LogEvent 
       setLog({ kind: "ready", lines: [], dropped: false });
       append([...collected.lines, ...pending.current.lines], collected.dropped || pending.current.dropped);
       pending.current = { lines: [], dropped: false };
-    }).catch((error: unknown) => { if (!controller.signal.aborted) { loading.current = false; pending.current = { lines: [], dropped: false }; setLog({ kind: "error", message: errorMessage(error) }); } });
+    }).catch((error: unknown) => { if (!controller.signal.aborted) { loading.current = true; setLog({ kind: "error", message: errorMessage(error) }); } });
     return () => controller.abort();
   }, [jobId, retry, append]);
 

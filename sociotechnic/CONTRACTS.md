@@ -1109,21 +1109,45 @@ present. It reuses the engine HTTP API and SSE stream. The CLI remains the
 complete command surface. The original single-file console remains available
 at `/legacy`, and at `/` before the React build exists.
 
-The first React surface prioritizes a compact evidence summary: current status
-and reason, checks at their recorded commit, review exceptions, gate head, and
-links to diff and approval records. The Checks milestone also recognizes the
-current build's existing `## Acceptance` evidence. It shows "Evidence recorded"
-and links to `build.md` when builder evidence exists but repository checks are
-unconfigured. It labels that evidence as builder-reported, counts checked and
-unchecked criteria separately, and never treats it as engine-run passing checks
-or clears `no-checks-configured`. The record must be READY and its COMMIT must
-match the current round's accepted build and gate head when present. Missing,
-unreadable and stale build evidence remain explicit; old rounds never count.
-The display adds no required build-record section, test, command, route or gate transition.
-Missing evidence stays unavailable; an old
-round or missing record is never presented as current passing evidence. The
-human gate appears next to this summary. Acceptance still means local testing,
-and publishing/merging still require separate confirmed actions.
+The dashboard follows the approved shadcn dashboard-01 composition: inbox sidebar,
+site header, decision bar, four section cards, recorded token chart and activity
+table. The decision bar appears for a human decision or ownership/recovery state;
+its Read action opens supporting evidence in a right-hand sheet. Detailed prose,
+original requests, worktree paths, earlier-round checks/reviews and gate blockers
+stay in sheets. Summary cards open their contributing evidence. Design runs show
+the interactive conversation in place of cards while no implementation plan exists.
+
+Dispatches/Records/Log/Decisions replace the former Overview/Activity/Analysis/
+in-run Agents tabs and stage strip. Dispatch rows and chart selections open
+model/effort, timing, reported usage, record and log details. Column customization
+changes the actual dispatch table; CSV exports only filtered rows and visible
+data columns. Records reuse formatted/raw rendering and original-byte download.
+The log merges paged catch-up and SSE by sequence without duplication, keeps a
+bounded tail, discloses retention loss and preserves failed catch-up until retry.
+
+Controls and Commands expose only legal actions under engine and ownership
+rules. Pause, Stop with note, executed single-step (`/run` with `mode: "step"`),
+hold-after-transition (`/run` with `hold`) and early overrides reuse existing
+routes. Overrides before a hold do not start a second driver. Stop notes persist
+in human history; reopen sends the explicitly chosen `discard` flag; Prepare PR
+text sends `push: false`, separately from confirmed publication. Acceptance keeps
+its local-testing confirmation, and GitHub merge binds the confirmed PR URL/head.
+External ownership retains Open owning console and usable Refresh status while
+local mutation controls are unavailable. Settings manages local capacity through
+`/api/local/capacity` with `expectedLimit`, sandbox capacity, and runtime themes.
+
+Measurements remain evidence: cumulative agent time sums dispatch durations,
+missing usage is unavailable, and live usage reports at completion. Chart areas
+step at recorded completions; cache reads are an included subset overlaid outside
+the dispatch stack. Checks must match their recorded reference and gate commit
+before a PASS headline; missing/unconfigured/stale evidence remains explicit.
+When repository checks are unconfigured, current READY build Acceptance evidence
+remains builder-reported: the card and evidence sheet show checked/unchecked
+counts and link to build.md only when its COMMIT matches the accepted build and
+gate head when present. Missing, stale, unreadable or absent acceptance criteria
+remain explicit; builder evidence never becomes engine-run PASS or clears the
+no-checks-configured policy flag.
+Acceptance, publishing and merging remain separate human decisions.
 
 The run rail hides archived runs by default. Each row offers Archive or Restore;
 a Show archived checkbox above the list includes archived runs with their label.
@@ -1406,33 +1430,30 @@ but runtime catalog reads and job workflows require PostgreSQL.
 
 #### Canonical UI Map
 
-The React console uses runtime-owned tokens in `ui/web/src/index.css`.
-`DESIGN.md` documents those tokens. Native selects are intentional: platform
-popup geometry is acceptable for project, status and bound selection.
-The compact Overview is complemented by Activity, Analysis and Agents tabs.
-Activity retains the dispatch ledger, model/effort, retries, outcome, record
-links, full timestamps, live elapsed time, deadlines, driver log and human
-history. Analysis retains all rounds with build/check/review/conformance/gate
-evidence and per-role timing/usage. Agents exposes the run's pinned role budgets, versions and tools from
-`/api/meta?job=<id>` alongside its actual dispatch history. Plain `/api/meta`
-reports latest releases. Missing
-cost or token measurements remain missing, never zero; parallel agent elapsed
-time is labeled cumulative rather than run wall time. Deadline compliance is
-derived only from recorded start, deadline and finish timestamps.
+The React console uses runtime-owned tokens in `ui/web/src/index.css` and
+`src/theme/` presets. The approved direction contract lives in
+`ui/web/.impeccable/surfaces/sociotechnic-ui-web-src-app-tsx.md`; the final design
+document is a later finish deliverable. Geist is local, body text is 16px, utility
+text is at least 13px, and section cards use 24px padding. Role colors map once
+in `role-colors.ts` to chart tokens and follow badges, chart and dispatch rows.
+Status labels/icons remain present alongside supplementary semantic colors.
 
-Forms retain drafts on failed requests, disable duplicate submits, and show
-inline errors. Dialogs use Radix focus trapping and return focus to the opener.
-New runs always hold at the plan. Restore and single-step controls remain in
-the legacy console or CLI during this migration.
-Rollback is `/legacy`; removal requires parity for those workflows and a
-separate decision. English is the current UI locale; dates remain labeled ISO.
+Forms keep drafts on failure, prevent duplicate submits and show inline errors.
+Installed Radix/shadcn dialogs and sheets trap focus, close with Escape and return
+to their opener. English is the current locale; full recorded timestamps remain
+available in details. New runs hold at the plan. Restore without continuing stays
+in the CLI until a dedicated API operation exists. `/legacy` remains the fallback.
 
 | Capability | Canonical owner | Source of truth | Allowed variants | Verification |
 | --- | --- | --- | --- | --- |
-| Select/Listbox | Native select | `ui/web/src/index.css` | Project, status, bound | Keyboard and narrow viewport |
-| Form | `ui/web/src/components/actions.tsx`, `components/design.tsx`, `components/agent-settings.tsx` | API routes in section 12.3 | New run, human decision, agent creation/version forms | Errors, retained draft, duplicate prevention |
-| Scrollbar | `ui/web/src/index.css` | Runtime theme tokens | System high contrast | Root and records computed styles |
-| CRUD | `ui/web/src/components/actions.tsx`, `components/add-agent.tsx`, `components/agent-versions.tsx` | Engine transitions in section 8 | Confirmation for consequential actions | API tests and fixture browser workflow |
+| Select/Listbox | `components/ui/select.tsx`, `components/form-select.tsx` | Installed Radix primitives | Projects, bounds, holds, roles, provider/model settings | Keyboard, labels, mobile popup geometry |
+| Shell/navigation | `components/shell/`, `components/ui/sidebar.tsx` | `use-console.ts`, engine job status | Inbox, agent library, settings, commands | Loading/error/empty, ownership, narrow sidebar and shortcuts |
+| Form/actions | `components/run/use-run-actions.tsx`, `components/new-run.tsx`, retained design/agent forms | Existing HTTP routes and engine transitions | Human gates, driver controls, dispatch interrupt | Draft/error recovery, confirmations, duplicate prevention |
+| Data table | `components/run/run-table.tsx`, `run-table-model.ts` | Parsed dispatch/record/human history | TanStack column visibility, search, filtered CSV | Helper tests and browser export/column proof |
+| Chart | `components/run/token-burn-chart.tsx`, `run-model.ts`, `components/ui/chart.tsx` | Completed recorded dispatch usage | Dispatch, round and run ranges; cache subset overlay | Real timestamps, missing/live coverage, dispatch drill-down |
+| Records/evidence | `components/records.tsx`, `components/run/evidence-sheet.tsx` | Committed records, checks and gate heads | Formatted/raw, download, round selector | Commit freshness, original bytes, focus return |
+| Scrollbar/theme | `index.css`, `theme/` | Runtime tokens | Light/dark presets, reduced motion | Computed styles and responsive browser checks |
+| Feedback | `components/ui/sonner.tsx`, inline form errors | Confirmed request outcomes | Success toast, retryable inline errors | No success before completion; stale-data recovery |
 
 #### Legacy console
 

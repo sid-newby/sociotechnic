@@ -157,7 +157,7 @@ human event. An interrupted request can be retried to reconcile an already
 merged PR. Local checkouts and worktrees stay as they are; synchronize the local
 base separately. Plain `merge <job>` continues to perform the local merge.
 
-In the React console, the `ready` panel offers Merge locally first (behind a confirm that names your checkout), then Accept, Request rework and Stop run. The `merged-local` panel says the change is merged into your checkout to test there and offers Accept, Request rework and Stop run. The `accepted` panel offers Push and open PR (behind a confirm that names the branch and base), Finish locally (or Merge locally when no local merge is recorded, behind a confirm) and Stop run, then Merge PR on GitHub and the pull request link once `pr` is recorded. The React console has no local PR-text action. Generate `pr.md` without pushing with `pr <job>`, `POST /api/jobs/:id/pr` with `{ "push": false }`, or Generate PR text in `/legacy`, which offers it in the `ready`, `merged-local`, `accepted` and `merged` panels. The skill pushes only when you typed `--push`, never on the suggestion of an agent or a record.
+In the React console, the `ready` panel offers Merge locally first (behind a confirm that names your checkout), then Accept, Request rework and Stop run. The `merged-local` panel says the change is merged into your checkout to test there and offers Accept, Request rework and Stop run. The `accepted` panel offers Push and open PR (behind a confirm that names the branch and base), Finish locally (or Merge locally when no local merge is recorded, behind a confirm) and Stop run, then Merge PR on GitHub and the pull request link once `pr` is recorded. Choose Prepare PR text in the React command palette (also beside Push and open PR after acceptance). Generate `pr.md` without pushing with `pr <job>`, `POST /api/jobs/:id/pr` with `{ "push": false }`, or Generate PR text in `/legacy`, which offers it in the `ready`, `merged-local`, `accepted` and `merged` panels. The skill pushes only when you typed `--push`, never on the suggestion of an agent or a record.
 
 ## Run console
 
@@ -169,8 +169,9 @@ sociotechnic/bin/sociotechnic ui
 
 The server prints one JSON line `{ url, port, pid, sociotechnicHome }`, opens the URL in your browser and runs in the foreground until SIGINT or SIGTERM. Run `task build` first for the React console, or `task ui` to build and ensure a background server. Before a build exists, the server uses the original HTML console.
 
-The React console shows current-round checks, review exceptions, gate evidence and the next human decision together. Activity exposes dispatch history, live logs, elapsed time and deadlines. Analysis exposes every round, review findings, conformance, timing and reported usage. Agents shows role profiles and their history in the selected run. Record text wraps by default; Raw view preserves the original line layout. Both consoles offer Recover worktree and continue when a run's worktree is missing; it calls `POST /api/jobs/:id/resume`, which restores the worktree and starts the driver. Restoring without continuing is the CLI `restore <job>`. Single-step is in `/legacy` (Step) and the CLI (`run <job> --step`, or `step <job>` without a driver).
+The React console uses an inbox sidebar, decision bar, four summary cards, recorded token chart and Dispatches/Records/Log/Decisions tabs. Evidence opens in right-hand sheets; the round selector preserves earlier evidence. Controls offers Pause, Step once, hold after a transition and early bound overrides. Step once uses `POST /api/jobs/:id/run` with `{ "mode": "step" }`, which executes one engine instruction; raw `/step` only returns an engine envelope. Settings manages local concurrency, sandbox capacity and theme. The command palette lists legal actions with CLI equivalents. Records support formatted/raw reading and original-byte download, and dispatch details support interrupt with a note.
 
+Both consoles offer Recover worktree and continue when a runnable run's worktree is missing; `/resume` restores and starts the driver. Restoring without continuing remains the CLI `restore <job>`.
 For frontend development, `task dev` first stops TCP listeners on ports 5173 and 4748, allowing five seconds for graceful shutdown before force-stopping any remaining listeners. It then starts a separate API at port 4748 and Vite at `http://127.0.0.1:5173`, opening the page when ready. Vite refuses to switch ports. It proxies `/api`, `/events` and `/legacy` to that API. Ctrl-C stops both processes. The production server on 4747 can keep running. Cleanup requires `lsof`.
 
 To see the live logs of an already-running console without restarting its driver,
@@ -234,33 +235,18 @@ scroll independently from the detail pane, with the rail filters fixed above.
 
 ### What the React console shows
 
-| View | Content |
+| Surface | Content |
 | --- | --- |
-| Overview | Current status, checks, review exceptions, gate commit, records and legal human decisions |
-| Activity | Live driver output, dispatch history with exact timestamps and deadlines, filters and human decisions |
-| Analysis | Per-agent elapsed time, deadline compliance, reported usage, every round's build/check/review/conformance evidence, gate blockers and flags |
-| Agents | Configured models, effort, tools, turn and deadline budgets, plus each agent's history in the selected run |
+| Decision bar and evidence sheets | Current human decision, plan, checks, reviews, gate blockers, approval and diff; round selection and original request/worktree detail |
+| Summary cards and chart | Cumulative agent time, reported tokens and estimated cost, moment evidence; completion-step usage by dispatch with cache-read subset overlay |
+| Dispatches | Role/status, model/effort, tokens, elapsed, record and details; column customization and filtered visible-column CSV download |
+| Records | Name, kind, attribution, timestamp, size and original-byte download; formatted/raw sheets |
+| Log and Decisions | Buffered driver log with dispatch filter and SSE catch-up; human actions and notes |
+| Agents and Settings | Agent library; local dispatch limit, sandbox capacity and theme |
 
-Technical records open in a dialog with wrapped text and a raw-format toggle.
-Missing usage remains unreported, and timing summaries cover only the selected
-run. When a worktree is missing, Recover worktree and continue restores it and
-starts the driver.
-
-The React console does not yet offer these engine abilities; use the CLI, the
-HTTP API or `/legacy` where noted:
-
-| Ability | Reach it through |
-| --- | --- |
-| Single step | `run <job> --step`, `POST /api/jobs/:id/run` with `mode: "step"`, Step in `/legacy` |
-| Hold after a status other than `planned` | `run <job> --hold <status,...>`, `POST /api/jobs/:id/run` with `hold` |
-| Raise a bound before it trips | `override <job> <bound> <note>` or `POST /api/jobs/:id/override` in any non-terminal status |
-| Restore a worktree without continuing | `restore <job>` |
-| Reopen and discard uncommitted changes | `reopen <job> --discard`, `POST /api/jobs/:id/reopen` with `discard: true`, `/legacy` |
-| Generate PR text without pushing | `pr <job>`, `POST /api/jobs/:id/pr`, `/legacy` |
-| Download a record | `GET /api/jobs/:id/records/<path>?download=1` |
-| Interrupt one dispatch | `interrupt <job> <dispatch> [note]`, `POST /api/jobs/:id/dispatches/:dispatchId/interrupt` |
-| Local concurrency limit | `GET` and `POST /api/local/capacity` |
-| Streamed driver log | SSE `log` events and `GET /api/jobs/:id/log` |
+The React console does not yet restore a worktree without continuing: use
+`restore <job>`. A separate restore-only API operation is planned; `/resume`
+starts the driver and must not be presented as restore-only.
 
 ### Legacy console
 

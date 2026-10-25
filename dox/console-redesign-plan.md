@@ -11,8 +11,8 @@ Brief: [console-redesign-brief.md](console-redesign-brief.md). Product truth:
 
 | Role | Who | Does |
 | --- | --- | --- |
-| Commander | This Claude session | Writes briefs, reviews every PR, merges, cleans worktrees, keeps docs honest |
-| Builders | Opus subagents, one per wave, each in its own git worktree | Implement, run checks, commit, push, open the PR, report back |
+| Coordinator | The supervising session | Writes briefs, reviews every PR, handles authorized merges and cleanup, keeps docs honest |
+| Builders and reviewers | GPT-6.1 Sol at high effort, selected by the owner for this continuation | Work in isolated worktrees with explicit file ownership, implement, check and report back |
 | Owner | Sid | Chooses release labels, merges the design-session PR, tests live runs |
 
 Cadence per wave: branch in a worktree, build, run the checks, commit, push,

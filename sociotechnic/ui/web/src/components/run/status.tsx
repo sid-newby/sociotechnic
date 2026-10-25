@@ -7,12 +7,18 @@ import { roleColor } from "../../role-colors";
 import { Badge } from "../ui/badge";
 import { agentLabel, useAgentTemplate } from "../agent-identity";
 
+export function statusColor(status: Status, running: boolean, archived = false): string {
+  if (status === "stopped") return "var(--muted-foreground)";
+  const group = inboxGroup({ status, running, archived });
+  return group === "done" ? "var(--status-completed)" : group === "needs" ? "var(--status-attention)" : "var(--status-working)";
+}
+
 export function RunStatusBadge({ status, running, archived = false }: { status: Status; running: boolean; archived?: boolean }) {
   const group = inboxGroup({ status, running, archived });
   const Icon = status === "stopped" ? Ban : group === "done" ? CircleCheck : running && group === "working" ? Loader : group === "needs" ? CircleAlert : CircleDot;
-  return <Badge variant="outline" className="h-6 gap-1.5 px-2 text-xs">
+  return <Badge variant="outline" className="h-6 gap-1.5 px-2 text-xs" style={{ color: statusColor(status, running, archived) }}>
     <Icon aria-hidden="true" className={running && group === "working" ? "motion-safe:animate-spin" : undefined} />
-    {statusLabels[status]}{running && group === "working" ? " · working" : ""}
+    {statusLabels[status]}
   </Badge>;
 }
 
@@ -30,9 +36,10 @@ const stateCopy: Record<DispatchState, string> = { running: "In process", queued
 export function DispatchStatus({ state }: { state: DispatchState }) {
   const Icon = { running: Loader, queued: Hourglass, ok: CircleCheck, failed: CircleX, timeout: Clock, interrupted: Scissors, unfinished: CircleDashed }[state];
   const bad = state === "failed" || state === "timeout";
-  return <Badge variant="outline" className="gap-1.5 px-1.5 text-muted-foreground">
+  const color = bad ? "var(--destructive)" : state === "ok" ? "var(--status-completed)" : state === "interrupted" ? "var(--status-attention)" : state === "running" || state === "queued" ? "var(--status-working)" : "var(--muted-foreground)";
+  return <Badge variant="outline" className="gap-1.5 px-1.5" style={{ color }}>
     <Icon aria-hidden="true" className={state === "running" ? "motion-safe:animate-spin" : bad ? "text-destructive" : undefined} />
-    <span className={bad ? "text-destructive" : "text-foreground"}>{stateCopy[state]}</span>
+    <span>{stateCopy[state]}</span>
   </Badge>;
 }
 
