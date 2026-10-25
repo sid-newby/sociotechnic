@@ -47,15 +47,15 @@ export function SandboxManager({ refresh, label = "Sandboxes", disabled = false 
       {!selected ? <><SandboxCapacity disabled={busy} onSaved={() => setRevision((value) => value + 1)} />
       <div className="action-row"><Button ref={refreshRef} type="button" variant="outline" disabled={busy || loading} onClick={() => { setSelected(null); setRevision((value) => value + 1); }}>Refresh sandboxes</Button></div>
       {loading ? <p role="status">Loading sandboxes…</p> : null}
-      {data ? <p>{data.sandboxes.length} retained / {data.limit} allowed</p> : null}
-      {data?.sandboxes.length === 0 && !loading ? <p>No retained sandboxes. Capacity is available.</p> : null}
+      {data ? <p>{data.sandboxes.length} retained / {data.limit} allowed{error ? " · last loaded" : ""}</p> : null}
+      {data?.sandboxes.length === 0 && !loading && !error ? <p>No retained sandboxes. Capacity is available.</p> : null}
       <div className="sandbox-list">{data?.sandboxes.map((row) => {
         const job = row.job;
         const removable = job && ["stopped", "merged"].includes(job.status);
         return <article className="sandbox-entry" key={row.name}>
           <h3>{job?.feature || row.name}</h3><p><code>{row.name}</code></p>
           {job ? <p>Run: {job.id} · {statusLabels[job.status]}</p> : null}
-          {!job || !row.initialized ? <p>Setup or ownership needs inspection with sbx. Automatic removal is unavailable.</p> : <div className="action-row"><Button type="button" variant="outline" disabled={busy || loading || !!selected} onClick={() => { setError(""); setMessage(""); setSelected({ kind: removable ? "remove" : "stop", id: job.id, feature: job.feature }); }}>{removable ? "Remove sandbox and worktree" : "Stop run"}</Button></div>}
+          {!job || !row.initialized ? <p>Setup or ownership needs inspection with sbx. Automatic removal is unavailable.</p> : <div className="action-row"><Button type="button" variant="outline" disabled={busy || loading || !!selected || !!error} onClick={() => { setError(""); setMessage(""); setSelected({ kind: removable ? "remove" : "stop", id: job.id, feature: job.feature }); }}>{removable ? "Remove sandbox and worktree" : "Stop run"}</Button></div>}
         </article>;
       })}</div></> : null}
       {selected ? <div className="sandbox-confirm" role="group" aria-label="Confirm sandbox action">

@@ -64,6 +64,7 @@ try {
   dirty = false; await dialog.getByRole('button', { name: 'Confirm removal', exact: true }).click();
   await dialog.getByText('0 retained / 2 allowed', { exact: true }).waitFor(); assert.equal(removals, 2);
   unavailable = true; await dialog.getByRole('button', { name: 'Refresh sandboxes' }).click(); await dialog.getByRole('alert').filter({ hasText: 'Cannot reach' }).waitFor();
+  assert.equal(await dialog.getByText('No retained sandboxes. Capacity is available.', { exact: true }).count(), 0);
   unavailable = false; rows = [{ name: 'owned-but-uninitialized', initialized: false, job: null }]; await dialog.getByRole('button', { name: 'Refresh sandboxes' }).click();
   await dialog.getByText('Setup or ownership needs inspection with sbx. Automatic removal is unavailable.').waitFor();
   assert.equal(await dialog.getByRole('button', { name: 'Remove sandbox and worktree', exact: true }).count(), 0);
