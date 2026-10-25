@@ -64,6 +64,13 @@ the suite again just to enable PostgreSQL. Repeat only after a material failure,
 fix or unresolved concern. Fixture HTTP listeners use ephemeral ports and fake
 provider transports; preserve the user's services on 4747, 5173 and 4748.
 
+The port-cleanup tests start only their own ephemeral listeners. A validated IPC
+message carries each assigned port; stdout is diagnostic output and may contain
+blank lines or startup banners. Startup errors retain bounded stdout/stderr,
+and fixture cleanup waits for the owned child to exit. Regression cases cover
+noisy/split stdout, startup failure and malformed IPC without weakening the real
+graceful/forced cleanup or unrelated-listener preservation checks.
+
 ## Focused acceptance cases
 
 | Card or integration concern | Behavioral proof |
