@@ -1,8 +1,8 @@
 # Interactive design replacement
 
-Implement local sessions first on `codex/interactive-design-session`. No live
-model runs are authorized until integration checks pass and a token budget is
-agreed. Fixture streams must be clearly distinguished from provider evidence.
+Implement local sessions first on `codex/interactive-design-session`. The user
+has authorized live testing and fixes without a token budget. Fixture streams
+must be clearly distinguished from provider evidence.
 
 1. Replace new packet dispatches with a generic resumable session lifecycle.
    Keep historical packet readers and approved handoffs; require explicit
@@ -20,11 +20,11 @@ agreed. Fixture streams must be clearly distinguished from provider evidence.
    final planner/build/review handoff to that digest. No implementation edits
    occur during design.
 6. Verify deterministic SDK, native subprocess, HTTP, PostgreSQL and browser
-   interaction including failure and recovery. Report live verification as
-   pending; do not run a paid smoke.
+   interaction including failure and recovery. Report live verification
+   accurately and exercise the real Claude session through the application.
 
 `docsImpact`: CONTRACTS.md, AGENTS.md, design-ceremony.md, cli-reference.md,
-engine-reference.md, development.md feature map, README, PRODUCT.md, DESIGN.md
+engine-reference.md, scaffolds.md, development.md feature map, README, PRODUCT.md, DESIGN.md
 and changelog, plus clearly labeled integration evidence and screenshots.
 Allowed implementation scope: design modules, engine/job state,
 driver/SDK integration, records, HTTP/CLI, design UI/model/styles, agent catalog

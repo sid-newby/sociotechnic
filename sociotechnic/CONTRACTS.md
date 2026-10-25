@@ -17,9 +17,16 @@ an automatic model retry. Human waiting consumes no inference or active deadline
 Only explicit approval of a current artifact fingerprint enables final planning;
 design choices alone do not authorize implementation. Existing build gates remain.
 
+The maintained React/Nest starter is supplied as a read-only reference when
+available. Its source revision and content digest are pinned in the design
+session and approval; the human's choice belongs in the design conversation and
+DESIGN.md. Planners and builders receive the same starter reference and refuse
+changed source bytes. Explicitly requested templates are preserved. A major UI
+request hands off before elaborating an implementation plan.
+
 Local integration verification uses injected SDK streams and real Impeccable
-subprocesses, never a provider call. Live verification requires separate human
-authorization and an agreed token budget.
+subprocesses, never a provider call. Live verification uses the real provider
+and is reported separately from fixture evidence.
 
 Sociotechnic is a tiered, role-based software line with a shared console driver
 for Claude and subscription-authenticated Codex roles. A deterministic engine (`sociotechnic/`, TypeScript on Node 24) owns every decision about state, bounds, verdicts and gates. The

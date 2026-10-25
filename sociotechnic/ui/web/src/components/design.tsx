@@ -67,6 +67,6 @@ function Conversation({ detail, refresh, disabled }: { detail: Detail; refresh: 
     {artifacts.length ? <details className="more-detail"><summary>Design artifacts ({artifacts.length})</summary><ul>{artifacts.map((p) => <li key={p}><a href={`${jobUrl(detail.job.id)}/design-artifacts/${encodeURIComponent(p)}`} target={`design-artifact-${d.id}`} rel="noopener noreferrer">{p.split("/workspace/")[1] ?? p}</a></li>)}</ul></details> : null}
     {canApprove ? <div className="design-approval"><label className="confirmation"><input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} disabled={blocked} /> I approve these design artifacts for implementation planning.</label><Button disabled={blocked || !confirmed} onClick={() => void action("approve", { digest: d.fingerprint, confirmed: true })}>Approve design and continue <ArrowRight /></Button></div> : null}
     {error ? <p className="inline-error" role="alert">{error}</p> : null}
-    <p className="technical-description">{d.usage.turns} recorded model turns · {d.usage.tokens.toLocaleString()} reported tokens. Human waiting does not run the model.</p>
+    <p className="technical-description">{active ? "Usage updates when this response finishes." : `${d.usage.turns} recorded model turns · ${d.usage.tokens.toLocaleString()} reported tokens.`} Human waiting does not run the model.</p>
   </section>;
 }

@@ -9,7 +9,7 @@ import { session, readJson, writeJsonAtomic, writeBytes } from "../src/record-st
 import { recordBytes } from "../src/db/store.ts";
 import { jobDir, stateDir, sociotechnicHome } from "../src/paths.ts";
 import { verifyDriverLease } from "../src/driverlock.ts";
-import { designSession, previewUrl } from "../src/design-session.ts";
+import { designSession, previewUrl, pinDesignStarter, designStarterBrief } from "../src/design-session.ts";
 import type { SkillInstallation } from "../src/design-session.ts";
 import type { DesignQuestion } from "../src/design-session.ts";
 import { SociotechnicError } from "../src/errors.ts";
@@ -149,19 +149,20 @@ export async function runInteractiveDesign(input: { id: string; token: string; s
     const nativeStore = sdkTranscriptStore(id, token);
     const store: SessionStore = { ...nativeStore, async append(key, entries) { try { await nativeStore.append(key, entries); } catch (e) { failPersistence(e); } } };
     const hasHistory = await readJob(id, () => [...session().records.keys()].some((p) => p.startsWith(`design/transcripts/${d.id}/`)));
-    await write((job) => { const s = designSession(job); s.skill = skill; s.error = null; s.question = null; if (s.streamingText) s.messages.push({ id: randomUUID(), role: "assistant", text: s.streamingText + "\n\n_Response interrupted._", at: new Date().toISOString() }); s.streamingText = ""; });
+    await write((job) => { pinDesignStarter(job); const s = designSession(job); s.skill = skill; s.error = null; s.question = null; if (s.streamingText) s.messages.push({ id: randomUUID(), role: "assistant", text: s.streamingText + "\n\n_Response interrupted._", at: new Date().toISOString() }); s.streamingText = ""; });
+    const starterBrief = await readJob(id, designStarterBrief);
     const initialContext = hasHistory ? "" : await runNative(skill, workspace, ["context"], abort.signal);
     const rawDefinition = config.definition ? parseFrontmatter(config.definition)?.body : null;
     if (!rawDefinition) throw new Error("Pinned designer instructions are missing");
     const options: Options = {
-      cwd: workspace, additionalDirectories: [initial.worktree], settingSources: ["project"], skills: ["impeccable"],
+      cwd: workspace, additionalDirectories: [initial.worktree, ...(starterBrief ? [join(sociotechnicHome(), "sociotechnic/scaffolds/react-nest/template")] : [])], settingSources: ["project"], skills: ["impeccable"],
       tools: config.tools.filter((t) => !t.startsWith("mcp__")),
       allowedTools: config.tools.filter((t) => t !== "AskUserQuestion"),
       model: config.model, effort: config.effort, maxTurns: config.maxTurns, persistSession: true,
       ...(hasHistory ? { resume: d.id } : { sessionId: d.id }), sessionStore: store, sessionStoreFlush: "eager",
       abortController: abort, includePartialMessages: true,
       env: { ...agentEnvironment(), CLAUDE_CODE_PROJECT_DIR_NAME: `design-${d.id}` },
-      systemPrompt: { type: "preset", preset: "claude_code", append: `${rawDefinition}\nDesign workspace: ${workspace}. Target repository (read-only): ${initial.worktree}. Read its actual content and conventions. This is design only; write design documents, previews and skill state only in the workspace. Run the actual impeccable skill. Use mcp__impeccable__run for every command of its CLI with the native argument vector; it executes the installed engine without a shell. Its serve-question page opens through the console's Open previews action. AskUserQuestion and ordinary conversational replies reach the human. Follow the skill's workflow rather than a fixed sequence of packets. Stop before application implementation. When ready for approval, retain DESIGN.md and the preview files in this workspace and explain the chosen result to the human.` },
+      systemPrompt: { type: "preset", preset: "claude_code", append: `${rawDefinition}\n${starterBrief}\nDesign workspace: ${workspace}. Target repository (read-only): ${initial.worktree}. Read its actual content and conventions. This is design only; write design documents, previews and skill state only in the workspace. Run the actual impeccable skill. Use mcp__impeccable__run for every command of its CLI with the native argument vector; it executes the installed engine without a shell. Its serve-question page opens through the console's Open previews action. AskUserQuestion and ordinary conversational replies reach the human. Follow the skill's workflow rather than a fixed sequence of packets. Stop before application implementation. When ready for approval, retain DESIGN.md and the preview files in this workspace and explain the chosen result to the human.` },
       mcpServers: { impeccable: { command: process.execPath, args: [join(sociotechnicHome(), "sociotechnic/ui/impeccable-runtime.ts")], env: { SOCIOTECHNIC_DESIGN_WORKSPACE: workspace, SOCIOTECHNIC_DESIGN_SESSION: d.id, SOCIOTECHNIC_DESIGN_SKILL_DIGEST: skill.digest, SOCIOTECHNIC_DESIGN_REFERENCE_ROOT: initial.worktree } } },
       canUseTool: async (name, value, context) => {
         if (name !== "AskUserQuestion") return { behavior: "deny", message: "This operation is outside the design session's permitted tools" };

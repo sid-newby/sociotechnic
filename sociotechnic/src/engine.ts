@@ -6,7 +6,7 @@ import { BASE_AGENT_VERSION, advisorConfiguration, pinAgentVersions, versionRole
 import { assistanceBrief, rosterBrief } from "./agent-roster.ts";
 import type { PinnedAgents } from "./agent-versions.ts";
 import { designDigest, designFingerprint, verifyDesign } from "./design.ts";
-import { newInteractiveDesign, verifyInteractiveDesign } from "./design-session.ts";
+import { newInteractiveDesign, verifyInteractiveDesign, designStarterBrief } from "./design-session.ts";
 import { approveBrief, buildBrief, planBrief, researchBrief, reviewBrief } from "./brief.ts";
 import type { FailingCheck, LensChanges } from "./brief.ts";
 import { commentInventory, cleanupPlan, digest, INVENTORY_FILE, verifyCommentChanges } from "./comment-inventory.ts";
@@ -299,7 +299,7 @@ function approvedDesignBrief(job: Job, revalidate = true): string | undefined {
   if (job.designSession) {
     if (job.designSession.state !== "approved") return undefined;
     const digest = revalidate ? verifyInteractiveDesign(job) : job.designSession.approval?.digest;
-    return `Required plan.designDigest: ${digest}\nApproved interactive design: ${abs(job, "design/approval.json")}\nRead the approved artifacts: ${JSON.stringify(job.designSession.approval?.files)}\nSkill version: ${job.designSession.skill?.version}. Preserve the human-approved design, product truth and stack decision. Include adoption of these documents and preview verification in implementation scope.`;
+    return `Required plan.designDigest: ${digest}\nApproved interactive design: ${abs(job, "design/approval.json")}\nRead the approved artifacts: ${JSON.stringify(job.designSession.approval?.files)}\n${designStarterBrief(job)}\nSkill version: ${job.designSession.skill?.version}. Preserve the human-approved design, product truth and stack decision. Include adoption of these documents and preview verification in implementation scope.`;
   }
   if (!job.design || job.design.state !== "approved") return undefined;
   const digest = revalidate ? requireDesignApproval(job) : designDigest(job.design);

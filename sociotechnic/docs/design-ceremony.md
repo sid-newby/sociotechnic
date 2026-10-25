@@ -28,6 +28,13 @@ and bundled platform executable are copied into a session-specific directory;
 its version and content digest are pinned for that session. Resume refuses
 changed skill bytes. The SDK loads the real skill from that workspace.
 
+When available, the maintained React/Nest house starter is supplied as a
+read-only reference with its source revision and content digest pinned in the
+session. An explicit template request is preserved; otherwise the conversation
+offers it for a new UI. The chosen stack belongs in DESIGN.md. Final planning
+receives the same starter reference, and changed starter bytes invalidate the
+approval rather than silently changing the foundation.
+
 The preflight verifies the installed executable and native decision schema,
 then runs its actual context command before the first SDK query. The native
 tool passes command arguments directly
@@ -111,5 +118,7 @@ fixture content. This starts no model and generates no images. The browser
 verification script uses the same injected session and refuses real provider
 execution. Fixture screenshots prove UI behavior only.
 
-Live model verification is pending. It requires separately agreed token spending
-and human participation; no live ceremony is claimed by these integration checks.
+Integration checks and live model verification are reported separately. Fixture
+checks alone do not establish that a live Claude ceremony works.
+See the [integration results](evidence/interactive-design.md) and the
+[live verification record](evidence/interactive-design-live.md).

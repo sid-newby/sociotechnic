@@ -31,6 +31,7 @@ Both are recorded separately and the complete copied installation is pinned by
 content digest. No installation was silently updated.
 
 Live SDK/model continuation, creative quality and provider spending remain
-unverified. A live test requires the user's agreed token budget and participation.
+unverified in this fixture evidence. See the separate
+[live verification record](interactive-design-live.md).
 The existing console was not restarted and its production catalog was not
 migrated during these checks.

@@ -98,6 +98,39 @@ test("server restart resumes from the opaque PostgreSQL transcript instead of re
   assert.equal(existsSync(join(workspace, "uncommitted.html")), false, "Recovery must discard artifacts absent from the committed database snapshot");
 });
 
+test("the house starter reaches the designer and changed starter bytes invalidate approval", async () => {
+  const template = join(home, "sociotechnic/scaffolds/react-nest/template");
+  mkdirSync(join(template, ".agents/skills/scaffold-ui"), { recursive: true });
+  writeFileSync(join(template, "readme.md"), "# Pinned house starter\n");
+  writeFileSync(join(template, ".agents/skills/scaffold-ui/SKILL.md"), "# Portable UI guide\n");
+  git(home, "init", "-q", "-b", "main"); git(home, "add", "sociotechnic/scaffolds"); git(home, "commit", "-qm", "fixture starter");
+  let supplied = false;
+  injected = async function* (args) {
+    assert.ok(args.options.additionalDirectories?.includes(template));
+    assert.ok(typeof args.options.systemPrompt === "object" && "append" in args.options.systemPrompt);
+    assert.match(args.options.systemPrompt.append ?? "", /Pinned React\/Nest starter revision:/);
+    supplied = true;
+    yield* fixtureDesignQuery(args);
+  };
+  try {
+    const id = await create(); const job = await completeInterview(id);
+    assert.equal(supplied, true); assert.ok(job.designSession?.starter);
+    assert.equal(job.designSession.starter.digest, scaffoldFingerprint(home));
+    const digest = await readJob(id, interactiveFingerprint);
+    writeFileSync(join(template, "readme.md"), "# Changed starter\n");
+    const approval = await call(`/api/jobs/${id}/design-session/approve`, { digest, confirmed: true });
+    assert.equal(approval.status, 400); assert.match(JSON.stringify(approval.data), /starter changed/);
+    assert.equal((await readJob(id, (j) => j)).designSession?.approval, null);
+    writeFileSync(join(template, "readme.md"), "# Pinned house starter\n");
+    assert.equal((await call(`/api/jobs/${id}/design-session/approve`, { digest, confirmed: true })).status, 200);
+    const planned = await settled(id);
+    assert.equal(planned.status, "planned");
+    const brief = planned.dispatches.find((d) => d.step === "plan")?.execution?.envelope.prompt;
+    assert.ok(brief?.includes(template));
+    assert.ok(brief.includes(job.designSession.starter.digest));
+  } finally { injected = undefined; rmSync(join(home, "sociotechnic"), { recursive: true, force: true }); }
+});
+
 test("interruption preserves the session and can resume without a fresh design attempt", async () => {
   const id = await create(); await completeInterview(id);
   await call(`/api/jobs/${id}/design-session/messages`, { message: "hold response", messageId: randomUUID() });

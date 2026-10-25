@@ -1,11 +1,14 @@
 import { createHash, randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { Job } from "./job.ts";
 import { transition } from "./job.ts";
-import { jobDir } from "./paths.ts";
+import { jobDir, sociotechnicHome } from "./paths.ts";
 import { readBytes, session, writeJsonAtomic } from "./record-store.ts";
 import { planDigest } from "./plan.ts";
 import { SociotechnicError } from "./errors.ts";
+import { scaffoldFingerprint } from "./design.ts";
+import * as git from "./git.ts";
 
 export type DesignMessage = { id: string; role: "user" | "assistant" | "tool"; text: string; at: string };
 export type DesignQuestion = { id: string; questions: { question: string; header: string; multiSelect: boolean; options: { label: string; description: string }[] }[] };
@@ -21,6 +24,7 @@ export type InteractiveDesign = {
   question: DesignQuestion | null;
   answers: Record<string, Record<string, string>>;
   skill: SkillInstallation | null;
+  starter?: { kind: "react-nest"; revision: string; digest: string };
   previewUrl: string | null;
   previewKeys: string[];
   streamingText: string;
@@ -36,6 +40,27 @@ export function newInteractiveDesign(reason: string): InteractiveDesign {
 export function designSession(job: Job): InteractiveDesign {
   if (!job.designSession) throw new SociotechnicError("bad-design", "This run has no interactive design session");
   return job.designSession;
+}
+
+export function pinDesignStarter(job: Job): void {
+  const d = designSession(job);
+  if (!d.starter && existsSync(join(sociotechnicHome(), "sociotechnic/scaffolds/react-nest/template"))) {
+    d.starter = { kind: "react-nest", revision: git.headCommit(sociotechnicHome()), digest: scaffoldFingerprint(sociotechnicHome()) };
+    writeJsonAtomic(join(jobDir(job.id), "design/starter.json"), d.starter);
+  }
+  verifyDesignStarter(job);
+}
+
+function verifyDesignStarter(job: Job): void {
+  const starter = designSession(job).starter;
+  if (starter && scaffoldFingerprint(sociotechnicHome()) !== starter.digest) throw new SociotechnicError("bad-design", "The pinned React/Nest starter changed; restore its exact bytes before continuing this design");
+}
+
+export function designStarterBrief(job: Job): string {
+  const starter = designSession(job).starter;
+  if (!starter) return "";
+  const root = join(sociotechnicHome(), "sociotechnic/scaffolds/react-nest/template");
+  return `House starter (read-only): ${root}\nPinned React/Nest starter revision: ${starter.revision}; digest: ${starter.digest}.\nRead its readme.md and .agents/skills/scaffold-ui/SKILL.md when using it. Respect an explicitly requested template. Otherwise offer this starter for a new UI and preserve an existing project's foundation. Record the human's stack/template choice in DESIGN.md; this reference does not make the choice for them. If selected, plan adoption from this exact source, including hidden configuration, lockfile and portable UI guide. Follow ${join(sociotechnicHome(), "sociotechnic/docs/scaffolds.md")} for validation and adoption. Do not copy or implement the application during design.`;
 }
 
 export function previewUrl(value: unknown): string | null {
@@ -66,7 +91,7 @@ export function artifactFiles(job: Job): string[] {
 export function interactiveFingerprint(job: Job): string {
   const d = designSession(job);
   const files = artifactFiles(job).map((path) => ({ path, sha256: createHash("sha256").update(readBytes(join(jobDir(job.id), path))).digest("hex") }));
-  return planDigest({ session: d.id, skill: d.skill?.digest, files });
+  return planDigest({ session: d.id, skill: d.skill?.digest, starter: d.starter ?? null, files });
 }
 
 export function approveInteractiveDesign(job: Job, expected: unknown): void {
@@ -75,16 +100,18 @@ export function approveInteractiveDesign(job: Job, expected: unknown): void {
   const files = artifactFiles(job);
   if (!files.some((p) => p.endsWith("/DESIGN.md")) || !files.some((p) => /\.(html|png|webp|jpg|jpeg)$/.test(p))) throw new SociotechnicError("bad-design", "Approval requires DESIGN.md and a preview artifact");
   const digest = interactiveFingerprint(job);
+  verifyDesignStarter(job);
   if (expected !== digest) throw new SociotechnicError("stale-design", "The design changed; inspect the current artifacts before approving");
   d.approval = { digest, at: new Date().toISOString(), files };
   d.state = "approved";
-  writeJsonAtomic(join(jobDir(job.id), "design/approval.json"), { session: d.id, skill: d.skill, ...d.approval });
+  writeJsonAtomic(join(jobDir(job.id), "design/approval.json"), { session: d.id, skill: d.skill, starter: d.starter ?? null, ...d.approval });
   job.human.push({ action: "design-approve", note: digest, at: d.approval.at });
   transition(job, "planning", "Interactive design approved; implementation planning may begin", new Date().toISOString());
 }
 
 export function verifyInteractiveDesign(job: Job): string {
   const d = designSession(job);
+  verifyDesignStarter(job);
   if (d.state !== "approved" || !d.approval || interactiveFingerprint(job) !== d.approval.digest) throw new SociotechnicError("bad-design", "Interactive design approval is missing or stale");
   return d.approval.digest;
 }

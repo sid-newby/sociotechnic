@@ -18,6 +18,7 @@ notes/
 
 .sociotechnic/jobs/
 .sociotechnic/staging/
+.sociotechnic/design-sessions/
 .sociotechnic/backups/
 .pnpm-store/
 .sociotechnic/sandboxes/
