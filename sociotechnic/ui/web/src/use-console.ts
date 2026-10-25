@@ -13,6 +13,7 @@ export function useConsole() {
   const selectedRef = useRef(selected);
   selectedRef.current = selected;
   const refresh = useCallback(() => setRevision((v) => v + 1), []);
+  const externallyOwned = detail.kind === "ready" && detail.value.driver.ownership.kind === "external";
 
   useEffect(() => {
     const controller = new AbortController();
@@ -49,12 +50,13 @@ export function useConsole() {
     stream.addEventListener("driver", update);
     stream.addEventListener("error", () => setConnection("reconnecting"));
     const polling = setInterval(() => {
+      if (externallyOwned) refresh();
       if (stream.readyState !== EventSource.OPEN || Date.now() - lastEvent > 40_000) { setConnection("reconnecting"); refresh(); }
     }, 5000);
     const onVisible = () => { if (document.visibilityState === "visible") refresh(); };
     document.addEventListener("visibilitychange", onVisible);
     return () => { stream.close(); clearInterval(polling); clearTimeout(timer); document.removeEventListener("visibilitychange", onVisible); };
-  }, [refresh]);
+  }, [refresh, externallyOwned]);
 
   useEffect(() => {
     const onHash = () => { const id = new URLSearchParams(location.hash.slice(1)).get("job"); if (id) setSelected(id); };

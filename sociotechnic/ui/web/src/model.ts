@@ -7,6 +7,8 @@ import type { Stage } from "../../../src/plan.ts";
 import type { Job, Status } from "../../../src/job.ts";
 import { sectionLines } from "../../../src/verdict.ts";
 import { parseExecution } from "../../../src/execution.ts";
+import { owningConsoleUrl } from "../../../src/driver-location.ts";
+import type { DriverOwnership } from "../../../src/driver-location.ts";
 
 export const statusLabels: Record<Status, string> = {
   designing: "Designing", "design-input": "Your design decision", new: "New", planning: "Planning", researching: "Researching", planned: "Plan ready",
@@ -35,7 +37,7 @@ export type Detail = {
   rounds: Round[];
   records: { path: string; bytes: number; mtime: string }[];
   plan: { title: string; summary: string; acceptance: string[]; stages?: Stage[] } | null;
-  driver: { running: boolean; mode: string | null; startedAt: string | null; lastStep: string | null; active: { id: string; agent: string; startedAt: string; deadlineAt: string; lastActivity: string | null }[]; log: { at: string; level: string; text: string }[]; error: string | null };
+  driver: { ownership: DriverOwnership; running: boolean; mode: string | null; startedAt: string | null; lastStep: string | null; active: { id: string; agent: string; startedAt: string; deadlineAt: string; lastActivity: string | null }[]; log: { at: string; level: string; text: string }[]; error: string | null };
   dispatches: Dispatch[];
   human: { at: string; action: string; note: string }[];
   overrides: { at: string; bound: string; note: string }[];
@@ -99,6 +101,14 @@ function parseRound(value: unknown): Round {
   };
 }
 
+function parseOwnership(value: unknown, id: string): DriverOwnership {
+  if (value == null) return { kind: "none" };
+  const v = object(value);
+  if (v.kind === "none" || v.kind === "local" || v.kind === "interrupted") return { kind: v.kind };
+  if (v.kind === "external") return { kind: "external", owner: v.owner === "ui" || v.owner === "cli" ? v.owner : "unknown", url: owningConsoleUrl(v.url, id) };
+  throw new Error("Unknown driver ownership. Refresh after updating the console.");
+}
+
 export function parseDetail(value: unknown): Detail {
   const d = object(value), j = object(d.job), base = object(j.base), caps = object(j.caps);
   const driver = d.driver == null ? null : object(d.driver);
@@ -111,7 +121,7 @@ export function parseDetail(value: unknown): Detail {
     rounds: list(j.rounds).map(parseRound),
     records: list(d.records).map((value) => { const r = object(value); return { path: text(r.path), bytes: count(r.bytes), mtime: text(r.mtime) }; }),
     plan: plan && typeof plan.title === "string" ? { title: plan.title, summary: text(plan.summary), acceptance: strings(plan.acceptance), stages: list(plan.stages ?? []).map((value) => { const stage = object(value); return { id: text(stage.id), title: text(stage.title), description: text(stage.description), files: strings(stage.files), acceptance: strings(stage.acceptance), risks: strings(stage.risks) }; }) } : null,
-    driver: { running: driver?.running === true, mode: optionalText(driver?.mode), startedAt: optionalText(driver?.startedAt), lastStep: driver?.lastStep ? optionalText(object(driver.lastStep).action) : null,
+    driver: { ownership: parseOwnership(driver?.ownership, text(j.id)), running: driver?.running === true || object(driver?.ownership ?? {}).kind === "external", mode: optionalText(driver?.mode), startedAt: optionalText(driver?.startedAt), lastStep: driver?.lastStep ? optionalText(object(driver.lastStep).action) : null,
       active: list(driver?.active ?? []).map((v) => { const a = object(v); return { id: text(a.dispatchId), agent: text(a.agent), startedAt: text(a.startedAt), deadlineAt: text(a.deadlineAt), lastActivity: optionalText(a.lastActivity) }; }),
       log: list(driver?.log ?? []).map((v) => { const l = object(v); return { at: text(l.at), level: text(l.level), text: text(l.text) }; }), error: optionalText(driver?.error) },
     dispatches: list(j.dispatches ?? []).map(parseDispatch),

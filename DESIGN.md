@@ -467,6 +467,16 @@ No new palette, modal primitive or settings owner is introduced.
 
 ### Database availability and run recovery
 
+When another console owns a run, the existing run-controls section says Running
+in another console and offers Open owning console, preserving the selected run
+in the destination URL. Use the shared Button as a native link. Keep local
+Continue, Pause, Stop and human-decision controls out of this ownership state.
+If the owning location is unavailable, explain that the original console or CLI
+owns execution and offer Refresh status. A stopped previous process is described
+as interrupted, with normal recovery checks still governing Continue. Ownership
+refreshes across consoles and after returning to the page. No new visual tokens
+or modal are needed.
+
 Run identity, archive visibility and evidence come from PostgreSQL. Missing local
 agent staging never makes a run absent or hides its records. Worktree recovery
 is a separate execution concern and must not be labeled as restoring evidence.

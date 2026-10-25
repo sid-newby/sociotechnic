@@ -323,7 +323,7 @@ export function createPgStore(rawUrl: string): Store {
       const v = r.rows[0]?.driver;
       return typeof v === "object" && v !== null ? Object.fromEntries(Object.entries(v)) : null;
     }),
-    setDriver: (id, owner) => withClient(async (c) => { await c.query("update jobs set driver=$2::jsonb where id=$1", [id, JSON.stringify(owner)]); }),
+    setDriver: (id, owner) => withClient(async (c) => { await c.query("with changed as (update jobs set driver=$2::jsonb where id=$1 returning id) select pg_notify('sociotechnic_jobs',id) from changed", [id, JSON.stringify(owner)]); }),
     async watch(onChange) {
       let stopped = false, active: PgClient | null = null;
       let timer: ReturnType<typeof setTimeout> | null = null;
@@ -475,7 +475,7 @@ export function createMemoryStore(): Store {
       return { token: crypto.randomUUID(), signal: new AbortController().signal, async verify() {if(!leases.has(key))throw new SociotechnicError("ownership-lost","Database ownership was lost");}, async release() { leases.delete(key); } };
     },
     driver: async (id) => clone(owners.get(id) ?? null),
-    setDriver: async (id, owner) => { owners.set(id, clone(owner)); },
+    setDriver: async (id, owner) => { owners.set(id, clone(owner)); for (const listener of listeners) listener(id); },
     async watch(fn) { listeners.add(fn); return async () => { listeners.delete(fn); }; },
     transaction(fn) {
       const operation = serial.then(async () => {

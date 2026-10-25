@@ -353,6 +353,20 @@ sequenceDiagram
 - It refuses a request whose `Host` is not its own address (DNS rebinding), and a mutating request with a foreign `Origin` or without `Content-Type: application/json`. `finish` is not exposed, and the console never edits a record, `job.json` or the plan.
 - Only one driver may run a job at a time. PostgreSQL holds driver ownership through a session advisory lock and a stored owner record (`host`, `pid`, `token`, `startedAt`, `mode`, `owner` of `ui` or `cli`). `step` from elsewhere is refused while that owner holds the job; interrupted ownership must be reconciled before takeover. Connection loss aborts execution and rejects stale completions. Local lock files cannot grant ownership. Pause the driver or wait for a gate; handoff remains available there.
 
+UI owners also record `consoleUrl`. The jobs, job-detail and driver endpoints
+include `driver.ownership`: `local`, `none`, `interrupted`, or `external`. External
+ownership includes `owner` (`ui`, `cli`, or `unknown`) and a safe same-host
+loopback `url` selecting the job, or `null` when no location is known. It reports
+`running: true` to block duplicate local execution; this describes ownership,
+not an independently verified agent heartbeat. The React console replaces local
+run controls with Open owning console and Refresh status. A dead same-host owner
+is reported as interrupted so Continue can use existing recovery checks.
+Ownership claim/release changes notify all connected consoles; the selected
+external owner also refreshes every five seconds to detect an exited process.
+For older UI owners without a URL, discovery checks only ports 4747 and 4748,
+requiring both the health PID and active-driver start time to match. Other hosts,
+CLI owners and unverified locations never receive a guessed link.
+
 ## Global command
 
 `/sociotechnic` can work in every Claude Code session on the machine, whatever the directory, not only in a session opened here. The global skill opens the run console and hands runs to the console's shared provider driver. Spec: [CONTRACTS.md section 15](../CONTRACTS.md).
