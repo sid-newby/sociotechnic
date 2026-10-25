@@ -3,6 +3,11 @@
 Release notes are committed before publication. [GitHub Releases](https://github.com/sid-newby/sociotechnic/releases) confirms which versions shipped.
 Dates on backfilled entries use America/Chicago. See the [release guide](sociotechnic/docs/releasing.md).
 
+## Unreleased
+
+- Move the web console onto the shadcn token contract with neutral colors, chart and sidebar tokens and the shared radius scale, and add the shadcn component set, Recharts and TanStack Table for the upcoming console layout. Existing views keep their layout. The Agent library history and dispatch filter now accept interrupted dispatches.
+- Add a theme switcher to the console header with the shadcn neutral theme and 42 TweakCN presets in light and dark. The console starts in neutral dark and remembers your choice in this browser.
+
 ## v0.5.0
 
 - Replace design packets with a normal turn-based Claude Code chat whose Markdown agent definition runs the installed /impeccable command with native tools and windows.

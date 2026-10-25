@@ -1,5 +1,5 @@
 :root { --amber: #905006; --violet: #6847b5; --cyan: #006a7a; }
-@media (prefers-color-scheme: dark) { :root { --amber: #f2bd6d; --violet: #bdabff; --cyan: #7ed4e2; } }
+.dark { --amber: #f2bd6d; --violet: #bdabff; --cyan: #7ed4e2; }
 ::selection { background: var(--primary); color: var(--primary-foreground); }
 input, textarea { caret-color: var(--primary); }
 a { text-underline-offset: 3px; }

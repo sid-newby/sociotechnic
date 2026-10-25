@@ -256,6 +256,7 @@ browser interaction was exercised.
 | Run archive preferences and rail scrolling | [server.ts](../ui/server.ts) (archive route and database job state), [App.tsx](../ui/web/src/App.tsx), [use-console.ts](../ui/web/src/use-console.ts), [index.css](../ui/web/src/index.css) | [ui.test.ts](../tests/ui.test.ts), [console.test.ts](../tests/console.test.ts); browser archive/restore and independent scrolling |
 | Formatted Run records and source view | [records.tsx](../ui/web/src/components/records.tsx) (formatter error boundary and independent raw source), [record-content.tsx](../ui/web/src/components/record-content.tsx), [record-format.ts](../ui/web/src/record-format.ts), [records.css](../ui/web/src/records.css), [vite.config.ts](../ui/web/vite.config.ts) (formatter dependency optimization) | [record-content.test.ts](../tests/record-content.test.ts) (real React rendering via Vite SSR with a disposable cache); browser-check formatter-load failure, source fallback, reload recovery, Markdown, JSON, diffs, keyboard and responsive themes |
 | React views, actions, records and server updates | [App.tsx](../ui/web/src/App.tsx), [components/](../ui/web/src/components/), [use-console.ts](../ui/web/src/use-console.ts), [api.ts](../ui/web/src/api.ts), [model.ts](../ui/web/src/model.ts) | [console.test.ts](../tests/console.test.ts) (console data helpers); build and exercise the affected view |
+| Console tokens, theme presets and shadcn components | [index.css](../ui/web/src/index.css), [theme/](../ui/web/src/theme/), [components/ui/](../ui/web/src/components/ui/), [components.json](../ui/web/components.json), [main.tsx](../ui/web/src/main.tsx) (provider), [App.tsx](../ui/web/src/App.tsx) (header switcher) | `task build` bundles the neutral preset and splits the others into chunks; browser-check preset switching, light/dark, reload persistence and the narrow header ([workspace notes](#web-console-workspace)) |
 | Welcome state and README banner | [App.tsx](../ui/web/src/App.tsx), [index.css](../ui/web/src/index.css), [transparent banner](../../assets/sociotechnic-banner-v4-transparent.png), [original banner](../../assets/sociotechnic-banner-v4.png) | Build verifies both theme assets are bundled; browser-check the banner, header New run action and narrow layout |
 | Console release version | [Vite config](../ui/web/vite.config.ts), [release parser](../../.github/scripts/changelog.cjs), [App.tsx](../ui/web/src/App.tsx), [release guide](releasing.md) | [console-version.test.ts](../tests/console-version.test.ts) verifies Vite embeds the newest changelog version; browser-check title typography and narrow layout |
 | Driver ownership across consoles | [driverlock.ts](../src/driverlock.ts), [driver-view.ts](../ui/driver-view.ts), [driver-location.ts](../src/driver-location.ts), [server.ts](../ui/server.ts), [actions.tsx](../ui/web/src/components/actions.tsx), [use-console.ts](../ui/web/src/use-console.ts) | [console-ownership.test.ts](../tests/console-ownership.test.ts) runs two servers against one store, verifies exact navigation, duplicate-execution refusal, ownership notifications and interrupted owners; uses disposable PostgreSQL with `task test:pg`; [console.test.ts](../tests/console.test.ts) validates browser parsing and safe links |
@@ -288,6 +289,53 @@ The package manager is pnpm. The lockfile is `sociotechnic/pnpm-lock.yaml` and i
 ```bash
 task install
 ```
+
+### Web console workspace
+
+`sociotechnic/ui/web` is the console's React 19, Vite 8 and Tailwind 4 workspace. Radix primitives come from `radix-ui`, icons from `lucide-react`, class merging from the `cn` package (re-exported by `src/lib/utils.ts`), variants from `class-variance-authority`, and the Geist Variable face from `@fontsource-variable/geist`. These packages support the shadcn components and the console layout:
+
+| Dependency | For |
+| --- | --- |
+| `tw-animate-css` | Enter and exit animation utilities, imported by `src/index.css` |
+| `recharts` | Charts, through the shadcn chart wrapper in `src/components/ui/chart.tsx` |
+| `@tanstack/react-table` | Headless data tables (TanStack Table v9) |
+| `cmdk` | The command palette in `src/components/ui/command.tsx` |
+| `vaul` | The drawer in `src/components/ui/drawer.tsx` |
+| `sonner` | Toasts in `src/components/ui/sonner.tsx`, which takes its light or dark scheme from the theme provider |
+
+#### shadcn components
+
+`components.json` configures shadcn: style `radix-nova`, neutral base, CSS variables, Lucide icons and `@/` aliases. Generated components live in `src/components/ui/`, with `src/hooks/use-mobile.ts` for the sidebar. They are: avatar, badge, breadcrumb, button, card, chart, checkbox, command, dialog, drawer, dropdown-menu, input, input-group, label, progress, scroll-area, select, separator, sheet, sidebar, skeleton, sonner, table, tabs, textarea, toggle, toggle-group and tooltip. Keep their `data-slot` attributes and the `cn` import from the `cn` package.
+
+The `shadcn` package is not a dependency. Its tree includes `semver@6.3.1`, which the `no-downgrade` trust policy rejects, and `pnpm dlx` applies the same policy. Run the CLI pinned at **4.22.1** through npx from `sociotechnic/ui/web`, previewing first:
+
+```bash
+npx --yes shadcn@4.22.1 add <component> --dry-run
+npx --yes shadcn@4.22.1 add <component> --diff
+npx --yes shadcn@4.22.1 add <component>
+```
+
+The CLI installs a component's npm dependencies with pnpm, so the supply chain policy still applies. Review every generated file and the lockfile. The `chart` item pins `recharts@3.8.0`, whose `reselect@5.1.1` the trust policy also rejects. `chart.tsx` was therefore written from `npx --yes shadcn@4.22.1 add chart --view` and runs on the installed Recharts 3. The registry's `sonner.tsx` imports `next-themes`. The local copy reads the scheme from `useTheme` instead, and `next-themes` is not installed.
+
+`src/index.css` inlines the rules of `shadcn@4.22.1`'s `dist/tailwind.css` (the `data-open`, `data-closed` and related variants, the accordion keyframes, and the `no-scrollbar`, `scroll-fade` and `shimmer` utilities) because `@import "shadcn/tailwind.css"` needs the package installed. When the CLI version changes, replace that block from the same version's tarball (`pnpm view shadcn@<version> dist.tarball`, checked against `dist.integrity`), downloaded outside the repository, and update the version in its one-line comment and in [third-party notices](../../dox/THIRD_PARTY_NOTICES.md).
+
+#### Theme presets
+
+The token contract in `src/index.css` follows the bundled scaffold's: the full `@theme inline` map including sidebar and chart colors and the radius scale, with shadcn neutral values in `:root` and `.dark`. Dark mode is the `dark` class on `<html>`, not `prefers-color-scheme`. Older view styles read aliases: `--surface` is `--card`, and `--positive` is `--chart-2` mixed half and half with `--foreground` so success text stays legible across presets. `--amber`, `--violet`, `--cyan` and the agent colors switch on `.dark`.
+
+`src/theme/` holds the theme module:
+
+| File | Role |
+| --- | --- |
+| `presets/*.json` | One preset per file: `name`, `cssVars.theme`, `cssVars.light` and `cssVars.dark`. `shadcn-neutral.json` is the default and matches `index.css` |
+| `presets/LICENSE-tweakcn` | Apache-2.0 license for the 42 vendored TweakCN presets |
+| `presets.ts` | Finds presets with `import.meta.glob`. The neutral preset is bundled; every other preset loads on demand as its own small chunk |
+| `provider.tsx` | `ThemeProvider` and `useTheme`. Sets the preset's variables on `document.documentElement.style` (theme and light, plus dark overrides in dark mode), `data-theme` and the `dark` class |
+| `theme-switcher.tsx` | The header's preset select and light/dark button |
+
+The console starts in `shadcn-neutral` dark. Choices persist in `localStorage` under `sociotechnic.theme` (preset key) and `sociotechnic.scheme` (`light` or `dark`). When storage is unavailable, a choice lasts only for the page.
+
+To add a preset, save its JSON as `presets/<key>.json` with the shape above. The file name is the key, and the select derives its label from the key. Drop `font-*` variables so Geist stays in force, and record the source and license in the third-party notices. TweakCN presets come from `https://tweakcn.com/r/themes/<key>.json`; keep `name` and `cssVars` without `font-*`. Presets change colors, `--radius`, `--spacing` (sage-garden and violet-bloom) and `--tracking-*`. Their `--shadow-*` variables are stored but have no effect: Tailwind's shadow utilities inline their own values, and the token map does not route them through those variables.
 
 ### Codex roles
 
