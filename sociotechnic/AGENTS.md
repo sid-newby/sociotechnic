@@ -108,6 +108,9 @@ non-empty. A failing gate opens the next round with a fresh builder that gets
 the findings; a passing gate with policy flags parks for a human; a clean pass
 dispatches the approver (Opus), whose APPROVE makes the job `ready`.
 
+New builder releases default to focused development and acceptance checks. The
+pinned definition, repository instructions and approved plan impose cumulative
+verification obligations; explicit legacy/custom full-suite requirements remain.
 READY describes actual builder evidence. The engine independently runs the full
 configured suite at the committed build HEAD. Holds at checked/reviewed still
 stop before the next transition. Agent pins freeze instructions and settings,

@@ -53,7 +53,7 @@ test("compact roster and API expose actual Azure capabilities without definition
   const roster = await agentRoster(), azure = roster.agents.filter((card) => card.name.startsWith("sociotechnic-azure-"));
   assert.equal(azure.length, 3);
   assert.deepEqual(new Set(azure.map((card) => card.mode)), new Set(["plan", "advise", "execute"]));
-  assert.ok(azure.every((card) => card.version === (card.name === "sociotechnic-azure-builder" ? "1.1.0" : "1.0.1") && card.skills.includes("azure-sme")));
+  assert.ok(azure.every((card) => card.version === ({ "sociotechnic-azure-builder": "1.1.1", "sociotechnic-azure-planner": "1.0.2", "sociotechnic-azure-advisor": "1.0.1" }[card.name]) && card.skills.includes("azure-sme")));
   assert.equal(azure.find((card) => card.mode === "advise")?.access, "read-only");
   assert.deepEqual(azure.find((card) => card.name === "sociotechnic-azure-builder")?.compatibleRoles, ["sociotechnic-builder", "sociotechnic-builder-lite"]);
   assert.ok(roster.agents.every((card) => !("definition" in card) && !("skillResources" in card)));

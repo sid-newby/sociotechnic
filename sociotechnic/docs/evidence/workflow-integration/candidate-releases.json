@@ -1,0 +1,75 @@
+{
+  "status": "unpublished candidate; no live catalog import",
+  "bundleDigest": "d9ba8cde9dc79f816d363dad7bcb87285611e2e96d63030ce1a24fa172e60783",
+  "historicalReleases": 32,
+  "candidateReleases": 11,
+  "unionReleases": 43,
+  "releases": [
+    {
+      "agent": "sociotechnic-azure-builder",
+      "version": "1.1.1",
+      "contentDigest": "0ca7ee9853893ebd3a100fb239b50d29d0d660b64eb0ecbc75d6b4b4672b5e53",
+      "definitionDigest": "1b360caaa34536dfe8c2cd9d0a074426be595b28f1c9caf65f61f325b85f898f"
+    },
+    {
+      "agent": "sociotechnic-azure-planner",
+      "version": "1.0.2",
+      "contentDigest": "335864ab212ffda2a62b57963a1582a02d9c964f409fa7953679bef1c6a65d78",
+      "definitionDigest": "9ea46d483bd8ca24651b501c3b711c72fe7b4638201390050b9080f1b7262611"
+    },
+    {
+      "agent": "sociotechnic-browser-builder",
+      "version": "1.0.1",
+      "contentDigest": "5a4163e1c21af40d8aeeec919b6f6222ca1b34a9e81c18d30bcb20b757d71fed",
+      "definitionDigest": "c1e4add2b7d0d1ae6a83b6508f4e25d8ac28e0b52afcd55cbced87760dae3817"
+    },
+    {
+      "agent": "sociotechnic-browser-builder-lite",
+      "version": "1.0.1",
+      "contentDigest": "715042943709d4277e9077e2748d0064ed5ac0245a6673483a91fea20dd810a1",
+      "definitionDigest": "204a1162c2c62fafedb0cd91eb1b6fb2ee7e33c4f0b4b257d6380ba9b0eb817a"
+    },
+    {
+      "agent": "sociotechnic-builder",
+      "version": "1.0.1",
+      "contentDigest": "2f495ac7f0f7a43319acf334365b1a71fd88855e1021beaab3b23715e64d5817",
+      "definitionDigest": "de416987b4ef7b2e1b4f8ea79ac47e7139bd45d5bf0e387a84ce27293750703d"
+    },
+    {
+      "agent": "sociotechnic-builder-lite",
+      "version": "1.0.1",
+      "contentDigest": "cfa04ec919e60f66328d05d377520dd47653787ce859ef28654a8bee46def000",
+      "definitionDigest": "a3a249c3874165363e5fa99418c17d08919235203a5ebfcd23c9b6294c720ebc"
+    },
+    {
+      "agent": "sociotechnic-comment-cleaner",
+      "version": "1.0.1",
+      "contentDigest": "0a8f64e5b4ecbdcefa80a48cb925ebd7eebda5233886535fe392174e7a1426df",
+      "definitionDigest": "b09e7193c9b8a7938cd930e2a532330626e65c2025d12c012e6faefdfa981d8c"
+    },
+    {
+      "agent": "sociotechnic-infrastructure-builder",
+      "version": "1.0.1",
+      "contentDigest": "441cac198fcf8785d7543b80edd8510bef87c0b3ee33a703936053603352a3ba",
+      "definitionDigest": "4060373ba53d3311fe3a1c195bf02717ea291b9c8150a8abd1171637d50d3941"
+    },
+    {
+      "agent": "sociotechnic-infrastructure-planner",
+      "version": "1.0.1",
+      "contentDigest": "914f95a2a876cfb1f70f458d9ebf50b9b32454e5b52a1945ad52276568402222",
+      "definitionDigest": "43384fdb0368f3526e130d72e45f28be6daa324cedb0ae277a5c092c324d1f8d"
+    },
+    {
+      "agent": "sociotechnic-planner",
+      "version": "1.0.3",
+      "contentDigest": "dcad61df25c9d825056ced50b3a34a75e2441dd226d09c1582c521b7cd471d29",
+      "definitionDigest": "70e1e8bba3357ba5e38ff847ef7a1fda8b354fe94a3f5a16e7a639cddc66c584"
+    },
+    {
+      "agent": "sociotechnic-sweeper",
+      "version": "1.0.1",
+      "contentDigest": "7e3f2d5782813e47fbdbb2602f40e81df3b4edacfb0b89dbb0845f00f1ff8dcf",
+      "definitionDigest": "3c79a05e135bccb1670fe35efe3efddb4a42f9fa3cffaea018dbcc1738143d40"
+    }
+  ]
+}

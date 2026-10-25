@@ -137,7 +137,7 @@ test("library API uses canonical database history, ignores local poison and repo
     assert.equal(library.agents.some((agent) => agent.name === "sociotechnic-azure-builder-lite"), false);
     for (const name of ["sociotechnic-infrastructure-planner", "sociotechnic-infrastructure-builder"]) {
       const expert = library.agents.find((agent) => agent.name === name); assert.ok(expert?.profile);
-      assert.equal(expert.profile.configuration.version, "1.0.0");
+      assert.equal(expert.profile.configuration.version, "1.0.1");
       assert.equal(expert.profile.configuration.model, "gpt-6.1-sol");
       assert.deepEqual(expert.profile.configuration.skills, ["terraform-skill", "container-technologies"]);
       assert.equal(expert.metrics.deployments, 0);
