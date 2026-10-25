@@ -259,3 +259,20 @@ input::placeholder, textarea::placeholder { color: var(--muted-foreground); opac
 .sandbox-entry p, .sandbox-confirm p { overflow-wrap: anywhere; margin-top: 6px; }
 .sandbox-entry h3, .sandbox-confirm h3 { font-size: 15px; font-weight: 650; }
 .sandbox-confirm { margin-top: 18px; }
+
+.design-conversation { display: grid; gap: 1.25rem; }
+.design-messages { display: grid; gap: 1rem; max-height: 38rem; overflow-y: auto; padding: .25rem; overscroll-behavior: contain; }
+.design-message { padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius); min-width: 0; }
+.design-message-user { background: var(--muted); margin-left: clamp(0rem, 3vw, 3rem); }
+.design-message .record-content { padding: .5rem 0 0; }
+.design-question fieldset { min-width: 0; border: 1px solid var(--border); padding: 1rem; border-radius: var(--radius); }
+.design-question legend { padding-inline: .25rem; font-weight: 600; }
+.design-answer-options { display: grid; gap: .75rem; margin-block: .75rem 1rem; }
+.design-answer-options label { display: flex; gap: .75rem; align-items: start; cursor: pointer; }
+.design-answer-options small { display: block; color: var(--muted-foreground); }
+.design-conversation .design-approval { display: grid; gap: 1rem; }
+.design-conversation .button { display: inline-flex; align-items: center; gap: .5rem; }
+.design-conversation .confirmation { display: flex; gap: .625rem; align-items: flex-start; }
+.design-conversation .confirmation input,
+.design-answer-options input { width: 1rem; height: 1rem; flex: 0 0 1rem; margin-top: .2rem; }
+.design-answer-options label { min-height: 44px; }

@@ -405,10 +405,8 @@ export async function run(argv: readonly string[]): Promise<unknown> {
       if (!isBound(bound)) usageError("bound must be rounds, dispatchesPerRound or retriesPerStep");
       return mutate(need(args, 0, "<job>"), (job) => engine.override(job, bound, rest(args, 2)));
     }
-    case "design-respond": {
-      const response: unknown = JSON.parse(readFileSync(resolve(needFlag(args, "response")), "utf8"));
-      return mutate(need(args, 0, "<job>"), (job) => engine.respondDesign(job, needFlag(args, "digest"), response));
-    }
+    case "design-respond":
+      throw new SociotechnicError("bad-design", "The packet response command is retired. Continue the interactive design conversation in the console.");
     case "rework":
       return mutate(need(args, 0, "<job>"), (job) => engine.rework(job, rest(args, 1)));
     case "accept":

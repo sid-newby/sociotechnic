@@ -1,3 +1,6 @@
+import { answerDesignQuestion, stopDesignPreviews } from "./design-session-runner.ts";
+import { approveInteractiveDesign, enqueueDesignMessage, interactiveFingerprint, artifactFiles } from "../src/design-session.ts";
+import type { DesignQuery } from "./design-session-runner.ts";
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync, realpathSync, rmSync, statSync } from "node:fs";
 import { createServer } from "node:http";
@@ -46,7 +49,7 @@ const PING_MS = 15_000;
 const liveOrigin = process.env.NODE_ENV === "development" ? " http://localhost:8400" : "";
 const CSP = `default-src 'self'; script-src 'self' 'unsafe-inline'${liveOrigin}; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'${liveOrigin}`;
 
-export type ServerOptions = { port?: number; host?: string; runner?: () => Runner };
+export type ServerOptions = { port?: number; host?: string; runner?: () => Runner; designQuery?: DesignQuery };
 export type ServerHandle = { url: string; port: number; drivers: DriverRegistry; close: () => Promise<void> };
 export type RecordEntry = { path: string; bytes: number; mtime: string };
 
@@ -202,7 +205,12 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
   };
   let port = 0;
   const consoleUrl = () => `http://${host}:${port}/`;
-  const drivers = createDriverRegistry({ runner: options.runner ?? runnerFromEnv, emit: (e: DriverEvent) => broadcast("driver", e), owner: "ui", consoleUrl });
+  const drivers = createDriverRegistry({ runner: options.runner ?? runnerFromEnv, emit: (e: DriverEvent) => broadcast("driver", e), owner: "ui", consoleUrl, designQuery: options.designQuery });
+  const assertSessionOwner = async (id: string, allowInterrupted = false): Promise<void> => {
+    const ownership = (await consoleDriverState(drivers, id, consoleUrl())).ownership;
+    if (ownership.kind === "external" || (ownership.kind === "interrupted" && !allowInterrupted)) throw new HttpError(409, "driver-active", "Manage this design session in its owning console, or explicitly resume an interrupted session");
+    if (ownership.kind !== "interrupted") await assertNoForeignDriver(id, process.pid);
+  };
   const startedAt = new Date().toISOString();
 
   const debounce = new Map<string, NodeJS.Timeout>();
@@ -283,7 +291,7 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
       pattern: /^\/api\/jobs\/([^/]+)$/,
       handler: async ({ params }) => {
         const id = jobIdParam(params[0]);
-        return { job: loadJob(id), plan: readPlanJson(id), records: listRecords(id), pr: hasRecord(join(jobDir(id), "pr.md")), worktreePresent: existsSync(loadJob(id).worktree), driver: await runningState(drivers, id, consoleUrl()) };
+        return { interactive: loadJob(id).designSession ? { ...loadJob(id).designSession, fingerprint: interactiveFingerprint(loadJob(id)), files: artifactFiles(loadJob(id)) } : null, job: loadJob(id), plan: readPlanJson(id), records: listRecords(id), pr: hasRecord(join(jobDir(id), "pr.md")), worktreePresent: existsSync(loadJob(id).worktree), driver: await runningState(drivers, id, consoleUrl()) };
       },
     },
     {
@@ -417,6 +425,7 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
       handler: async ({ params }) => {
         const id = jobIdParam(params[0]);
         drivers.stop(id);
+        if (await readJob(id, (job) => !!job.designSession)) { await drivers.settled(id); await stopDesignPreviews(id); }
         if (await readJob(id, (job) => job.execution?.kind === "docker-sandbox")) await drivers.settled(id);
         return mutateJob(id, (job) => engine.stopJob(job));
       },
@@ -467,6 +476,63 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
       },
     },
     {
+      method: "POST", pattern: /^\/api\/jobs\/([^/]+)\/design-session\/messages$/,
+      handler: async ({ params, body }) => {
+        const id = jobIdParam(params[0]);
+        if (drivers.isRunning(id)) throw new HttpError(409, "driver-active", "Interrupt the current response before sending another message");
+        await assertSessionOwner(id);
+        await mutateJob(id, (job) => enqueueDesignMessage(job, body.message, body.messageId));
+        const job = await readJob(id, (j) => j);
+        return { driver: job.status === "designing" ? await drivers.run(id, "run", ["planned"]) : drivers.state(id) };
+      },
+    },
+    {
+      method: "POST", pattern: /^\/api\/jobs\/([^/]+)\/design-session\/answer$/,
+      handler: async ({ params, body }) => {
+        const id = jobIdParam(params[0]);
+        await assertSessionOwner(id);
+        await answerDesignQuestion(id, body.questionId, body.answers);
+        return { recorded: true };
+      },
+    },
+    {
+      method: "POST", pattern: /^\/api\/jobs\/([^/]+)\/design-session\/interrupt$/,
+      handler: async ({ params }) => {
+        const id = jobIdParam(params[0]);
+        await assertSessionOwner(id);
+        drivers.stop(id); await drivers.settled(id);
+        return { interrupted: true };
+      },
+    },
+    {
+      method: "POST", pattern: /^\/api\/jobs\/([^/]+)\/design-session\/resume$/,
+      handler: async ({ params }) => {
+        const id = jobIdParam(params[0]);
+        if (drivers.isRunning(id)) throw new HttpError(409, "driver-active", "The session is already running");
+        await assertSessionOwner(id, true);
+        await mutateJob(id, (job) => {
+          const d = job.designSession;
+          if (!d || !["ready", "failed", "interrupted", "working", "waiting"].includes(d.state) || !["design-input", "designing"].includes(job.status)) throw new HttpError(409, "illegal-transition", "This session cannot be resumed here");
+          d.state = "ready"; d.error = null;
+          if (!d.input) d.input = { id: crypto.randomUUID(), text: "Continue our design conversation from the last completed step. If a question was interrupted, present it again; do not invent an answer." };
+          job.status = "designing";
+        });
+        return { driver: await drivers.run(id, "run", ["planned"]) };
+      },
+    },
+    {
+      method: "POST", pattern: /^\/api\/jobs\/([^/]+)\/design-session\/approve$/,
+      handler: async ({ params, body }) => {
+        const id = jobIdParam(params[0]);
+        if (drivers.isRunning(id)) throw new HttpError(409, "driver-active", "Finish or interrupt the current response before approving");
+        await assertSessionOwner(id);
+        if (body.confirmed !== true) throw new HttpError(400, "bad-input", "Explicit design approval is required");
+        await mutateJob(id, (job) => approveInteractiveDesign(job, body.digest));
+        await stopDesignPreviews(id);
+        return { approved: true, driver: await drivers.run(id, "run", ["planned"]) };
+      },
+    },
+    {
       method: "POST", pattern: /^\/api\/jobs\/([^/]+)\/design-response$/,
       handler: async ({ params, body }) => {
         const id = jobIdParam(params[0]);
@@ -474,7 +540,7 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
         await assertNoForeignDriver(id, process.pid);
         const digest = str(body, "digest", true) ?? "";
         const out = await mutateJob(id, (job) => engine.respondDesign(job, digest, body.response));
-        return { ...out, driver: await drivers.run(id, "run", ["planned"]) };
+        return out;
       },
     },
     { method: "POST", pattern: /^\/api\/jobs\/([^/]+)\/pause$/, handler: ({ params }) => drivers.pause(jobIdParam(params[0])) },
@@ -502,6 +568,20 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
     if (method === "GET" || method === "HEAD") {
       if (path === "/" || path === "/legacy") return serveIndex(res, path === "/legacy", method === "HEAD");
       if (path.startsWith("/assets/")) return serveAsset(res, path, method === "HEAD");
+      const interactiveAsset = /^\/api\/jobs\/([^/]+)\/design-artifacts\/(.+)$/.exec(path);
+      if (interactiveAsset) {
+        const id = jobIdParam(interactiveAsset[1]);
+        return readJob(id, (job) => {
+          const file = decodeURIComponent(interactiveAsset[2]);
+          if (!artifactFiles(job).includes(file)) throw new HttpError(404, "not-found", "Unknown design artifact");
+          const record = session().records.get(file);
+          if (!record) throw new HttpError(404, "not-found", "Unknown design artifact");
+          const bytes = record.encoding === "base64" ? Buffer.from(record.text, "base64") : Buffer.from(record.text);
+          const type = { ".html": "text/html; charset=utf-8", ".png": "image/png", ".webp": "image/webp", ".jpg": "image/jpeg", ".jpeg": "image/jpeg" }[extname(file)] ?? "text/plain; charset=utf-8";
+          res.writeHead(200, { "content-type": type, "cache-control": "no-store", "x-content-type-options": "nosniff", "content-security-policy": "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; base-uri 'none'" });
+          res.end(method === "HEAD" ? undefined : bytes);
+        });
+      }
       const preview = /^\/api\/jobs\/([^/]+)\/design-assets\/(.+)$/.exec(path);
       if (preview) {
         const id = jobIdParam(preview[1]);
@@ -565,13 +645,14 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
     await stopWatch();
     clearInterval(ping);
     for (const t of debounce.values()) clearTimeout(t);
-    await drivers.shutdown();
+    try { await drivers.shutdown(); } finally {
     for (const c of clients) c.end();
     clients.clear();
     await new Promise<void>((r) => {
       server.close(() => r());
       server.closeAllConnections();
     });
+    }
   };
 
   return { url, port, drivers, close };

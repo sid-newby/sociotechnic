@@ -1,0 +1,108 @@
+import assert from 'node:assert/strict';
+import { execFile, execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { promisify } from 'node:util';
+import { createMemoryStore, setStore } from '../src/db/store.ts';
+import { initializeAgentVersions } from '../src/agent-versions.ts';
+import { createJobOperation, readJob } from '../src/job-store.ts';
+import { newDesignJob } from '../src/engine.ts';
+import { fakeRunner } from '../ui/runner.ts';
+import { startServer } from '../ui/server.ts';
+import { fixtureDesignQuery } from '../tests/fixtures/interactive-design.ts';
+import { runNative } from '../ui/impeccable-runtime.ts';
+
+if (!process.env.SOCIOTECHNIC_TEST_IMPECCABLE_SKILL) throw new Error('Set SOCIOTECHNIC_TEST_IMPECCABLE_SKILL to the installed skill. This script uses no live models.');
+const root = mkdtempSync(join(tmpdir(), 'sociotechnic-design-browser-'));
+const proof = process.env.SOCIOTECHNIC_BROWSER_PROOF ?? mkdtempSync(join(tmpdir(), 'sociotechnic-design-proof-'));
+mkdirSync(proof, { recursive: true });
+process.env.SOCIOTECHNIC_HOME = root;
+process.env.SOCIOTECHNIC_IMPECCABLE_SKILL = process.env.SOCIOTECHNIC_TEST_IMPECCABLE_SKILL;
+process.env.SOCIOTECHNIC_DATABASE_URL = 'off';
+const store = createMemoryStore(); setStore(store);
+const execute = promisify(execFile);
+const browserSession = `interactive-design-${process.pid}`;
+const browser = async (...args) => (await execute('agent-browser', ['--session', browserSession, ...args], { timeout: 30_000 })).stdout.trim();
+let server, id, native, workspace, nativeKey;
+let calls = 0;
+const sdkQuery = async function* (args) {
+  calls++;
+  assert.ok(calls <= 4, 'Unexpected fixture redispatch');
+  for await (const event of fixtureDesignQuery(args)) {
+    if (event.type === 'result' && !args.options.resume) {
+      native = await readJob(id, job => job.designSession.skill);
+      workspace = args.options.cwd;
+      nativeKey = `${args.options.sessionId}-browser`;
+      const payload = { title: 'Native preview integration fixture', question: 'Choose the reading direction', options: [{ id: 'reading', label: 'Reading desk', thesis: 'Keep sources and notes together', palette: ['#172033', '#ffffff'], materials: ['paper'], viewport: 'A notebook beside a reading pane', risk: 'Less dense' }], followup: true };
+      writeFileSync(join(workspace, 'question.json'), JSON.stringify(payload));
+      const startArgs = ['serve-question', '--start', '--key', nativeKey, '--payload', 'question.json', '--no-open'];
+      const output = await runNative(native, workspace, startArgs);
+      const base = { session_id: args.options.sessionId, transcript_path: '', cwd: workspace, tool_name: 'mcp__impeccable__run', tool_use_id: 'fixture-preview', tool_input: { args: startArgs } };
+      for (const group of args.options.hooks.PostToolUse ?? []) for (const hook of group.hooks) await hook({ ...base, hook_event_name: 'PostToolUse', tool_response: { content: [{ type: 'text', text: output }] } }, 'fixture-preview', { signal: args.options.abortController.signal });
+      const waitArgs = ['serve-question', '--wait', '--key', nativeKey];
+      for (const group of args.options.hooks.PreToolUse ?? []) for (const hook of group.hooks) await hook({ ...base, hook_event_name: 'PreToolUse', tool_input: { args: waitArgs } }, 'fixture-preview', { signal: args.options.abortController.signal });
+      const answer = await runNative(native, workspace, waitArgs, args.options.abortController.signal);
+      assert.match(answer, /reading/);
+      for (const group of args.options.hooks.PostToolUse ?? []) for (const hook of group.hooks) await hook({ ...base, hook_event_name: 'PostToolUse', tool_input: { args: waitArgs }, tool_response: { content: [{ type: 'text', text: answer }] } }, 'fixture-preview', { signal: args.options.abortController.signal });
+    }
+    yield event;
+  }
+};
+try {
+  await initializeAgentVersions(store);
+  const repo = join(root, 'repo'); mkdirSync(repo);
+  const git = (...args) => execFileSync('git', ['-c', 'user.name=Browser fixture', '-c', 'user.email=test@example.invalid', '-c', 'commit.gpgsign=false', '-c', 'core.hooksPath=/dev/null', ...args], { cwd: repo, stdio: 'ignore' });
+  git('init', '-q', '-b', 'main'); writeFileSync(join(repo, 'README.md'), '# Fixture research notebook\n'); git('add', '.'); git('commit', '-qm', 'fixture');
+  ({ job: id } = await createJobOperation(() => newDesignJob(repo, 'Design a research notebook', null)));
+  server = await startServer({ port: 0, designQuery: sdkQuery, runner: () => fakeRunner(new URL('../tests/fixtures/fake-agent.mjs', import.meta.url).pathname) });
+  await server.drivers.run(id, 'run', ['planned']);
+  const url = `${server.url}#job=${id}`;
+  await browser('set', 'viewport', '1440', '1000');
+  await browser('open', url);
+  await browser('wait', '--text', 'Who will use this workspace?');
+  await browser('check', '.design-answer-options label:first-child input');
+  await browser('find', 'role', 'button', 'click', '--name', 'Reply to Claude');
+  await browser('wait', '--text', 'Open previews');
+  const preview = await browser('get', 'attr', '.design-conversation .action-row a', 'href');
+  assert.match(preview, /^http:\/\/127\.0\.0\.1:[0-9]+\//);
+  assert.equal(await browser('get', 'attr', '.design-conversation .action-row a', 'target'), `impeccable-${(await readJob(id, j => j.designSession)).id}`);
+  await browser('screenshot', join(proof, 'conversation-desktop.png'), '--full');
+  await browser('tab', 'new', '--label', 'preview', preview);
+  await browser('wait', '--text', 'Reading desk');
+  await browser('screenshot', join(proof, 'native-preview.png'), '--full');
+  await browser('click', 'button.choose[data-id="reading"]');
+  await browser('tab', 't1');
+  await server.drivers.settled(id);
+  await browser('reload');
+  await browser('wait', '--text', 'Your message');
+  await browser('fill', '#design-message', 'Keep this draft after a network error');
+  await browser('eval', 'window.fixtureFetch = window.fetch; window.fetch = (...args) => String(args[0]).includes("/design-session/messages") ? Promise.reject(new Error("Fixture network failure")) : window.fixtureFetch(...args)');
+  await browser('press', 'Enter');
+  await browser('wait', '--text', 'Cannot reach Sociotechnic');
+  assert.equal(await browser('get', 'value', '#design-message'), 'Keep this draft after a network error');
+  assert.equal(calls, 1);
+  await browser('eval', 'window.fetch = window.fixtureFetch; delete window.fixtureFetch');
+  await browser('fill', '#design-message', 'Make it denser');
+  await browser('press', 'Enter');
+  await browser('wait', '--text', 'retained our previous conversation');
+  assert.equal(calls, 2);
+  await browser('set', 'viewport', '390', '844');
+  assert.equal(await browser('eval', 'document.documentElement.scrollWidth <= innerWidth'), 'true');
+  await browser('screenshot', join(proof, 'conversation-mobile.png'), '--full');
+  await browser('check', '.design-approval input');
+  await browser('find', 'role', 'button', 'click', '--name', 'Approve design and continue');
+  await server.drivers.settled(id);
+  await browser('wait', '--text', 'Design approved');
+  for (let n = 0; n < 300 && await readJob(id, j => j.status) !== 'planned'; n++) await new Promise(resolve => setTimeout(resolve, 20));
+  assert.equal(await readJob(id, j => j.status), 'planned');
+  assert.equal(await readJob(id, j => j.round), 0);
+  assert.equal(calls, 2);
+  writeFileSync(join(proof, 'verification.json'), JSON.stringify({ fixtureSdk: true, actualImpeccable: true, modelCalls: 0, sdkQueries: calls, status: 'planned', previewSeparateWindowTarget: true }, null, 2));
+  console.log(JSON.stringify({ proof, fixtureSdk: true, actualImpeccable: true, modelCalls: 0, status: 'planned' }));
+} finally {
+  await browser('close').catch(() => {});
+  if (server) await server.close();
+  if (native && nativeKey) await runNative(native, workspace, ['serve-question', '--stop', '--key', nativeKey]).catch(() => {});
+  await store.close(); setStore(undefined); rmSync(root, { recursive: true, force: true });
+}

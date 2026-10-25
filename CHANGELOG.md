@@ -3,6 +3,11 @@
 Release notes are committed before publication. [GitHub Releases](https://github.com/sid-newby/sociotechnic/releases) confirms which versions shipped.
 Dates on backfilled entries use America/Chicago. See the [release guide](sociotechnic/docs/releasing.md).
 
+## Unreleased
+
+- Replace new design packets with a resumable Local Claude conversation using the actual pinned Impeccable skill and its separate native preview window.
+- Persist SDK transcripts and artifact approval in PostgreSQL, surface missing tools before inference, and retain historical design evidence. Docker design is refused; live verification awaits an agreed token budget.
+
 ## v0.4.2
 
 - Show when another console owns a run and open that console at the selected job instead of offering a local resume that cannot succeed.

@@ -1,215 +1,115 @@
-# Fable design ceremony
+# Interactive design sessions
 
-The design ceremony precedes implementation planning for substantial UI work.
-Fable owns product discovery, design strategy, direction exploration and three
-composition previews. The human makes the choices; the engine records them.
+Choose **Design ceremony** in **New run** and use **Local** execution. The app
+hosts a Claude conversation using the actual Impeccable skill. Reply normally,
+answer Claude's questions and request revisions in the same conversation.
+**Open previews** opens Impeccable's own decision page in a separate window or
+tab. Its choices, re-rolls and updates follow the installed skill. Closing that
+window makes no decision. The app does not impose a three-option packet flow.
 
-## Start and continue
+When the design is ready, inspect the saved artifacts, explicitly confirm them
+and choose **Approve design and continue**. The final planner receives their
+immutable fingerprint, product/design documents and stack decision. The plan
+is held for review before building. Design approval does not accept a build or
+permit publishing or merging.
 
-Choose **Design ceremony** in **New run** and describe the product or UI change.
-For an ordinary feature run, the planner can also request the ceremony when it
-finds a new interface, replacement identity, substantial layout or interaction
-change, or multi-screen design work. Small local fixes and comment cleanup keep
-their existing workflow. The explicit run type guarantees the ceremony rather
-than relying on the planner's classification.
+## Ownership and installation
 
-1. Fable reads existing product, design and surface context, then asks up to
-   three material questions. Confirm known facts rather than repeating an
-   initialization interview. Missing PRODUCT.md triggers product discovery;
-   missing DESIGN.md alone does not erase an incumbent interface.
-2. Answer the interview and choose the existing stack, the bundled React/NestJS
-   starter, or another stack. A custom stack includes a description and relevant
-   deployment constraints. The starter is a foundation, not a visual direction.
-3. Choose among three grounded directions. Fable explains the thesis, reasoning
-   and tradeoff and provides a preview for each. Request another pass with a
-   steering note when the set misses the brief.
-4. Inspect three compositions within the selected direction. Preview images or
-   self-contained HTML prototypes are labeled by format. **Inspect preview**
-   opens a larger view; closing it does not approve anything.
-5. Choose a composition, check the explicit approval box, and choose **Approve
-   design and continue**. The final planner receives the design, confirmed
-   product truth, stack and approval digest. The resulting plan is held for
-   review before the ordinary build/check/review workflow.
+Impeccable owns the design process. Claude's native SDK session owns conversation
+continuation. PostgreSQL owns committed transcripts, messages, artifacts and
+approvals. The pinned agent release owns model, effort, tools and execution
+limits. SDK files and the design workspace are materialized execution copies.
 
-Answers, choices and revision requests continue the same job automatically in
-the console. There is no active model or dispatch deadline while waiting for a
-human. A fresh dispatch reads the records when work resumes. Stop/reopen,
-driver locks, retry limits and dispatch bounds continue to apply. Repeated
-revisions can reach a bound; the existing human override lifts it explicitly.
+Install Impeccable before starting. `SOCIOTECHNIC_IMPECCABLE_SKILL` can name a
+trusted installed skill directory. Without an explicit path, discovery checks
+project and personal Claude/Codex installations and the Codex plugin cache.
+An invalid explicit path never falls back. The selected installation, references
+and bundled platform executable are copied into a session-specific directory;
+its version and content digest are pinned for that session. Resume refuses
+changed skill bytes. The SDK loads the real skill from that workspace.
 
-Design approval permits implementation. Testing, acceptance, publication,
-remote merge and cleanup retain their separate human gates.
+The preflight verifies the installed executable and native decision schema,
+then runs its actual context command before the first SDK query. The native
+tool passes command arguments directly
+to that executable without a shell. It supports the skill's decision-server
+start/wait/update/stop protocol and other native design commands. Global
+installation/update operations are outside the session. Missing tooling fails
+visibly with no automatic model retry.
 
-When the bundled stack is selected, Fable and the approved implementation/review
-handoff receive its portable `scaffold-ui` guide. It maps actual installed
-components, token and typography sources, with pinned shadcn/Tailwind references
-and primary Radix guidance. Those standards support the approved design; they
-do not select its appearance or override an existing/custom stack. See
-[scaffold UI standards](scaffolds.md#ui-standards-carried-by-the-starter).
+Image generation uses the native skill's configured capabilities, including
+`OPENAI_API_KEY` where required. No harness image tool is invented. A preview
+server can be tested without image generation or any model request.
 
-## Impeccable installation and execution
+## Conversation, waiting and recovery
 
-The designer is pinned to `claude-fable-5-1` with `xhigh` effort, 120 turns and
-a 40-minute dispatch deadline. Historical usage retains the actual models
-returned by the SDK. There is no alternate-provider or model fallback.
+Replies use the exact session ID with SDK persistence and its `SessionStore`
+interface. PostgreSQL retains opaque SDK entries, including tool results; the
+app does not reconstruct a conversation from summaries or UI text. Message IDs
+prevent repeated HTTP sends from starting duplicate turns. A driver lease
+protects one active writer, and the existing owning-console link identifies
+where to manage active work.
 
-Set `SOCIOTECHNIC_IMPECCABLE_SKILL` to a trusted installed skill directory when
-explicit resolution is needed. It must contain `SKILL.md` and
-`scripts/impeccable`. Otherwise resolution checks the project's Claude skill,
-the user's Claude and Codex skill directories, then the installed Codex
-Impeccable plugin cache. An invalid explicit path fails; it does not silently
-select a different installation. Sociotechnic does not install or update the
-skill for the user.
+A native question waits for its actual answer. A preview `--wait` pauses active
+deadline accounting. Neither wait polls a model or consumes a design retry.
+The pinned role's turn limit applies to each SDK query; each human reply resumes
+the same session in a new query. Reported turns accumulate, while cumulative SDK
+model-usage snapshots replace earlier snapshots instead of being added again.
+Input, output and cache counters remain distinct.
 
-The SDK explicitly registers `mcp__design__impeccable`. It runs shell-free
-commands in the current isolated design round and permits only:
+**Interrupt response** stops active execution and preserves history. **Resume
+session** resumes that session explicitly. After an interrupted pending question,
+Claude must present it again; an absent answer is never manufactured. A process
+restart rehydrates native transcript entries and saved design artifacts from
+PostgreSQL, discarding workspace files absent from the committed snapshot.
+Persistence failure aborts further inference; recovery is explicit.
+The SDK's local transcript mirror is not an alternate authoritative store.
 
-- `context`, with no arguments;
-- `concept-seed`, with scoped direction/surface exploration flags;
-- `build-phase start`, for Impeccable's comp preparation;
-- `generate-image`, with prompt and PNG output paths inside that round; reference images may
-  also be read from the target worktree.
+Design writes stay in `.sociotechnic/design-sessions/<session-id>/`; target
+repository files are read-only during this stage. Skill files and SDK storage
+are excluded from agent writes. Saved artifacts are served from database bytes
+with a restrictive sandbox policy. Native interactive previews run on their
+own loopback origin. Owned preview keys are scoped to the session and stopped
+on interruption, shutdown, explicit stop or final approval.
 
-Fable reads the resolved skill and its init, shape, new-work and craft guidance.
-The console replaces Impeccable's standalone question page and answer channel;
-it preserves the interview, direction workshop and composition selection as
-engine-validated packets. It does not launch a second decision server.
+## HTTP and historical compatibility
 
-Image generation through the installed Impeccable tool requires
-`OPENAI_API_KEY` in the console's environment. When available, the interview
-resolves comp-first versus code-first work. Without it, the designer produces
-labeled HTML prototypes. A harness-native image tool is not assumed to exist
-inside a Claude SDK dispatch. Missing Impeccable context execution fails the
-dispatch, even if the agent writes an otherwise valid packet.
+Job detail includes `interactive`, its current fingerprint and saved file list.
+All mutations use the existing JSON, origin and ownership protections:
 
-## Records and integrity
+| Route under `/api/jobs/:id/design-session/` | Body and effect |
+| --- | --- |
+| `POST messages` | `{ message, messageId }`; records and resumes a conversational turn |
+| `POST answer` | `{ questionId, answers }`; resolves the current native question |
+| `POST interrupt` | `{}`; cancels active execution while retaining history |
+| `POST resume` | `{}`; explicitly resumes a paused session |
+| `POST approve` | `{ digest, confirmed: true }`; approves current saved artifacts and starts held final planning |
 
-Each fresh phase uses `design/round-N.json` and writes previews only beneath
-`design/atelier/round-N/`. The packet is one of:
+`GET /api/jobs/:id/design-artifacts/<encoded-record-path>` reads only a saved
+artifact belonging to that session. `design/approval.json` records the final
+artifact fingerprint. The ordinary record viewer retains native transcripts.
 
-```json
-{
-  "phase": "interview",
-  "title": "Understand the product",
-  "strategy": "Grounded reading of the product and remaining uncertainties",
-  "product": "",
-  "questions": [{ "id": "audience", "prompt": "Who uses this, and for what task?" }]
-}
-```
+Historical packets and approved designs remain readable and digest-validated.
+The old `design-respond` command and `design-response` route reject new packet
+responses. Unfinished packet runs do not silently change their pinned release
+or fabricate a Claude session: start a new Local design run with the retained
+request and human decisions. Old approved implementation runs keep their gates.
 
-```json
-{
-  "phase": "directions",
-  "title": "Choose a direction",
-  "strategy": "Product-specific design reasoning and interaction strategy",
-  "product": "# Product\nConfirmed product facts...",
-  "options": [
-    {
-      "id": "research-desk",
-      "title": "Research desk",
-      "thesis": "The organizing idea",
-      "rationale": "Why it fits this product and task",
-      "risk": "An honest tradeoff",
-      "preview": "design/atelier/round-2/research-desk.html"
-    }
-  ]
-}
-```
+Docker design sessions are not enabled. Explicit Docker design creation is
+rejected before job provisioning or inference. An ordinary Docker planner may
+identify that design is required; it cannot run a host designer as a fallback.
 
-The second example shows one option's shape; real direction and preview packets
-require exactly three distinct options and preview files. The final composition
-packet uses `phase: "previews"`. Product truth must be populated after interview.
-The engine requires the expected phase and a successful context-tool receipt
-bound to the current dispatch. It rejects missing, oversized, symlinked and
-out-of-round preview files.
+## Verification status
 
-`job.design` stores the current phase and engine-recorded decisions. Every
-decision names its packet and digest. Fingerprints cover validated packet
-content and preview bytes; final approval also covers prior decisions and the
-selected stack. The planner must include the exact approved `designDigest` in
-its final plan. The engine rechecks approval before build dispatch and at the
-review gate. Edited, missing or stale evidence cannot become a passing result.
+`tests/design.test.ts` injects deterministic SDK events and exercises HTTP,
+question replies, same-session revision, restart, interruption, immutable
+approval, held final planning, tool failure and path boundaries. PostgreSQL
+coverage uses disposable databases through `task test:pg`.
 
-`design/tool-N.json` is written by the scoped tool, not the designer. The
-designer's Write/Edit hook allows only its current packet and preview directory;
-application files, prior rounds, job state and tool receipts are outside scope.
-There is no Bash or child-agent tool. Application code, PRODUCT.md, final
-DESIGN.md/sidecar, tests and commits belong to builders after approval.
+Set `SOCIOTECHNIC_TEST_IMPECCABLE_SKILL` to an installed skill directory when
+running that test file to also exercise its real native decision server with
+fixture content. This starts no model and generates no images. The browser
+verification script uses the same injected session and refuses real provider
+execution. Fixture screenshots prove UI behavior only.
 
-HTML previews run in sandboxed iframes under a response CSP that disables
-scripts, connections, forms, remote assets and access to the parent console.
-They are illustrative prototypes. The asset route serves only files referenced
-by the current fingerprinted showcase. It never exposes a general file server.
-
-PostgreSQL stores the exact packet, HTML/raster previews and scoped-tool receipt
-as canonical records. The designer writes them in dispatch output staging; the
-engine validates and ingests the declared set together. Approval digests read
-committed bytes, so editing or deleting staging cannot change an approval. The
-current preview route serves database bytes under the same path and digest
-checks. Database backup/restore includes binary previews; Git branches and
-worktree edits still need their own backup. Existing jobs without `design` state
-remain compatible.
-
-## Bundled scaffold
-
-Selecting React/NestJS records the Sociotechnic revision and the maintained
-starter's content digest. Runtime dependencies, build output and Git metadata
-are excluded; environment secrets are rejected. A changed starter invalidates
-the selection. The implementation brief requires the
-[documented validation](scaffolds.md#validation-before-use) before copying source
-into the job worktree. Needed source updates must return for renewed approval,
-not silently replace the selected version.
-
-## CLI and HTTP
-
-```bash
-sociotechnic new /path/to/repo 'Design the research workspace' --workflow design
-sociotechnic run <job> --hold planned
-sociotechnic design-respond <job> --digest sha256:... --response /path/to/response.json
-sociotechnic run <job> --hold planned
-```
-
-The CLI response command records the human decision; `run` continues that same
-job. The console's `POST /api/jobs/:id/design-response` performs both in order.
-It takes `{ "digest": "sha256:...", "response": ... }` and rejects a running
-driver or stale digest. Supported response shapes are:
-
-```json
-{"action":"answer","answers":{"audience":"Practitioners preparing an interview"},"stack":"existing"}
-```
-
-```json
-{"action":"answer","answers":{"audience":"Practitioners preparing an interview"},"stack":"custom","customStack":"SvelteKit on the existing host"}
-```
-
-```json
-{"action":"select","optionId":"research-desk"}
-```
-
-```json
-{"action":"approve","optionId":"composition-one","confirmed":true}
-```
-
-```json
-{"action":"revise","note":"Show a denser layout while keeping the selected direction"}
-```
-
-Use `stack: "react-nest"` to select the bundle. `select` is legal only for
-directions; `approve` is legal only for composition previews with explicit
-confirmation. A revision returns to the current phase with a fresh iteration.
-If only the current preview bytes changed, revision can regenerate that
-showcase. Changed earlier evidence or scaffold source remains a visible blocker.
-
-`GET /api/jobs/:id/design-assets/<job-relative-path>?digest=<current-digest>`
-serves the current showcase under the restrictive preview policy. Job detail,
-dispatch activity, human history and the normal record routes retain the rest.
-
-## Verification
-
-`tests/design.test.ts` exercises the real engine, HTTP server and shared driver
-with fake agents, disposable Git worktrees and actual preview files. It covers
-same-run continuation, plan binding, approval confirmation, revisions,
-stop/reopen, stale bytes, changed scaffolds, write guards and tool boundaries.
-These tests do not establish live creative quality, provider entitlement or
-configured image generation. Live smoke and browser results belong in
-[design ceremony evidence](evidence/design-ceremony.md) with their actual scope and limitations.
+Live model verification is pending. It requires separately agreed token spending
+and human participation; no live ceremony is claimed by these integration checks.

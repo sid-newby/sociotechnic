@@ -558,29 +558,23 @@ Refusals:
 - A mutating request without `Content-Type: application/json` gets 400.
 - `finish` is not exposed.
 
-## Design ceremony commands and API
+## Interactive design commands and API
 
-Use `new <repo> <feature> --workflow design` to start directly with Fable's
-Impeccable ceremony. General feature planning can request `needs-design`
-automatically for major UI work. Comment cleanup is unchanged.
+`new <repo> <feature> --workflow design` creates a Local interactive design
+session. Ordinary planning can request `needs-design`. Continue through the
+console conversation; the native Impeccable skill owns its questions and preview
+page. Docker design is refused before designer inference.
 
-`design-respond <job> --digest <current-digest> --response <json-file>` records a
-human answer, direction selection, composition approval or revision. Then use
-`run <job> --hold planned` to continue the same job. The global/project skills
-perform that continuation; they must not invent a response. `design-input` is a
-human gate, never a signal to loop `run` until it passes.
+The conversation routes under `/api/jobs/:id/design-session/` are `messages`,
+`answer`, `interrupt`, `resume` and `approve`. Message IDs deduplicate sends;
+question IDs and approval digests reject stale responses. Approval starts final
+planning with the normal `planned` hold. Saved design artifacts are available
+through `/api/jobs/:id/design-artifacts/<encoded-record-path>`.
 
-`POST /api/jobs` accepts `workflow: "design"`. The existing shared console
-presents the interview and showcase. `POST /api/jobs/:id/design-response` takes
-`{ digest, response }`, records the response under the normal mutation lock and
-continues the run with `hold: ["planned"]`. A stale digest or running driver is
-409. `GET /api/jobs/:id/design-assets/<path>?digest=<digest>` serves only the
-current validated showcase with a restrictive sandbox policy. No arbitrary
-filesystem asset endpoint is added.
-
-[Design ceremony](design-ceremony.md) defines all response shapes, tool setup,
-preview formats and limits. Human design approval is separate from accepting a
-build, pushing a PR and merging.
+The old `design-respond` command and `design-response` HTTP route are retired
+and return a visible error. Historical packet records and approved designs remain
+readable. [Interactive design](design-ceremony.md) defines request bodies,
+installation, session persistence, preview lifecycle and verification limits.
 
 ## Agent library API
 

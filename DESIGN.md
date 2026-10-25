@@ -433,24 +433,22 @@ Use the existing form, dialog, busy state, validation, focus and error patterns.
 
 ### Design ceremony in Overview
 
-Overview leads with the current design ceremony while a run is awaiting product
-answers, direction choice or composition approval. Build evidence stays below it
-once planning or implementation exists. Reuse the console's runtime tokens,
-Button primitive, native stack select, labeled fields and Radix preview dialog.
+Overview hosts a resumable design conversation. Reuse the console's tokens,
+Button primitive and safe Markdown record renderer for assistant and human
+messages. Keep a labeled reply composer, clear pending/error/interrupted states,
+IME-safe Enter-to-send, retained drafts after request failure and explicit reply
+controls for native questions. Do not force-scroll away from material being read.
 
-A strategy introduction precedes three equal-salience preview alternatives, each
-with a thesis, rationale and honest tradeoff. Radio controls express the chosen
-option; a separate explicit checkbox confirms final composition approval.
-Inspect preview opens a larger sandboxed view and returns focus to its trigger.
-Closing a preview makes no decision. Distinguish HTML prototype from image
-composition in visible text. Preview cards stack at narrower widths.
+Open previews is a user-activated link to Impeccable's own loopback decision
+page in a separate named window. The app does not recreate its cards or option
+counts. Closing it makes no decision. Saved artifact links remain inspectable.
+Final approval requires a separate explicit confirmation of the current artifact
+fingerprint. Build evidence appears after design approval and planning.
 
-Interview drafts and selection survive failed requests. Pending responses disable
-duplicate submits; stale/loading failures remain explicit and expose recovery.
-A revision note requests another pass in the same phase. Approved design is a
-human decision distinct from a passing build or acceptance. The workflow strip
-adds Design only for jobs with ceremony state and marks it from recorded
-approval. Do not introduce new theme tokens or overwrite a project's identity.
+External ownership uses the existing owning-console action. Disable duplicate
+submissions while preserving draft editing and interruption. Resume retains the
+same session. Report model turns and tokens separately from human waiting,
+engine attempts and build rounds. No new theme tokens are introduced.
 
 ### Creating and assigning agents
 

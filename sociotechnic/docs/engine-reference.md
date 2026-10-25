@@ -63,9 +63,9 @@ stateDiagram-v2
   state "design-input" as design_input
   new --> designing: explicit design workflow
   planning --> designing: needs-design
-  designing --> design_input: validated packet
-  design_input --> designing: answer, select, revise
-  design_input --> planning: approve composition
+  designing --> design_input: Claude awaits human input
+  design_input --> designing: reply or resume session
+  design_input --> planning: approve design artifacts
   planning --> researching: needs-research (once)
   researching --> planning
   planning --> planned: valid plan pinned
@@ -106,7 +106,7 @@ provider bindings are separate from their Claude prompt definitions.
 
 | Role (agent name) | Model | Effort | Tools | Writes | Timeout |
 | --- | --- | --- | --- | --- | --- |
-| `sociotechnic-designer` | claude-fable-5-1 | xhigh | Read, Grep, Glob, Write, WebSearch, WebFetch, Context7, scoped Impeccable | Current design packet and preview round | 40 min |
+| `sociotechnic-designer` | claude-fable-5-1 | xhigh | Read, Grep, Glob, Write/Edit, Skill, AskUserQuestion, WebSearch, WebFetch, Context7, native Impeccable | Isolated design workspace and native session | 40 active min/query |
 | `sociotechnic-planner` | fable | xhigh | Read, Grep, Glob, Write, WebSearch, WebFetch, Context7 | `plan.json` (+ optional `plan.md`) | 25 min |
 | `sociotechnic-researcher` | gpt-6-luna (Codex) | high | Read, Grep, Glob, Write, WebSearch, WebFetch, Context7 | `research/<n>-<slug>.md` | 15 min |
 | `sociotechnic-builder` (COMPLEX) | opus | high | Read, Grep, Glob, Bash, Edit, Write, WebSearch, WebFetch, Context7 | commits + `round-N/build.md` | 60 min |
@@ -565,21 +565,23 @@ the console refreshes current state after reconnect so missed notifications do
 not leave stale evidence. SSE ping and transient live driver activity remain.
 Uncommitted staging changes do not become completed-record events.
 
-## Design ceremony
+## Interactive design
 
-`job.design` is optional for compatibility with existing jobs. Its discriminated
-state is `generating`, `waiting` or `approved`; job statuses `designing` and
-`design-input` identify execution and human waiting before plan pinning.
-Interview, direction and preview decisions use fresh Fable/xhigh dispatches.
-The scoped Impeccable tool runs only in the current isolated preview round;
-`guard-design.sh` denies application writes, prior rounds and engine state.
+New design work uses `job.designSession`: generic ready, working, waiting,
+interrupted, failed and approved states. Job statuses `designing` and
+`design-input` describe execution and human waiting; they do not prescribe
+Impeccable's design phases. Each human message resumes the exact SDK session.
+No designer packet dispatch or automatic missing-tool retry is created.
 
-Approval fingerprints cover packets, preview files, earlier decisions and the
-selected scaffold source. Final plans require the exact `designDigest`.
-Dispatch and retry bounds include ceremony work in round zero; overrides and
-stop/reopen retain their existing meanings. Designer waits have no active model
-deadline. [Design ceremony](design-ceremony.md) documents packets, responses,
-asset isolation, installed-skill resolution, image availability and verification.
+PostgreSQL owns native SDK transcripts, human messages, saved artifact bytes,
+installation identity and approval. Driver leases guard transcript writes.
+Human waiting suspends active deadlines. An immutable approved artifact
+fingerprint binds final `plan.designDigest`, build and review handoffs.
+Historical `job.design` packets remain supported for reading and approved
+implementation integrity, not further packet generation.
+
+See [interactive design](design-ceremony.md) for local installation, recovery,
+limits, preview lifecycle and the pending live-provider verification boundary.
 
 ## Agent library evidence and provenance
 

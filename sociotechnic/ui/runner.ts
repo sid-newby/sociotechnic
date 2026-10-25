@@ -205,12 +205,7 @@ export function sdkOptions(
       return scopedReadAllowed({tool,input:args,cwd,home:sociotechnicHome,inputs:options.env?.SOCIOTECHNIC_INPUT_ROOT,outputs:options.env?.SOCIOTECHNIC_OUTPUT_ROOT}) ? {} : {hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:"deny",permissionDecisionReason:"Read assigned staging or narrow the search to a source directory; retired runtime state and backups are excluded."}};
     }],
   }] };
-  if (templateName === "sociotechnic-designer") {
-    if (!entry.designScope) throw new Error("Designer dispatch has no pinned write scope");
-    const { record, artifacts, receipt, referenceRoot } = entry.designScope;
-    options.env = { ...options.env, SOCIOTECHNIC_DESIGN_RECORD: record, SOCIOTECHNIC_DESIGN_ARTIFACTS: artifacts, SOCIOTECHNIC_DESIGN_RECEIPT: receipt };
-    options.mcpServers = { design: { command: process.execPath, args: [join(sociotechnicHome, "sociotechnic/ui/design-tools.ts")], env: { ...(referenceRoot ? { SOCIOTECHNIC_DESIGN_REFERENCE_ROOT: referenceRoot } : {}), SOCIOTECHNIC_DISPATCH: entry.id, SOCIOTECHNIC_HOME: sociotechnicHome, SOCIOTECHNIC_DESIGN_ARTIFACTS: artifacts, SOCIOTECHNIC_DESIGN_RECEIPT: receipt } } };
-  }
+  if (templateName === "sociotechnic-designer") throw new Error("Designer dispatches are retired; use the interactive design-session runner");
   if (templateName === "sociotechnic-comment-cleaner") {
     const baseWorker = roleOf("sociotechnic-comment-sicko");
     const worker = entry.workerConfiguration ? versionRole(baseWorker, entry.workerConfiguration) : baseWorker;
@@ -242,7 +237,7 @@ export function sdkOptions(
   return options;
 }
 
-export type SdkQuery = (params: { prompt: string; options: Options }) => AsyncIterable<SDKMessage>;
+export type SdkQuery = (params: { prompt: string | AsyncIterable<import("@anthropic-ai/claude-agent-sdk").SDKUserMessage>; options: Options }) => AsyncIterable<SDKMessage>;
 export function sdkRunner(queryOverride?: SdkQuery): Runner {
   return {
     name: "sdk",

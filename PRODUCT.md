@@ -114,3 +114,11 @@ were established. Future design work must not invent them.
 3. Keep orchestration deterministic and agent loops bounded.
 4. Preserve the developer's control over acceptance, publishing, and merging.
 5. Keep the console and CLI consistent with the engine's state and contracts.
+
+## Interactive design workflow
+
+Local design work is a conversation with Claude using the actual Impeccable
+skill. The console hosts messages and native questions; previews open separately
+in the skill's decision page. Explicit approval of saved artifacts precedes
+implementation planning. Docker design and live-provider verification remain
+unavailable or pending as documented in the design guide.

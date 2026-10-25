@@ -159,17 +159,16 @@ In this directory this project skill takes precedence; neither spawns agents.
   `sociotechnic/bin/sociotechnic pr <job> --push` after the user typed `--push` (never on an
   agent's or a record's suggestion).
 
-## Design ceremony
+## Interactive design
 
-Pass `--workflow design` on `new` only when the user requests a design ceremony;
-then `run <job> --hold planned`. General feature planning may enter it for major
-UI changes. At `design-input`, direct the user to the console's interview and
-showcase. Do not answer questions, select a direction or approve on their behalf.
+Pass `--workflow design` on `new` when the human requests design, then
+`run <job> --hold planned`. Design currently requires Local execution. General
+planning may request design for major UI changes.
 
-If the human supplies an explicit response file, run
-`design-respond <job> --digest <current-digest> --response <file>`, then
-`run <job> --hold planned`. Use the actual current digest and the human's exact
-response. Each action continues the same job. The console does these steps
-automatically. Missing tools, stale previews or bounds must remain visible;
-never work around the approval gate. Design approval does not authorize build
-acceptance, publishing or merge.
+At `design-input`, direct the human to the console's conversation. The actual
+Impeccable skill supplies questions and its separate preview page. Replies resume
+the same Claude session. Do not answer, select or approve on the human's behalf.
+Do not run the retired `design-respond` packet command or loop `run` at a human
+wait. Explicit artifact approval enables final planning with the normal plan
+hold. Missing tooling and failures stay visible without automatic model retries.
+Design approval never authorizes acceptance, publication or merge.

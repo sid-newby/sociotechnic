@@ -1,11 +1,32 @@
 # Sociotechnic contracts
 
+## Interactive design sessions
+
+New design work uses one resumable local Claude session and the actual pinned
+Impeccable installation. Impeccable owns questions, directions, composition and
+revision; the console hosts conversation and opens its native decision page in
+a separate window. There is no application-defined interview/showcase packet
+protocol. Historical packet evidence remains readable; unfinished packet jobs
+require an explicit migration before further design work.
+
+PostgreSQL owns session metadata, native SDK transcripts, human input and approved
+artifact bytes. SDK files and the design workspace are materialized execution
+copies. Resume uses the exact session ID, agent release and skill digest. Missing
+tooling, unsupported Docker execution or persistence failure stops work without
+an automatic model retry. Human waiting consumes no inference or active deadline.
+Only explicit approval of a current artifact fingerprint enables final planning;
+design choices alone do not authorize implementation. Existing build gates remain.
+
+Local integration verification uses injected SDK streams and real Impeccable
+subprocesses, never a provider call. Live verification requires separate human
+authorization and an agreed token budget.
+
 Sociotechnic is a tiered, role-based software line with a shared console driver
 for Claude and subscription-authenticated Codex roles. A deterministic engine (`sociotechnic/`, TypeScript on Node 24) owns every decision about state, bounds, verdicts and gates. The
 session that runs `/sociotechnic` only executes what the engine tells it: spawn this
-agent with this prompt, record that it finished, ask the engine again. Every
-agent runs fresh, on the model and effort its role earns, and writes one record
-file. Nothing is inferred from an agent's chat output.
+agent with this prompt, record that it finished, ask the engine again. Implementation and review agents run fresh, on the model and effort their role
+earns, and write one record file. Interactive design is the session exception
+defined above; conversation never substitutes for explicit artifact approval.
 
 This file is the contract between the engine (`sociotechnic/src`), the role
 initialization seeds (`sociotechnic/seeds/agents.json`), the driver skill
@@ -192,7 +213,7 @@ are separate from the Claude definition model.
 
 | Role (agent name) | Model | Effort | Tools | Writes | Timeout |
 | --- | --- | --- | --- | --- | --- |
-| sociotechnic-designer | claude-fable-5-1 | xhigh | Read, Grep, Glob, Write, WebSearch, WebFetch, Context7, scoped Impeccable | Current design packet + preview round | 40 min |
+| sociotechnic-designer | claude-fable-5-1 | xhigh | Read, Grep, Glob, Write/Edit, Skill, AskUserQuestion, WebSearch, WebFetch, Context7, native Impeccable | Isolated design workspace and resumable session | 40 active min/query |
 | sociotechnic-planner | fable | xhigh | Read, Grep, Glob, Write, WebSearch, WebFetch, Context7 | `plan.json` (+ optional `plan.md`) | 25 min |
 | sociotechnic-researcher | gpt-6-luna (Codex) | high | Read, Grep, Glob, Write, WebSearch, WebFetch, Context7 | `research/<n>-<slug>.md` | 15 min |
 | sociotechnic-builder (tier COMPLEX) | opus | high | Read, Grep, Glob, Bash, Edit, Write, WebSearch, WebFetch, Context7 | commits on branch + `round-N/build.md` | 60 min |
@@ -508,8 +529,8 @@ remains legal for a human who tested in the worktree instead.
 | Status | Meaning | Leaves via |
 | --- | --- | --- |
 | new | database job, branch and worktree exist | `step` dispatches the planner |
-| designing | Fable developing the current ceremony phase | `finish` + `step`: validated packet -> design-input; malformed -> bounded retry |
-| design-input | interview answer, direction choice or composition approval awaited | `design-respond`: next fresh designer or approved final planning |
+| designing | Claude working in the interactive Local design session | native SDK response or question -> design-input; failure is visible without automatic retry |
+| design-input | interactive design awaits the human | message/answer resumes the same session; explicit artifact approval enables final planning |
 | planning | planner dispatched | `finish` + `step`: valid plan -> planned; needs-design -> designing; needs-research -> researching; malformed -> retry once, then needs-human |
 | researching | researchers dispatched | all finished -> `step` re-dispatches planner -> planning |
 | planned | plan pinned, tier known | `step` opens round 1 and dispatches the tier's builder -> building |
@@ -840,7 +861,9 @@ already running), 403 (origin or host refused).
 | `POST /api/repositories/create` | `{ path: string, name: string }` | Creates one new child directory and returns its browsing listing; no recursive creation, overwrite or Git initialization. Same-origin protected |
 | `POST /api/jobs` | `{ repo, feature, base?, initialize?: boolean, githubRepository?: string }` | `NewResult`; explicit initialization prepares a missing repository; `githubRepository` requires initialization and publishes the base branch before job creation |
 | `POST /api/jobs/:id/archive` | `{ archived: boolean }` | `{ id, archived }`; visibility-only, persisted in the database job document |
-| `POST /api/jobs/:id/design-response` | `{ digest, response }` | Records a validated human design decision, then continues the same run with a plan hold |
+| `POST /api/jobs/:id/design-response` | | Retired packet mutation; returns an explicit error |
+| `POST /api/jobs/:id/design-session/{messages,answer,interrupt,resume,approve}` | See design guide | Resume the native session, resolve human input or approve exact artifacts |
+| `GET /api/jobs/:id/design-artifacts/<encoded-path>` | | Saved artifact bytes belonging to the current session; sandboxed HTML |
 | `GET /api/jobs/:id/design-assets/<path>?digest=<digest>` | | Current fingerprinted preview; sandboxed HTML or image |
 | `POST /api/jobs/:id/step` | `{ hold?: Status[] }` | step result (12.5) |
 | `POST /api/jobs/:id/override` | `{ bound, note }` | engine result |
@@ -1429,7 +1452,7 @@ remain in force.
 `src/staging.ts` materializes committed input records under
 `.sociotechnic/staging/<job>/<dispatch>/inputs/`; agents write assigned outputs
 under `outputs/`. Paths remain dispatch-scoped, and input changes cannot mutate
-committed evidence. Designer packets, previews and tool receipts, approver notes,
+committed evidence. Native design transcripts, artifact snapshots and historical packets, approver notes,
 and cleanup-worker evidence are included in their declared output scopes.
 Traversals, symlinks, foreign-job paths and stale dispatch outputs are rejected.
 
@@ -1566,36 +1589,33 @@ registry installation. Refresh references deliberately with the scaffold.
 
 ## 15. Global command and console-driven runs
 
-### Design ceremony contract
+### Interactive design contract
 
-Major UI work may enter a Fable/xhigh design ceremony before the implementation
-plan is pinned. `new --workflow design` explicitly requests it; otherwise the
-planner may emit `{"status":"needs-design","reason":"..."}` once. The designer
-runs fresh dispatches, writing JSON packets and preview artifacts inside the job
-folder. `designing` advances to `design-input` for human decisions. Interview,
-direction and preview packets are validated; direction and preview showcases
-each carry three alternatives. The console presents them as a ceremony rather
-than treating agent prose as a decision.
+Major UI work can enter a Local interactive Claude session before plan pinning.
+`new --workflow design` requests it explicitly; a planner can emit `needs-design`.
+The actual pinned Impeccable skill owns the interview, direction, preview and
+revision workflow. The console hosts conversation and native questions and links
+to the skill's own separate decision page. It imposes no packet phases or option
+counts. Human messages resume the exact SDK session ID.
 
-The human answers the interview and chooses existing, bundled React/Nest or
-custom stack; selects a direction; then explicitly approves a composition.
-Revision preserves history and returns to a fresh designer within the same job.
-Unanswered, closed or stale previews never delegate approval. Waiting carries
-no active dispatch deadline. Dispatch/retry bounds and stop/reopen still apply.
+PostgreSQL stores opaque native transcripts, display messages, skill identity,
+artifact bytes and explicit artifact approval. Workspace files and SDK transcripts
+on disk are execution copies. Driver-lease guards reject stale writers. Missing
+tooling and unsupported Docker design fail before designer inference, without an
+automatic retry. Human waiting pauses active deadline accounting and makes no
+model requests. Interrupt/resume retains history; absent answers stay absent.
 
-The engine fingerprints packets, preview bytes and prior decisions. It pins the
-bundled scaffold's source digest when selected. Only engine-recorded human
-approval allows final planning, and a design plan must reference its approved
-digest. The engine revalidates approval before builds and the review gate.
-Designer writes cannot modify application source, engine state or prior rounds.
-Preview HTML is served under a restrictive sandbox policy and cannot call the
-console API. Missing Impeccable tooling is a visible failure, with no provider
-or approval fallback. See [design ceremony](docs/design-ceremony.md) for the
-packet schema, permissions and actual verification limits.
+The human explicitly approves a current immutable artifact fingerprint. Final
+planning must reference its `designDigest`; builds and review gates revalidate
+it. No application writes occur during design. Skill files and SDK storage stay
+outside designer writes. Saved HTML artifacts are sandboxed; native interactive
+previews have their own loopback origin and session-owned process keys.
 
-Design approval authorizes implementation, not acceptance, push or merge. The
-existing human gates remain in force. Old jobs without ceremony state retain
-their workflow.
+Historical packets and approvals stay readable. Unfinished packet runs require
+a new explicit interactive run rather than fabricated conversation history or
+silent changes to pinned releases. Design approval never accepts a build or
+permits publishing or merging. See [interactive design](docs/design-ceremony.md)
+for installation, lifecycle, API and actual verification limits.
 
 The project skill in `.claude/skills/sociotechnic` only exists in a session opened in
 SOCIOTECHNIC_HOME; it delegates execution to the shared console driver. A

@@ -58,18 +58,16 @@ For [comment and docblock cleanup](sociotechnic/docs/comment-cleanup.md), choose
 
 ## Design before implementation
 
-For a new interface or major UI change, choose **Design ceremony** in **New run**.
-Fable reads the existing product and design context, interviews you about gaps,
-and offers the bundled React/NestJS starter alongside your existing or preferred
-stack. It then presents design directions and three composition previews.
-Inspect them, request another pass when needed, and explicitly approve the
-design to implement. Each decision continues the same run automatically.
+For a new interface or major UI change, choose **Design ceremony** in **New run**
+and use **Local** execution. Talk with Claude through the actual Impeccable skill,
+answer its questions and request revisions in the same conversation. **Open
+previews** opens the skill's own decision page in a separate window or tab.
 
-The final implementation plan follows your approval and is held for review.
-Ordinary feature runs can also enter the ceremony when the planner identifies
-major UI work. Small fixes retain the normal planning path. Preview formats are
-labeled; image compositions require configured image generation, while HTML
-prototypes are available without it. [Design ceremony details](sociotechnic/docs/design-ceremony.md).
+Inspect the resulting design artifacts and explicitly approve them before
+implementation planning. The final plan is held for review before building.
+Ordinary feature planning can request design when needed. Small fixes keep the
+normal planning path. Docker design sessions are not yet supported.
+[Interactive design details](sociotechnic/docs/design-ceremony.md).
 
 ## Follow the work
 

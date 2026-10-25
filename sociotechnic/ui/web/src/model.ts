@@ -1,3 +1,4 @@
+import type { DesignQuestion, DesignMessage } from "../../../src/design-session.ts";
 import { parseDesignPacket } from "../../../src/design-packet.ts";
 import type { DesignPacket } from "../../../src/design-packet.ts";
 import { tokenUsage } from "./token-usage.ts";
@@ -30,7 +31,9 @@ export type Round = {
   gate: { pass: boolean; head: string; blockers: string[]; flags: string[]; changedFiles: number; computedAt: string } | null;
 };
 export type DesignView = { state: "generating"; phase: string; iteration: number } | { state: "waiting" | "approved"; packet: DesignPacket; digest: string; iteration: number; optionId: string; stack: string };
+export type InteractiveDesignView = { id: string; state: string; streamingText: string; messages: DesignMessage[]; question: DesignQuestion | null; previewUrl: string | null; error: string | null; fingerprint: string; files: string[]; skillVersion: string | null; usage: { turns: number; tokens: number } };
 export type Detail = {
+  interactive: InteractiveDesignView | null;
   design: DesignView | null;
   worktreePresent: boolean;
   job: Pick<Job, "id" | "feature" | "repo" | "worktree" | "branch" | "status" | "statusReason" | "round" | "base" | "updatedAt" | "caps" | "execution">;
@@ -130,9 +133,25 @@ export function parseDetail(value: unknown): Detail {
     pullRequest: typeof pr?.url === "string" && pr.url.startsWith("https://") ? { url: pr.url, head: text(pr.head), merge: merge ? { commit: text(merge.commit), mergedAt: text(merge.mergedAt) } : null } : null,
     localMerge: local && typeof local.commit === "string" ? { commit: local.commit, head: text(local.head), mergedAt: text(local.mergedAt) } : null,
     design: parseDesignView(j.design),
+    interactive: parseInteractive(d.interactive),
     worktreePresent: d.worktreePresent === true,
     checks: null, checksError: null, verification: null, verificationError: null,
   };
+}
+
+function parseInteractive(value: unknown): InteractiveDesignView | null {
+  if (value == null) return null;
+  const d = object(value), usage = object(d.usage), skill = d.skill == null ? null : object(d.skill);
+  const q = d.question == null ? null : object(d.question);
+  let preview: string | null = null;
+  if (typeof d.previewUrl === "string") try {
+    const url = new URL(d.previewUrl);
+    if (url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname) && !url.username && !url.password) preview = url.href;
+  } catch { /* Invalid preview URLs never become navigation targets. */ }
+  return { id: text(d.id), state: text(d.state), streamingText: text(d.streamingText), fingerprint: text(d.fingerprint), files: strings(d.files), previewUrl: preview, error: optionalText(d.error), skillVersion: skill ? text(skill.version) : null,
+    usage: { turns: count(usage.turns), tokens: count(usage.input) + count(usage.output) + count(usage.cacheRead) + count(usage.cacheWrite) },
+    messages: list(d.messages).map((v) => { const m = object(v); if (m.role !== "user" && m.role !== "assistant" && m.role !== "tool") throw new Error("Invalid design message role"); return { id: text(m.id), role: m.role, text: text(m.text), at: text(m.at) }; }),
+    question: q ? { id: text(q.id), questions: list(q.questions).map((v) => { const item = object(v); return { question: text(item.question), header: text(item.header), multiSelect: item.multiSelect === true, options: list(item.options).map((o) => { const opt = object(o); return { label: text(opt.label), description: text(opt.description) }; }) }; }) } : null };
 }
 
 function parseDesignView(value: unknown): DesignView | null {

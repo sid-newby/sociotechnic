@@ -1,3 +1,5 @@
+import { runInteractiveDesign, stopLocalDesignPreviews } from "./design-session-runner.ts";
+import type { DesignQuery } from "./design-session-runner.ts";
 import { versionRole } from "../src/agent-versions.ts";
 
 import type { DispatchOut, StepResult } from "../src/engine.ts";
@@ -47,7 +49,7 @@ export type DriverRegistry = {
   shutdown: () => Promise<void>;
 };
 
-export type DriverOptions = { runner: () => Runner; emit: (event: DriverEvent) => void; owner?: DriverOwner; consoleUrl?: () => string };
+export type DriverOptions = { runner: () => Runner; emit: (event: DriverEvent) => void; owner?: DriverOwner; consoleUrl?: () => string; designQuery?: DesignQuery };
 
 const LOG_CAP = 200;
 const ACTIVITY_INTERVAL_MS = 250;
@@ -210,6 +212,10 @@ export function createDriverRegistry(options: DriverOptions): DriverRegistry {
           log(slot, "warn", `recorded interrupted dispatches as failed; existing retry bounds apply: ${result.pending.join(", ")}`);
           continue;
         }
+        if (result.action === "human") {
+          const design = await readJob(id, (job) => job.designSession);
+          if (design?.state === "ready") await runInteractiveDesign({ id, token: slot.token, signal: slot.abort.signal, onActivity: (line) => activity(id, slot, design.id, line), query: options.designQuery });
+        }
         const why = result.action === "done" ? "done" : `${result.action}: ${result.reason}`;
         log(slot, "info", `stopped at ${result.status} (${why})`);
         return;
@@ -281,6 +287,7 @@ export function createDriverRegistry(options: DriverOptions): DriverRegistry {
         slot.abort.abort();
       }
       await Promise.all([...slots.values()].map((s) => s.loop));
+      for (const id of slots.keys()) await stopLocalDesignPreviews(id);
     },
   };
 }

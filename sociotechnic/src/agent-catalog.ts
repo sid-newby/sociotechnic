@@ -41,7 +41,8 @@ export function agentCatalogEntry(base: Role, dir?: string, configuration?: Agen
   const fields = definition === null ? {} : parseFrontmatter(definition)?.fields ?? {};
   const declared = fields.skills;
   const skills = Array.isArray(declared) ? declared : typeof declared === "string" ? declared.replace(/^\[|\]$/g, "").split(",").map((s) => s.trim()).filter(Boolean) : [];
-  if (role.tools.includes("mcp__design__impeccable")) skills.push("Impeccable (scoped design tool)");
+  if (role.tools.includes("mcp__impeccable__run")) skills.push("Impeccable (native session)");
+  else if (role.tools.includes("mcp__design__impeccable")) skills.push("Impeccable (scoped design tool)");
   const settings = { provider: role.provider, model: role.model, effort: role.effort, tools: [...role.tools], timeoutMinutes: role.timeoutMinutes, maxTurns: role.maxTurns, skills };
   const revision = definition === null ? null : createHash("sha256").update(JSON.stringify({ schema: 1, role, definition })).digest("hex");
   return { name: role.name, description: typeof fields.description === "string" ? fields.description : "Definition unavailable. Restore the agent definition to inspect its purpose.", record: role.record, configuration: { version, ...(definition === null ? {} : { definition }), revision, ...settings } };

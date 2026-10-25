@@ -1,3 +1,4 @@
+import type { InteractiveDesign } from "./design-session.ts";
 import { join } from "node:path";
 import type { Execution } from "./execution.ts";
 import type { DesignCeremony } from "./design.ts";
@@ -126,6 +127,7 @@ export type Job = {
   localMerge?: LocalMerge;
   pr?: PrRecord;
   design?: DesignCeremony;
+  designSession?: InteractiveDesign;
   commentCleanup?: { inventoryDigest: string };
 };
 
