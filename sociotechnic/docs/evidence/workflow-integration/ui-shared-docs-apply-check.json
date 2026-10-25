@@ -1,0 +1,7 @@
+{
+  "command": "git apply --check /tmp/flow-shared-docs.patch",
+  "scope": "read-only check; no patch applied to UI worktree",
+  "exit": 0,
+  "stdout": "",
+  "stderr": ""
+}

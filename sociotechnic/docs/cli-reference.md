@@ -170,6 +170,14 @@ A repaired passing HEAD receives all applicable reviews. Agent pins preserve
 instructions, not the engine binary; issued review waves finish normally after
 an operator-controlled upgrade. See [gate behavior](engine-reference.md#gate).
 
+For ordinary Claude dispatches without Agent delegation, the staged task owns
+the storage adapter instructions and exact input/output paths. The pinned profile
+is preserved verbatim; legacy job-folder references mean that staging scope.
+Role tools, read/write guards and ingestion checks remain. Comment coordinators,
+nested workers and interactive design retain their existing assembly. Packaged
+skill materialization paths can still vary. This change does not establish cache
+hits or latency improvement. Optional reader-recovery concurrency is deferred.
+
 ## Run console
 
 A local web page that shows what a run is doing and lets you start, hold, resume and gate runs. The project and global `/sociotechnic` skills also hand runs to this shared driver. It routes each pinned dispatch to Claude Agent SDK or the subscription-authenticated Codex CLI and obeys the same engine.
