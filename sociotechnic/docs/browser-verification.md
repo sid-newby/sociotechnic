@@ -31,6 +31,12 @@ healthy installations are reused. Network and package installation must be
 permitted on the machine. Do not use elevated installation against a shared
 system prefix; configure a writable npm prefix if necessary.
 
+Linux ARM64 uses the Debian-compatible `apt-get` packages `chromium` and
+`chromium-sandbox`; Chrome for Testing does not supply that architecture.
+This path requires root or noninteractive `sudo` for system package installation
+inside the chosen environment. Other platforms use `agent-browser install`.
+Both paths must pass the same actual Chrome launch check.
+
 The smoke check renders a disposable proof page with both CLIs and closes its
 own sessions. It does not dispatch a model, connect to a database or modify a
 target repository. The CLIs' interactive commands and MCP transports are upstream
@@ -46,10 +52,11 @@ copied. A setup failure fails that dispatch and preserves normal retry/human
 handling; it cannot switch to host execution. Other roles and builds without the
 skill do not trigger browser installation.
 
-This Sandbox browser preparation is experimental. The current verification
-record has host rendering and fake-transport proof; the real-VM browser smoke
-was blocked by the installation's occupied one-slot capacity limit. Run the
-command below before relying on Linux browser verification.
+On October 25, 2026, the real-VM smoke passed in a fresh Debian 13 ARM64 Sandbox:
+automatic installation, both browser CLIs rendering the proof page, Linux checks,
+Git bundle import with a matching commit, and owned VM/fixture cleanup. The test
+temporarily used a second slot, then restored the limit to one; the existing
+retained run was unchanged. A browser-enabled live model dispatch remains untested.
 
 The initial download may be substantial. Subsequent build rounds reuse a healthy
 installation. This provisioning obeys the dispatch deadline and normal Sandbox
