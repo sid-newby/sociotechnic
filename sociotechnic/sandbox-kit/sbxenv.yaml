@@ -20,7 +20,8 @@ kits:
   - docker.io/docker/sbx-kit-codex-mixin:0.162.1@sha256:04938d868baacd2ac2e11acd65a6a90e319d131b5f458b6d3f141cab7c85ffd7
   - docker.io/docker/sbx-kit-claude-mixin:2.1.292@sha256:38797566d13559dd8388409a557aba5820fa2adc50fbc6497cba4be2649d41b4
 
-# No workspace, host lifecycle commands, SSH capability, MCP, or published ports.
+# No workspace, host lifecycle commands, SSH capability or published ports.
+# Provisioning loads the operator's registered Context7 through sbx mcp load.
 sandboxOptions:
   cpus: ${{ env.args.cpus }}
   memory: "${{ env.args.memoryGiB }}g"
