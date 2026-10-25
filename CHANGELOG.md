@@ -7,6 +7,8 @@ Dates on backfilled entries use America/Chicago. See the [release guide](sociote
 
 - Replace design packets with a normal turn-based Claude Code chat whose Markdown agent definition runs the installed /impeccable command with native tools and windows.
 - Support image input and output, persistent SDK history, Markdown work-product handoffs and follow-up assignments in the same conversation. Apply committed catalog additions at console startup and recover unused retired designer bindings in place.
+- Interrupt one in-flight dispatch from the CLI or API while the rest of its step keeps running; the interrupt is recorded with the human's note, and the step retries under the existing retry bound with that note as the reason.
+- Add an optional installation limit on concurrent local dispatches, stream driver log lines as SSE events with a paged catch-up route, and download any record as a file. Correct the references where they described console controls that only the legacy console offers.
 
 ## v0.4.2
 

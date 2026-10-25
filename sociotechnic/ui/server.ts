@@ -10,7 +10,7 @@ import { createServer } from "node:http";
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { homedir } from "node:os";
-import { dirname, extname, join, resolve, sep } from "node:path";
+import { dirname, extname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { designAsset, verifyDesign } from "../src/design.ts";
 import { BASE_AGENT_VERSION, agentBase, agentVersionChoices, createAgent, isAgentVersion, listAgentVersions, loadAgentCatalog, pinAgentVersions, publishAgentVersion, readAgentVersion } from "../src/agent-versions.ts";
@@ -21,8 +21,9 @@ import { dbStatus } from "../src/db/init.ts";
 import { listJobs, listProjects, loadJobHistory } from "../src/db/listing.ts";
 import { readJob, effectJob, createJobOperation } from "../src/job-store.ts";
 import { requireStore, currentStore } from "../src/db/store.ts";
-import { session, readText, readJson, hasRecord } from "../src/record-store.ts";
+import { session, readText, readJson, readBytes, hasRecord } from "../src/record-store.ts";
 import * as engine from "../src/engine.ts";
+import { localDispatchConfigurable, localDispatchLimit, setLocalDispatchLimit } from "../src/local-capacity.ts";
 import { assertNoForeignDriver } from "../src/driverlock.ts";
 import { SociotechnicError } from "../src/errors.ts";
 import { sandboxInventory, setSandboxLimit } from "../src/sandbox.ts";
@@ -79,7 +80,7 @@ function sendJson(res: ServerResponse, status: number, value: unknown): void {
 function statusFor(err: unknown): { status: number; code: string; message: string } {
   if (err instanceof HttpError) return { status: err.status, code: err.code, message: err.message };
   if (err instanceof SociotechnicError) {
-    const status = ["illegal-transition", "driver-active", "locked", "stale-design", "stale-agent-version", "stale-sandbox-settings", "stale-job", "ownership-lost"].includes(err.code) ? 409 : err.code === "not-found" ? 404 : ["db", "db-unreachable", "db-disabled", "migration-required"].includes(err.code) ? 503 : 400;
+    const status = ["illegal-transition", "driver-active", "locked", "stale-design", "stale-agent-version", "stale-sandbox-settings", "stale-job", "ownership-lost", "sandbox-interrupt", "dispatch-starting", "driver-stopped", "stale-local-capacity", "local-capacity-managed"].includes(err.code) ? 409 : err.code === "not-found" ? 404 : ["db", "db-unreachable", "db-disabled", "migration-required"].includes(err.code) ? 503 : 400;
     return { status, code: err.code, message: err.message };
   }
   return { status: 500, code: "internal", message: err instanceof Error ? err.message : String(err) };
@@ -158,6 +159,36 @@ function recordPath(id: string, raw: string): { rel: string; full: string } {
 }
 function readPlanJson(id: string): unknown { return hasRecord(join(jobDir(id),"plan.json")) ? readJson(join(jobDir(id),"plan.json")) : null; }
 
+const DOWNLOAD_TYPES: Record<string, string> = { ".md": "text/markdown; charset=utf-8", ".json": "application/json; charset=utf-8", ".txt": "text/plain; charset=utf-8", ".patch": "text/x-diff; charset=utf-8", ".diff": "text/x-diff; charset=utf-8", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp" };
+function sendRecordDownload(res: ServerResponse, id: string, raw: string, head: boolean): void {
+  const { full } = recordPath(id, raw);
+  const key = relative(jobDir(id), full).split(sep).join("/");
+  const bytes = readBytes(full);
+  const name = key.replaceAll("/", "-");
+  res.writeHead(200, {
+    "content-type": DOWNLOAD_TYPES[extname(key.replace(/\.superseded-by-d-[0-9]+$/, ""))] ?? "application/octet-stream",
+    "content-length": bytes.length,
+    "content-disposition": `attachment; filename="${name.replace(/[^A-Za-z0-9._-]/g, "_")}"; filename*=UTF-8''${encodeURIComponent(name).replace(/['()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)}`,
+    "cache-control": "no-store", "x-content-type-options": "nosniff", "content-security-policy": "sandbox; default-src 'none'",
+  });
+  res.end(head ? undefined : bytes);
+}
+
+function intQuery(query: URLSearchParams, key: string, fallback: number, min: number, max: number): number {
+  const raw = query.get(key);
+  if (raw === null) return fallback;
+  const value = /^[0-9]{1,16}$/.test(raw) ? Number(raw) : Number.NaN;
+  if (!Number.isSafeInteger(value) || value < min || value > max) throw new HttpError(400, "bad-input", `${key} must be an integer from ${min} to ${max}`);
+  return value;
+}
+
+function dispatchIdParam(raw: string): string {
+  let id: string;
+  try { id = decodeURIComponent(raw); } catch { throw new HttpError(400, "bad-input", "Invalid dispatch id"); }
+  if (!/^d-[0-9]+$/.test(id)) throw new HttpError(400, "bad-input", `not a dispatch id: ${id}`);
+  return id;
+}
+
 function queryOf(req: IncomingMessage): URLSearchParams {
   return new URL(req.url ?? "/", "http://127.0.0.1").searchParams;
 }
@@ -210,7 +241,7 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
   };
   let port = 0;
   const consoleUrl = () => `http://${host}:${port}/`;
-  const drivers = createDriverRegistry({ runner: options.runner ?? runnerFromEnv, emit: (e: DriverEvent) => broadcast("driver", e), owner: "ui", consoleUrl, designQuery: options.designQuery });
+  const drivers = createDriverRegistry({ runner: options.runner ?? runnerFromEnv, emit: (e: DriverEvent) => broadcast("driver", e), onLog: (e) => broadcast("log", e), owner: "ui", consoleUrl, designQuery: options.designQuery });
   const assertSessionOwner = async (id: string, allowInterrupted = false): Promise<void> => {
     const ownership = (await consoleDriverState(drivers, id, consoleUrl())).ownership;
     if (ownership.kind === "external" || (ownership.kind === "interrupted" && !allowInterrupted)) throw new HttpError(409, "driver-active", "Manage this design session in its owning console, or explicitly resume an interrupted session");
@@ -231,6 +262,12 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
   const routes: Route[] = [
     { method: "GET", pattern: /^\/api\/sandboxes$/, handler: () => sandboxInventory() },
     { method: "POST", pattern: /^\/api\/sandboxes\/capacity$/, handler: ({ body }) => setSandboxLimit(body.limit, body.expectedLimit) },
+    { method: "GET", pattern: /^\/api\/local\/capacity$/, handler: () => ({ limit: localDispatchLimit(), configurable: localDispatchConfigurable(), ...drivers.capacity() }) },
+    { method: "POST", pattern: /^\/api\/local\/capacity$/, handler: async ({ body }) => {
+      const out = await setLocalDispatchLimit(body.limit, body.expectedLimit);
+      drivers.capacityChanged();
+      return out;
+    } },
     { method: "GET", pattern: /^\/api\/agent-versions$/, handler: () => agentVersionChoices() },
     { method: "GET", pattern: /^\/api\/agent-roster$/, handler: () => agentRoster() },
     { method: "POST", pattern: /^\/api\/agents$/, handler: async ({ body }) => {
@@ -309,6 +346,30 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
       },
     },
     { method: "GET", pattern: /^\/api\/jobs\/([^/]+)\/driver$/, handler: ({ params }) => consoleDriverState(drivers, jobIdParam(params[0]), consoleUrl()) },
+    { method: "GET", pattern: /^\/api\/jobs\/([^/]+)\/log$/, handler: ({ req, params }) => {
+      const query = queryOf(req);
+      return drivers.logPage(jobIdParam(params[0]), intQuery(query, "after", 0, 0, Number.MAX_SAFE_INTEGER), intQuery(query, "limit", 200, 1, 1000));
+    } },
+    {
+      method: "POST",
+      pattern: /^\/api\/jobs\/([^/]+)\/dispatches\/([^/]+)\/interrupt$/,
+      handler: async ({ params, body }) => {
+        const id = jobIdParam(params[0]);
+        const dispatch = dispatchIdParam(params[1]);
+        const note = str(body, "note", false)?.trim() || null;
+        engine.assertInterruptible(loadJob(id), dispatch);
+        const running = drivers.interrupt(id, dispatch, note);
+        if (running !== null) return running;
+        const ownership = (await consoleDriverState(drivers, id, consoleUrl())).ownership;
+        if (ownership.kind === "external") throw new HttpError(409, "driver-active", "Interrupt this dispatch in the console that owns the run");
+        if (ownership.kind !== "none") throw new HttpError(409, "driver-active", "The previous driver stopped; continue the run to recover before interrupting");
+        const out = await mutateJob(id, async (job) => {
+          await assertNoForeignDriver(id, process.pid);
+          return engine.interrupt(job, dispatch, note);
+        });
+        return { job: out.job, dispatch: out.dispatch, outcome: out.outcome, note: out.note, terminated: false };
+      },
+    },
     {
       method: "POST",
       pattern: /^\/api\/jobs$/,
@@ -604,6 +665,11 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
     if (method === "GET" || method === "HEAD") {
       if (path === "/" || path === "/legacy") return serveIndex(res, path === "/legacy", method === "HEAD");
       if (path.startsWith("/assets/")) return serveAsset(res, path, method === "HEAD");
+      const download = /^\/api\/jobs\/([^/]+)\/records\/(.+)$/.exec(path);
+      if (download && queryOf(req).get("download") === "1") {
+        const id = jobIdParam(download[1]);
+        return readJob(id, () => sendRecordDownload(res, id, download[2], method === "HEAD"));
+      }
       const designImage = /^\/api\/jobs\/([^/]+)\/design-images\/(.+)$/.exec(path);
       if (designImage) {
         const id = jobIdParam(designImage[1]);
