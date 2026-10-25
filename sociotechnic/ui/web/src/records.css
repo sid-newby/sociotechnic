@@ -4,7 +4,7 @@
 .wrapped-record { white-space: pre-wrap; overflow-wrap: anywhere; }
 .raw-record { white-space: pre; }
 .prose-record { font-size: 15px; line-height: 1.7; }
-.code-record { font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace); font-size: 12px; line-height: 1.6; }
+.code-record { font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace); font-size: 13px; line-height: 1.6; }
 .record-content:focus-visible, .record-table:focus-visible { outline: 2px solid var(--ring); outline-offset: -3px; }
 .record-content > :first-child { margin-top: 0; }
 .record-content > :last-child { margin-bottom: 0; }
@@ -29,8 +29,8 @@
 .markdown-record a:hover { text-decoration-thickness: 2px; }
 .markdown-record :not(pre) > code { background: var(--muted); padding: 2px 5px; border-radius: 5px; font-size: .88em; }
 .record-code-block { min-width: 0; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: var(--background); }
-.record-code-label { padding: 6px 16px; font-size: 12px; color: var(--muted-foreground); background: var(--muted); border-bottom: 1px solid var(--border); }
-.record-code-block pre { font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace); margin: 0; padding: 16px; overflow: auto; white-space: pre; font-size: 12px; line-height: 1.6; }
+.record-code-label { padding: 6px 16px; font-size: 13px; color: var(--muted-foreground); background: var(--muted); border-bottom: 1px solid var(--border); }
+.record-code-block pre { font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace); margin: 0; padding: 16px; overflow: auto; white-space: pre; font-size: 13px; line-height: 1.6; }
 .record-code-block pre:focus-visible { outline-offset: -3px; }
 .record-code-block code { display: block; width: max-content; min-width: 100%; }
 .record-table { overflow: auto; }
