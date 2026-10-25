@@ -3,8 +3,10 @@
 Release notes are committed before publication. [GitHub Releases](https://github.com/sid-newby/sociotechnic/releases) confirms which versions shipped.
 Dates on backfilled entries use America/Chicago. See the [release guide](sociotechnic/docs/releasing.md).
 
-## Unreleased
+## v0.7.0
 
+- Let planners ask the human specific questions before pinning a plan or dispatching a builder, including after research. Show the questions in the console and retain dispatch-bound answers for resumed planning with mandatory plan review.
+- Preserve review/report requests as written deliverables instead of assuming they need an application integration. Reject stale replies and retain answer drafts on failed saves.
 - Replace console API-dollar estimates with recorded token categories, cache-read coverage and report scopes in dashboard/detail sheets, History and optional CSV columns. Preserve raw records and existing totals; unavailable counters remain unknown, and thinking is never added twice. No cache-hit, expiry or per-turn inference is made.
 
 - Document the shipped console design system and UI builder conventions, preserving the approved dashboard direction and runtime token ownership.
