@@ -4,13 +4,13 @@
 
 Sociotechnical (or sociotechnic) refers to the interlinked relationship between people (social systems) and machines, tools, or software (technical systems) within organizations and society. The theory states that an organization or system works best when its social and technical parts are designed together to fit each other, rather than optimizing technology alone.
 
-Human behavior, culture, and values shape how technology is used, while technology simultaneously changes how people work and communicate. Speak like a human. Ship like a machine. 
+Human behavior, culture, and values shape how technology is used, while technology simultaneously changes how people work and communicate. Speak like a human. Ship like a machine.
 
 We invite you to join us. Be Sociotechnic.
 
-Sociotechnic turns a development task into a safe, isolated branch you can test, review and merge with confidence. Start a run in the web console, review its plan, and follow the work through building, checks and independent reviews. The engine coordinates fresh coding agents and stops when it needs your decision. 
+Sociotechnic turns a development task into a safe, isolated branch you can test, review and merge with confidence. Start a run in the web console, review its plan, and follow the work through building, checks and independent reviews. The engine coordinates fresh coding agents and stops when it needs your decision.
 
-The console is the intended main interface. The engine and semantically versioned agent definitions live in this repository. PostgreSQL stores job records across projects and versions. Full CLI parity exists for further automations or dev feats against itself. 
+The console is the intended main interface. The engine and semantically versioned agent definitions live in this repository. PostgreSQL stores job records across projects and versions. Full CLI parity exists for further automations or dev feats against itself.
 
 [Start a run](#start-a-run) · [Agent library](#agent-library) · [Follow the work](#follow-the-work) · [Review and decide](#review-and-decide) · [How it works](#how-it-works) · [Technical documentation](#technical-documentation)
 
@@ -89,7 +89,7 @@ Choose **Agent library**, beside **New run**, to browse the whole team across
 projects and runs. Each role has a distinct icon shared with run profiles,
 activity and analysis. Search by role, model or description, then inspect when
 it is called, its model and effort, allowed tools, limits and explicit skill
-access. Operator-installed skills are not automatically granted to agents. 
+access. Operator-installed skills are not automatically granted to agents.
 
 ![Agent library showing the planner, versioned specialist roster and deployment evidence from the committed demo fixture.](assets/console/agent-library.png)
 
