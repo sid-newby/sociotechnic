@@ -37,6 +37,8 @@ New run also offers **Docker Sandbox — experimental**. The run's agents and
 checks share an isolated local Linux environment with explicit CPU, memory and
 concurrency settings. Your source checkout is not mounted. Committed work returns
 to a local review worktree for the same testing, acceptance and merge decisions.
+Your environment choice and valid CPU, memory and concurrency settings are saved
+automatically in this browser for future runs, even if you cancel the dialog.
 
 Keep a clean slate: choose the total **sandbox slots** for this installation
 separately from the workers inside each run's sandbox. Each run gets its own
@@ -46,7 +48,7 @@ remove their sandbox and worktree without losing the recorded history.
 When you finish a run locally or confirm its GitHub merge, its sandbox is removed.
 Dirty or unexported work blocks cleanup and stays visible for recovery; it is never silently discarded.
 
-Local execution remains the default. [Setup, storage and cleanup](sociotechnic/docs/docker-sandboxes.md).
+Local execution is the initial default. [Setup, storage and cleanup](sociotechnic/docs/docker-sandboxes.md).
 
 ![Start a run dialog with repository path, optional base branch and change description.](assets/console/start-a-run.png)
 
