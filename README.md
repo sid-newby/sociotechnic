@@ -70,7 +70,7 @@ Each round records the build commit, configured checks and review verdicts. A le
 
 Analysis separates uncached input, output, cache read and cache write, with per-role totals, dispatch counts and median durations. These are reported measurements for the selected run. Historical SDK dollar estimates do not establish subscription charges.
 
-![Analysis view showing recorded token totals and unavailable category measurements from the demo fixtures.](assets/console/analysis.png)
+![Analysis view showing recorded token totals and unavailable category measurements from the demo fixtures.](assets/console/analysis-ov.png)
 
 ## Agent library
 
