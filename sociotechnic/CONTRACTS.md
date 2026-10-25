@@ -1490,6 +1490,16 @@ establish model quality or account access.
 
 ## 14. Packaging, tasks and supply chain policy
 
+- Console driver state includes persisted ownership across servers sharing the
+  database. A UI driver records its loopback console URL with its owner token.
+  Job lists, detail and driver inspection distinguish local execution, ownership
+  elsewhere and an interrupted local owner. A foreign owner blocks local run
+  controls and offers Open owning console when a safe same-host URL is known.
+  Legacy owners can be located through the documented local console ports only
+  after health PID and active-driver start time agree. Unknown or remote-host
+  locations never become guessed navigation links. Ownership changes notify all
+  consoles; existing advisory locks, takeover checks and human gates still apply.
+
 - The React console header displays `sociotechnic vX.Y.Z` in one shared title
   style. Vite embeds the newest root changelog entry using the release parser;
   malformed or unordered version history fails the build. The label identifies

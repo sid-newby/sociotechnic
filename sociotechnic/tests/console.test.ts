@@ -12,6 +12,17 @@ function fixture() {
   return detail;
 }
 
+test("console parsing preserves external ownership and rejects unsafe navigation", () => {
+  const job = { ...fixture().job, rounds: [] };
+  for (const url of ["javascript:alert(1)", "https://example.invalid/", "http://user:secret@localhost:4747/"]) {
+    const detail = parseDetail({ job, rounds: [], records: [], driver: { running: false, ownership: { kind: "external", owner: "ui", url } } });
+    assert.equal(detail.driver.running, true);
+    assert.deepEqual(detail.driver.ownership, { kind: "external", owner: "ui", url: null });
+  }
+  const detail = parseDetail({ job, records: [], driver: { ownership: { kind: "external", owner: "ui", url: "http://127.0.0.1:4747/#job=wrong" } } });
+  assert.deepEqual(detail.driver.ownership, { kind: "external", owner: "ui", url: `http://127.0.0.1:4747/#job=${job.id}` });
+});
+
 test("summary uses the current round and matching check commits", () => {
   const detail = fixture();
   assert.equal(evidence(detail).checkLabel, "Passed");

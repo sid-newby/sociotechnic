@@ -3,6 +3,11 @@
 Release notes are committed before publication. [GitHub Releases](https://github.com/sid-newby/sociotechnic/releases) confirms which versions shipped.
 Dates on backfilled entries use America/Chicago. See the [release guide](sociotechnic/docs/releasing.md).
 
+## v0.4.2
+
+- Show when another console owns a run and open that console at the selected job instead of offering a local resume that cannot succeed.
+- Refresh ownership across consoles, distinguish interrupted drivers, and preserve existing driver locks and recovery checks.
+
 ## v0.4.1
 
 - Fix browser provisioning on Debian-compatible Linux ARM64 by installing system Chromium and its sandbox package instead of requesting an unavailable Chrome for Testing build.

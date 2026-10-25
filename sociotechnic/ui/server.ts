@@ -26,8 +26,10 @@ import { isBound, loadJob, STATUSES } from "../src/job.ts";
 import { assertJobId, sociotechnicHome, jobDir, stateDir } from "../src/paths.ts";
 
 import { ROLES } from "../src/roles.ts";
-import type { DriverEvent, DriverMode, DriverRegistry, DriverState } from "./driver.ts";
+import type { DriverEvent, DriverMode, DriverRegistry } from "./driver.ts";
 import { createDriverRegistry, mutateJob } from "./driver.ts";
+import { consoleDriverState } from "./driver-view.ts";
+import type { ConsoleDriverState } from "./driver-view.ts";
 import type { Runner } from "./runner.ts";
 import { runnerFromEnv } from "./runner.ts";
 import { mergeMethod, mergeRemote } from "../src/remote-merge.ts";
@@ -150,20 +152,21 @@ function recordPath(id: string, raw: string): { rel: string; full: string } {
 }
 function readPlanJson(id: string): unknown { return hasRecord(join(jobDir(id),"plan.json")) ? readJson(join(jobDir(id),"plan.json")) : null; }
 
-function runningState(drivers: DriverRegistry, id: string): DriverState | null {
-  return drivers.isRunning(id) ? drivers.state(id) : null;
-}
-
 function queryOf(req: IncomingMessage): URLSearchParams {
   return new URL(req.url ?? "/", "http://127.0.0.1").searchParams;
 }
 
-async function jobsListing(drivers: DriverRegistry, query: URLSearchParams): Promise<Record<string, unknown>> {
+async function runningState(drivers: DriverRegistry, id: string, consoleUrl: string): Promise<ConsoleDriverState | null> {
+  const state = await consoleDriverState(drivers, id, consoleUrl);
+  return state.ownership.kind === "none" ? null : state;
+}
+
+async function jobsListing(drivers: DriverRegistry, query: URLSearchParams, consoleUrl: string): Promise<Record<string, unknown>> {
   const project = query.get("project")?.trim() ?? "";
   const status = query.get("status")?.trim() ?? "";
   if (status !== "" && !(STATUSES as readonly string[]).includes(status)) throw new HttpError(400, "bad-input", `unknown status ${status}`);
   const out = await listJobs({ project: project === "" ? null : expandHome(project), status: status === "" ? null : status });
-  return { ...out, jobs: out.jobs.map((e) => ({ ...e, driver: runningState(drivers, e.id) })) };
+  return { ...out, jobs: await Promise.all(out.jobs.map(async (e) => ({ ...e, driver: await runningState(drivers, e.id, consoleUrl) }))) };
 }
 
 function serveIndex(res: ServerResponse, legacy: boolean, head: boolean): void {
@@ -197,8 +200,9 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
     const frame = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
     for (const c of clients) c.write(frame);
   };
-  const drivers = createDriverRegistry({ runner: options.runner ?? runnerFromEnv, emit: (e: DriverEvent) => broadcast("driver", e), owner: "ui" });
   let port = 0;
+  const consoleUrl = () => `http://${host}:${port}/`;
+  const drivers = createDriverRegistry({ runner: options.runner ?? runnerFromEnv, emit: (e: DriverEvent) => broadcast("driver", e), owner: "ui", consoleUrl });
   const startedAt = new Date().toISOString();
 
   const debounce = new Map<string, NodeJS.Timeout>();
@@ -258,7 +262,7 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
         })) : (await loadAgentCatalog()).map((entry) => ({ ...ROLES.find((r) => r.name === (entry.configuration.baseRole ?? entry.name)), name: entry.name, ...entry.configuration })), agents: { ok: true, problems: [] }, agentsMd: existsSync(AGENTS_MD) ? readFileSync(AGENTS_MD, "utf8") : "" };
       },
     },
-    { method: "GET", pattern: /^\/api\/jobs$/, handler: ({ req }) => jobsListing(drivers, queryOf(req)) },
+    { method: "GET", pattern: /^\/api\/jobs$/, handler: ({ req }) => jobsListing(drivers, queryOf(req), consoleUrl()) },
     {
       method: "POST",
       pattern: /^\/api\/jobs\/([^/]+)\/archive$/,
@@ -277,9 +281,9 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
     {
       method: "GET",
       pattern: /^\/api\/jobs\/([^/]+)$/,
-      handler: ({ params }) => {
+      handler: async ({ params }) => {
         const id = jobIdParam(params[0]);
-        return { job: loadJob(id), plan: readPlanJson(id), records: listRecords(id), pr: hasRecord(join(jobDir(id), "pr.md")), worktreePresent: existsSync(loadJob(id).worktree), driver: runningState(drivers, id) };
+        return { job: loadJob(id), plan: readPlanJson(id), records: listRecords(id), pr: hasRecord(join(jobDir(id), "pr.md")), worktreePresent: existsSync(loadJob(id).worktree), driver: await runningState(drivers, id, consoleUrl()) };
       },
     },
     {
@@ -291,7 +295,7 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
         return { path: rel, text: readText(full) };
       },
     },
-    { method: "GET", pattern: /^\/api\/jobs\/([^/]+)\/driver$/, handler: ({ params }) => drivers.state(jobIdParam(params[0])) },
+    { method: "GET", pattern: /^\/api\/jobs\/([^/]+)\/driver$/, handler: ({ params }) => consoleDriverState(drivers, jobIdParam(params[0]), consoleUrl()) },
     {
       method: "POST",
       pattern: /^\/api\/jobs$/,

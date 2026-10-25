@@ -453,6 +453,15 @@ Globs support `**`, `*` and `?`, matched against repo-relative paths with forwar
 
 ## Console archive preferences
 
+Driver ownership is separate from workflow status and archive visibility. The
+database owner row identifies the process and, for UI drivers, its console URL.
+Console APIs resolve this persisted owner instead of treating a server's empty
+local driver registry as an idle run. Other same-host consoles can link to the
+owner while all execution and takeover decisions remain protected by the existing
+advisory lease. A known dead local process is an interrupted owner, not active
+execution. See [cross-console ownership](cli-reference.md#safety-and-handoff)
+for API states, refresh behavior and legacy location discovery.
+
 Archive state is part of the PostgreSQL job document. Archive and unarchive
 change visibility only: records, workflow status and active execution are kept.
 The HTTP listing includes archived runs, and Show archived controls rail

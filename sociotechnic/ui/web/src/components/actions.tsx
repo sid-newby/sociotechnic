@@ -67,7 +67,12 @@ export function Actions({ detail, refresh, disabled }: { detail: Detail; refresh
   const human = status in gateCopy;
   const continueRoute = detail.worktreePresent ? "run" : "resume";
   const recoveryLabel = "Recover worktree and continue";
+  if (driver.ownership.kind === "external") return <section className="human-actions" aria-labelledby="decision-title">
+    <div className="section-heading"><div><h2 id="decision-title">{driver.ownership.owner === "ui" ? "Running in another console" : "Owned by another process"}</h2><p role="status">{driver.ownership.url ? "Follow this run and manage its controls in the console that owns it." : "This run is owned elsewhere. Use its original console or CLI to check progress and manage execution."}</p></div></div>
+    <div className="action-row">{driver.ownership.url ? <Button asChild><a href={driver.ownership.url}>Open owning console <ArrowRight aria-hidden="true" /></a></Button> : null}<Button variant="outline" onClick={refresh}>Refresh status</Button></div>
+  </section>;
   return <section className="human-actions" aria-labelledby="decision-title">
+    {driver.ownership.kind === "interrupted" ? <p role="status">The previous driver process has stopped. Continue the run to recover through the existing retry checks.</p> : null}
     <div className="section-heading"><div><h2 id="decision-title">{human ? "Your next decision" : "Run controls"}</h2><p>{detail.pullRequest?.merge ? (sandboxed ? job.statusReason : `Merged on GitHub at ${detail.pullRequest.merge.commit}. Your local checkout has not been synchronized by Sociotechnic.`) : (planningFailure ? "Planning has not completed. Retry the planner with feedback, or stop this run. A validated plan must be reviewed before building." : gateCopy[status]) ?? (driver.running ? "Agents are working. You can pause after in-flight work finishes." : "Continue the workflow. Sociotechnic stops when it needs your decision.")}</p></div></div>
     <div className="action-row">
       {status === "planned" ? <Button disabled={blocked} onClick={() => void run(continueRoute, { mode: "run" }, "Run continued.")}>{detail.worktreePresent ? "Continue build" : recoveryLabel} <ArrowRight /></Button> : null}

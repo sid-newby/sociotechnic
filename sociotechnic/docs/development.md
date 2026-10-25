@@ -69,6 +69,19 @@ models or production database are used. It removes its fixtures and server and
 prints the proof directory; set `SOCIOTECHNIC_BROWSER_PROOF` to choose that
 directory. Screenshots contain only test data.
 
+### Console ownership browser verification
+
+After `task build`, run `node sociotechnic/scripts/verify-console-ownership.mjs`.
+It requires the installed `agent-browser` CLI and Chrome. It starts two isolated
+consoles sharing an in-memory store, holds a fake planner, verifies the owning
+console link through keyboard navigation, captures desktop and mobile views,
+and checks automatic release updates, unknown locations and interrupted owners.
+It uses no live agents, production database or existing jobs. The script closes
+only its named browser session and test servers, removes its fixture repository,
+and prints the retained screenshot directory. `SOCIOTECHNIC_BROWSER_PROOF` can
+choose that directory. Run `task test:pg` separately for real ownership locks and
+cross-connection notifications.
+
 ## Development
 
 For contribution scope, issue reports and PR expectations, read
@@ -226,6 +239,7 @@ browser interaction was exercised.
 | React views, actions, records and server updates | [App.tsx](../ui/web/src/App.tsx), [components/](../ui/web/src/components/), [use-console.ts](../ui/web/src/use-console.ts), [api.ts](../ui/web/src/api.ts), [model.ts](../ui/web/src/model.ts) | [console.test.ts](../tests/console.test.ts) (console data helpers); build and exercise the affected view |
 | Welcome state and README banner | [App.tsx](../ui/web/src/App.tsx), [index.css](../ui/web/src/index.css), [transparent banner](../../assets/sociotechnic-banner-v4-transparent.png), [original banner](../../assets/sociotechnic-banner-v4.png) | Build verifies both theme assets are bundled; browser-check the banner, header New run action and narrow layout |
 | Console release version | [Vite config](../ui/web/vite.config.ts), [release parser](../../.github/scripts/changelog.cjs), [App.tsx](../ui/web/src/App.tsx), [release guide](releasing.md) | [console-version.test.ts](../tests/console-version.test.ts) verifies Vite embeds the newest changelog version; browser-check title typography and narrow layout |
+| Driver ownership across consoles | [driverlock.ts](../src/driverlock.ts), [driver-view.ts](../ui/driver-view.ts), [driver-location.ts](../src/driver-location.ts), [server.ts](../ui/server.ts), [actions.tsx](../ui/web/src/components/actions.tsx), [use-console.ts](../ui/web/src/use-console.ts) | [console-ownership.test.ts](../tests/console-ownership.test.ts) runs two servers against one store, verifies exact navigation, duplicate-execution refusal, ownership notifications and interrupted owners; uses disposable PostgreSQL with `task test:pg`; [console.test.ts](../tests/console.test.ts) validates browser parsing and safe links |
 | README console screenshots | [Capture script](../scripts/console-screenshots.mjs), [capture notes and images](../../assets/console/README.md), [demo records](../ui/seed/demo-job/) | Build, run the capture script, inspect all eight views, verify dimensions and README image links |
 | Builder verification in the Checks milestone | [model.ts](../ui/web/src/model.ts) (`parseBuildVerification`, `evidence`), [api.ts](../ui/web/src/api.ts) (`getDetail`), [experience.tsx](../ui/web/src/components/experience.tsx) (`Workflow`, `BuilderEvidence`), [technical.tsx](../ui/web/src/components/technical.tsx) | [console.test.ts](../tests/console.test.ts) (current, stale, missing and unchecked evidence); browser-check the milestone and original-record link |
 | Usage and token reporting | [usage.ts](../src/usage.ts), [token-usage.ts](../src/token-usage.ts) (shared; web re-export retained), [telemetry.ts](../ui/web/src/telemetry.ts) | [token-usage.test.ts](../tests/token-usage.test.ts), [console.test.ts](../tests/console.test.ts) |

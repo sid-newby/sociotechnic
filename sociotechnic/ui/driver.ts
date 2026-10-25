@@ -47,7 +47,7 @@ export type DriverRegistry = {
   shutdown: () => Promise<void>;
 };
 
-export type DriverOptions = { runner: () => Runner; emit: (event: DriverEvent) => void; owner?: DriverOwner };
+export type DriverOptions = { runner: () => Runner; emit: (event: DriverEvent) => void; owner?: DriverOwner; consoleUrl?: () => string };
 
 const LOG_CAP = 200;
 const ACTIVITY_INTERVAL_MS = 250;
@@ -241,7 +241,7 @@ export function createDriverRegistry(options: DriverOptions): DriverRegistry {
       const job = await readJob(id, (job) => job);
       const next=statusLine(job).nextAction;
       if(next === "human" || next === "done")throw new SociotechnicError("illegal-transition", "A driver cannot advance a human gate or finished job");
-      slot.token = await acquireDriver(id, { pid: process.pid, startedAt, mode, owner }, () => { slot.abort.abort(); slot.pauseRequested = true; });
+      slot.token = await acquireDriver(id, { pid: process.pid, startedAt, mode, owner, ...(options.consoleUrl ? { consoleUrl: options.consoleUrl() } : {}) }, () => { slot.abort.abort(); slot.pauseRequested = true; });
       try { await effectJob(id,"restore",(current)=>{
         const action=statusLine(current).nextAction;
         if(action === "human" || action === "done")throw new SociotechnicError("illegal-transition","A driver cannot advance a human gate or finished job");

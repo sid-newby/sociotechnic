@@ -96,6 +96,13 @@ Analysis separates uncached input, output, cache read and cache write, with per-
 
 ![Analysis view showing recorded token totals and unavailable category measurements from the demo fixtures.](assets/console/analysis-ov.png)
 
+If a run is **Running in another console**, choose **Open owning console** to
+follow it and use its controls there. The current console keeps its records
+visible and refreshes ownership automatically. If the owning location is
+unknown, use the original console or CLI and choose **Refresh status** to check
+again. An interrupted driver is shown separately and uses the normal recovery
+controls.
+
 ## Agent library
 
 For UI work that needs browser verification, choose the browser builder or browser
