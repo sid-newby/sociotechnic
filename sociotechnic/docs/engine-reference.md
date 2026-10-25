@@ -377,7 +377,7 @@ Every bound is enforced by the engine. Past a bound the job moves to `needs-huma
 
 - **Retries.** A retry spawns a fresh agent as `attempt + 1`, with the reason in its brief.
 - **Timeouts.** Each dispatch has `deadlineAt = startedAt + role timeout` (see the roles table). `step` reports overdue dispatches as `stop`. The driver stops them and calls `finish --outcome timeout`, which counts as a failed attempt.
-- **Overrides accumulate.** Effective cap = `caps[bound]` plus the number of overrides for that bound. Overrides never reset. `rework` grants one `rounds` override.
+- **Overrides accumulate.** Effective cap = `caps[bound]` plus the number of overrides for that bound. Overrides never reset. `rework` grants one `rounds` override after a build, or one `retriesPerStep` override for a failed round-zero planner with no pinned plan. Planning feedback stays in human history and the next planner brief; the console holds again at `planned`.
 - **No resume.** No agent is ever resumed. Every dispatch gets a generated brief that names files to read and inlines only what is small: the changed-files list, CHANGES findings, failing check tails, the retry reason.
 
 ```bash

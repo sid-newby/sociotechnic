@@ -15,6 +15,7 @@ import {
   park,
   reopen,
   retryAllowed,
+  reworkPlanning,
   STATUSES,
   stop,
   transition,
@@ -166,4 +167,19 @@ test("reopen derives the status for a job stopped before stoppedFrom existed", (
     [["review", "approve"], "approving"],
   ];
   for (const [steps, want] of cases) assert.equal(reopen(legacy(steps), "kept", NOW), want, steps.join(","));
+});
+
+test("planning feedback cannot bypass design, research, dispatch bounds or a pinned plan", () => {
+  for (const variant of ["design", "research", "dispatch", "pinned", "build"]) {
+    const j = job("planning");
+    park(j, "retry-bound:plan (1 + 0 overrides)", NOW);
+    if (variant === "design") j.parkedFrom = "designing";
+    if (variant === "research") j.parkedFrom = "researching";
+    if (variant === "dispatch") j.statusReason = "loop-bound:dispatchesPerRound";
+    if (variant === "pinned") j.plan = { digest: "a".repeat(64), tier: "EASY", pinnedAt: NOW, researchRound: 0 };
+    if (variant === "build") j.round = 1;
+    const before = structuredClone(j);
+    assert.throws(() => reworkPlanning(j, "feedback", NOW), IllegalTransition);
+    assert.deepEqual(j, before);
+  }
 });

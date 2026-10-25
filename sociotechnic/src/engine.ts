@@ -222,6 +222,7 @@ function researchRel(i: number, question: string): string {
 function planPrompt(job: Job, retryReason: string | null): string {
   return planBrief({
     feature: job.feature,
+    feedback: job.human.filter((entry) => entry.action === "rework").map((entry) => entry.note),
     repo: job.repo,
     design: approvedDesignBrief(job),
     allowDesign: job.design === undefined,
@@ -874,7 +875,10 @@ export function rework(job: Job, note: string, now = nowIso()): { job: string; r
   if (note.trim() === "") throw new SociotechnicError("usage", "rework needs a note");
   jobfns.assertStatus(job, jobfns.HUMAN_GATES, "rework");
   const round = currentRound(job);
-  if (round === null) throw new IllegalTransition(`job ${job.id} has no round to rework`);
+  if (round === null) {
+    jobfns.reworkPlanning(job, note.trim(), now);
+    return { job: job.id, round: 0 };
+  }
   const head = git.headCommit(job.worktree);
   const text = humanReviewText(note, head);
   writeTextAtomic(abs(job, roundRel(round.n, "review-human.md")), text);
@@ -893,7 +897,7 @@ export function rework(job: Job, note: string, now = nowIso()): { job: string; r
 }
 
 export function accept(job: Job, note: string, now = nowIso()): { job: string; status: Status } {
-  if (job.design && job.round === 0) throw new IllegalTransition("A design ceremony is not an implemented build to accept");
+  if (currentRound(job) === null) throw new IllegalTransition("There is no implemented build round to accept");
   jobfns.accept(job, note.trim(), now);
   return { job: job.id, status: job.status };
 }

@@ -15,8 +15,9 @@ import { ROLES, roleOf } from "../src/roles.ts";
 import { agentCatalogEntry } from "../src/agent-catalog.ts";
 import { merge } from "../src/engine.ts";
 import { parseExecution } from "../src/execution.ts";
+import type { Job } from "../src/job.ts";
 import { createJob } from "../src/job.ts";
-import { checkSandboxDisk, ensureSandbox, importSandboxCommit, removeSandbox, runSandboxChecks, sandboxEnvironment, sandboxHead, sbx, VM_WORKER, vmExec } from "../src/sandbox.ts";
+import { checkSandboxDisk, ensureSandbox, importSandboxCommit, removeSandbox, runSandboxChecks, sandboxEnvironment, sandboxHead, sandboxInventory, sandboxName, sbx, VM_WORKER, vmExec } from "../src/sandbox.ts";
 import * as git from "../src/git.ts";
 import { mapSandboxPaths, runInSandbox, sandboxSlot } from "../ui/sandbox-runner.ts";
 import { copySandboxOutputs } from "../ui/sandbox-outputs.ts";
@@ -176,6 +177,38 @@ test("dirty sandbox blocks import and removal without losing edits", async () =>
   await mutateJob(id, (stored) => { stored.statusReason = "Ready for recovery"; });
   assert.equal(readFileSync(path, "utf8"), "keep me"); rmSync(path);
 });
+test("sandbox inventory includes archived owned runs, exposes capacity settings and preserves unsafe work", async () => {
+  const cfg = JSON.parse(readFileSync(configPath, "utf8"));
+  const orphan = sandboxName("20261024-orphan");
+  writeFileSync(configPath, JSON.stringify({ ...cfg, names: [...cfg.names, orphan, "unrelated-sandbox"] }));
+  await mutateJob(id, (stored) => { stored.archived = true; });
+  const server = await startServer({ port: 0 });
+  const post = (path: string, body: unknown) => fetch(new URL(path, server.url), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  try {
+    const inventory = await (await fetch(new URL("/api/sandboxes", server.url))).json();
+    assert.equal(inventory.limit, 1); assert.equal(inventory.configurable, true); assert.equal(inventory.sandboxes.length, 2);
+    assert.equal(inventory.sandboxes[0].job.id, id); assert.equal(inventory.sandboxes[0].initialized, true);
+    assert.deepEqual(inventory.sandboxes[1], { name: orphan, initialized: false, job: null });
+    assert.equal((await post("/api/sandboxes/capacity", { limit: 3, expectedLimit: 1 })).status, 200);
+    assert.equal((await sandboxInventory()).limit, 3);
+    assert.deepEqual(JSON.parse(readFileSync(join(home, ".sociotechnic/sandbox-settings.json"), "utf8")), { maxRetained: 3 });
+    assert.equal((await post("/api/sandboxes/capacity", { limit: 2, expectedLimit: 1 })).status, 409);
+    for (const limit of [0, 33, 1.5, "2", null]) assert.equal((await post("/api/sandboxes/capacity", { limit, expectedLimit: 3 })).status, 400);
+    process.env.SOCIOTECHNIC_SANDBOX_MAX_RETAINED = "4";
+    assert.equal((await sandboxInventory()).configurable, false); assert.equal((await sandboxInventory()).limit, 4);
+    assert.equal((await post("/api/sandboxes/capacity", { limit: 2, expectedLimit: 4 })).status, 400);
+    delete process.env.SOCIOTECHNIC_SANDBOX_MAX_RETAINED;
+    writeFileSync(join(vmRoot, "repo/unsafe.txt"), "preserve me");
+    assert.equal((await post(`/api/jobs/${id}/clean`, {})).status, 400);
+    assert.equal(readFileSync(join(vmRoot, "repo/unsafe.txt"), "utf8"), "preserve me");
+    assert.equal((await sandboxInventory()).sandboxes.length, 2);
+    rmSync(join(vmRoot, "repo/unsafe.txt"));
+  } finally {
+    delete process.env.SOCIOTECHNIC_SANDBOX_MAX_RETAINED;
+    await server.close(); rmSync(join(home, ".sociotechnic/sandbox-settings.json"), { force: true });
+    writeFileSync(configPath, JSON.stringify(cfg)); await mutateJob(id, (stored) => { stored.archived = false; });
+  }
+});
 test("repository checks run in the VM checkout and are bound to its commit", async () => {
   const marker = join(vmRoot, "only-in-vm");
   const report = await runSandboxChecks(job, [{ name: "VM cwd", run: "node -e \"require('node:fs').writeFileSync('../only-in-vm', process.cwd())\"", timeoutSeconds: 5 }], git.headCommit(review));
@@ -217,6 +250,20 @@ test("a timed-out exec stops its VM and terminates the remote process", async ()
     }
     assert.fail("VM process survived the stop command");
   } finally { const updated = JSON.parse(readFileSync(configPath, "utf8")); if (updated.remotePid) { try { process.kill(-updated.remotePid, "SIGKILL"); } catch {} } delete updated.hangWorker; delete updated.remotePid; writeFileSync(configPath, JSON.stringify(updated)); }
+});
+test("remote merge commits its confirmation even when sandbox cleanup fails, then retries safely", async () => {
+  const confirmMerge = (stored: Job) => { stored.status = "merged"; stored.statusReason = "confirmed GitHub merge"; return { merged: true }; };
+  writeFileSync(join(vmRoot, "repo/remote-uncommitted.txt"), "keep remote work");
+  const result = await effectJob(id, "merge-remote", confirmMerge);
+  assert.deepEqual(result, { merged: true });
+  assert.equal(await readJob(id, (stored) => stored.status), "merged");
+  assert.match(await readJob(id, (stored) => stored.statusReason), /sandbox cleanup failed/);
+  assert.equal(readFileSync(join(vmRoot, "repo/remote-uncommitted.txt"), "utf8"), "keep remote work");
+  rmSync(join(vmRoot, "repo/remote-uncommitted.txt"));
+  await effectJob(id, "merge-remote", confirmMerge);
+  assert.equal((await sandboxInventory()).sandboxes.length, 0);
+  assert.equal(existsSync(review), true);
+  await ensureSandbox(job);
 });
 test("accepted cleanup reconciles a deleted branch and preserves other sandboxes", async () => {
   const cfg = JSON.parse(readFileSync(configPath, "utf8")); cfg.names.push("other-project"); writeFileSync(configPath, JSON.stringify(cfg));

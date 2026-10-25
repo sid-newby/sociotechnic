@@ -95,6 +95,10 @@ export async function effectJob<T>(id: string, kind: string, fn: (job: Job) => T
     if (kind === "merge" && job.status === "accepted") await assertSandboxPreserved(job);
     const result=await fn(job);
     if (kind === "merge" && job.status === "merged") await removeSandbox(job);
+    if (kind === "merge-remote" && job.status === "merged" && job.execution?.kind === "docker-sandbox") {
+      try { await removeSandbox(job); job.statusReason = `merged on GitHub${job.pr?.merge ? ` as ${job.pr.merge.commit}` : ""}; sandbox removed; local checkout unchanged`; }
+      catch (error) { job.statusReason += `; sandbox cleanup failed: ${error instanceof Error ? error.message : "unknown failure"}. Use Sandboxes to retry cleanup.`; }
+    }
     job.lastOperation=job.externalOperation;delete job.externalOperation;return result;
   }); }
   catch(error) {

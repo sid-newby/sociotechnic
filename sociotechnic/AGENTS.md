@@ -124,6 +124,9 @@ An override lifts one bound by one and is remembered forever.
 | `merged` | finished locally, or a confirmed remote merge is recorded | merge --remote --confirm for a published PR not yet merged remotely; clean |
 | `stopped` | a human stopped it; plan, history, branch and worktree are kept | reopen (keeps uncommitted edits; `--discard` drops them), then run; clean |
 
+`rework <note>` at a failed round-zero planner with no pinned plan records planning
+feedback and grants one retry. Start only the planner and retain the plan hold;
+never send that note to a builder without a pinned plan. After a build round,
 `rework <note>` is the human's review: it becomes a `[high]` finding in a
 `review-human.md` record and opens a new round for a fresh builder. `override
 <bound> <note>` adds one to that bound and lets `step` resume where the job

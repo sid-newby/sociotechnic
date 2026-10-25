@@ -408,6 +408,13 @@ export function recordRemoteMerge(job: Job, pr: PrRecord, merge: RemoteMerge, no
   job.statusReason = `merged on GitHub as ${merge.commit}; local checkout unchanged`;
 }
 
+export function reworkPlanning(job: Job, note: string, now: string): void {
+  assertStatus(job, ["needs-human"], "rework planning");
+  if (job.round !== 0 || job.plan !== null || job.parkedFrom !== "planning" || !job.statusReason.startsWith("retry-bound:plan")) throw new IllegalTransition("Planning feedback requires a failed planning attempt with no pinned plan");
+  addOverride(job, "retriesPerStep", `planning feedback: ${note}`, now);
+  addHuman(job, "rework", note, now);
+}
+
 export function rework(job: Job, note: string, human: Parsed, closingGate: Gate, now: string): void {
   assertStatus(job, HUMAN_GATES, "rework");
   const round = requireRound(job);

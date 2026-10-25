@@ -10,7 +10,7 @@ We invite you to join us. Be Sociotechnic.
 
 Sociotechnic turns a development task into a safe, isolated branch you can test, review and merge with confidence. Start a run in the web console, review its plan, and follow the work through building, checks and independent reviews. The engine coordinates fresh coding agents and stops when it needs your decision.
 
-The console is the intended main interface. The engine and semantically versioned agent definitions live in this repository. PostgreSQL stores job records across projects and versions. Full CLI parity exists for further automations or dev feats against itself.
+The console is the intended main interface. The engine and semantically versioned agent definitions live in this repository. PostgreSQL stores job records across projects and versions. The CLI and HTTP API support further automation and development against Sociotechnic itself.
 
 [Start a run](#start-a-run) · [Agent library](#agent-library) · [Follow the work](#follow-the-work) · [Review and decide](#review-and-decide) · [How it works](#how-it-works) · [Technical documentation](#technical-documentation)
 
@@ -37,6 +37,15 @@ New run also offers **Docker Sandbox — experimental**. The run's agents and
 checks share an isolated local Linux environment with explicit CPU, memory and
 concurrency settings. Your source checkout is not mounted. Committed work returns
 to a local review worktree for the same testing, acceptance and merge decisions.
+
+Keep a clean slate: choose the total **sandbox slots** for this installation
+separately from the workers inside each run's sandbox. Each run gets its own
+CPU and memory limits. Use **Sandboxes** to see retained runs, stop them, or
+remove their sandbox and worktree without losing the recorded history.
+
+When you finish a run locally or confirm its GitHub merge, its sandbox is removed.
+Dirty or unexported work blocks cleanup and stays visible for recovery; it is never silently discarded.
+
 Local execution remains the default. [Setup, storage and cleanup](sociotechnic/docs/docker-sandboxes.md).
 
 ![Start a run dialog with repository path, optional base branch and change description.](assets/console/start-a-run.png)

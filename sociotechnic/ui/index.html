@@ -895,10 +895,12 @@ function gateActions(job, stale) {
     cls: "primary",
     confirm: `Merge ${branch} into ${base} so you can test it in your own checkout?\n\nThis is LOCAL ONLY: git merge --no-ff in the main checkout (${str(job.repo)}), which must be clean and on ${base}. The worktree and job branch are kept for rework and publishing. Nothing is pushed.`,
   });
-  const reworkBlock = () => h("div", { class: "action" }, draftArea("d-rework", "Rework note (required)", "What the next builder must change", 3),
-    h("div", { class: "row" }, btn("Rework", "rework", "gate", async () => {
-      const n = draft("d-rework"); if (!n) throw new Error("A rework note is required: it becomes the [high] finding the next builder fixes.");
+  const planningFailure = st === "needs-human" && Number(job.round) === 0 && !job.plan && str(job.statusReason).startsWith("retry-bound:plan");
+  const reworkBlock = () => h("div", { class: "action" }, draftArea("d-rework", "Rework note (required)", planningFailure ? "Additional context for the planner" : "What the next builder must change", 3),
+    h("div", { class: "row" }, btn(planningFailure ? "Retry planning with feedback" : "Rework", "rework", "gate", async () => {
+      const n = draft("d-rework"); if (!n) throw new Error("A rework note is required.");
       await post("/rework", { note: n }); S.drafts["d-rework"] = ""; await after();
+      if (planningFailure) { S.driver = await post("/run", { mode: "run", hold: ["planned"] }); await after(); }
     })));
 
   if (st === "planned") {
@@ -913,7 +915,9 @@ function gateActions(job, stale) {
     out.push(acceptBlock(true), reworkBlock(), h("div", { class: "row" }, prBtn(), stopBtn()));
   } else if (st === "needs-human") {
     const bsel = S.drafts["d-bound"] || "rounds";
-    out.push(h("div", { class: "row" }, mergeLocalBtn()), acceptBlock(false), reworkBlock(), h("div", { class: "action" },
+    if (Number(job.round) > 0) out.push(h("div", { class: "row" }, mergeLocalBtn()), acceptBlock(false), reworkBlock());
+    else if (planningFailure) out.push(h("p", { text: "Retry the planner with feedback. Building waits for a validated plan and your review." }), reworkBlock());
+    out.push(h("div", { class: "action" },
       h("label", { for: "d-bound", text: "Override bound" }),
       h("select", { id: "d-bound", value: bsel, onchange: (e) => { S.drafts["d-bound"] = e.target.value; } },
         BOUNDS.map((b) => h("option", { value: b, text: `${b} (now ${effectiveCap(job, b)}, becomes ${effectiveCap(job, b) + 1})` }))),
@@ -924,7 +928,7 @@ function gateActions(job, stale) {
         await post("/override", { bound, note: n });
         S.drafts["d-override"] = "";
         await after();
-        const r = await post("/run", { mode: "run" }); S.driver = r || S.driver; await after();
+        const r = await post("/run", { mode: "run", ...(Number(job.round) === 0 ? { hold: ["planned"] } : {}) }); S.driver = r || S.driver; await after();
       }, { disabled: running }))),
       h("div", { class: "row" }, stopBtn()));
   } else if (st === "accepted") {
