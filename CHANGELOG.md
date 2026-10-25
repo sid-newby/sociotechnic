@@ -3,6 +3,11 @@
 Release notes are committed before publication. [GitHub Releases](https://github.com/sid-newby/sociotechnic/releases) confirms which versions shipped.
 Dates on backfilled entries use America/Chicago. See the [release guide](sociotechnic/docs/releasing.md).
 
+## v0.3.2
+
+- Remember the selected new-run environment and valid sandbox CPU, memory and concurrency settings across browser sessions, including canceled dialogs.
+- Keep saved resources when switching to local execution, and allow the form to work when browser storage is unavailable.
+
 ## v0.3.1
 
 - Connect Docker Sandbox agents to Context7 through Docker's host-managed MCP gateway while keeping credentials on the host and preserving the two-tool role allowlist.
