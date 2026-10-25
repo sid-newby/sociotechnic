@@ -48,7 +48,16 @@ export function installBrowserTools(): void {
   const missing = BROWSER_TOOLS.filter((tool) => version(tool.command) !== tool.version);
   if (missing.length) execFileSync("npm", ["install", "--global", "--no-fund", "--no-audit", ...missing.map((tool) => `${tool.package}@${tool.version}`)], { stdio: "inherit", timeout: 600_000 });
   try { verifyBrowserTools(); return; } catch {}
-  execFileSync("agent-browser", ["install", ...(process.platform === "linux" ? ["--with-deps"] : [])], { stdio: "inherit", timeout: 600_000 });
+  if (process.platform === "linux" && process.arch === "arm64") {
+    const root = process.getuid?.() === 0;
+    const command = root ? "apt-get" : "sudo";
+    const prefix = root ? [] : ["-n", "apt-get"];
+    const options = { stdio: "inherit", timeout: 600_000, env: { ...process.env, DEBIAN_FRONTEND: "noninteractive" } } satisfies Parameters<typeof execFileSync>[2];
+    execFileSync(command, [...prefix, "update"], options);
+    execFileSync(command, [...prefix, "install", "-y", "--no-install-recommends", "chromium", "chromium-sandbox"], options);
+  } else {
+    execFileSync("agent-browser", ["install", ...(process.platform === "linux" ? ["--with-deps"] : [])], { stdio: "inherit", timeout: 600_000 });
+  }
   verifyBrowserTools();
 }
 

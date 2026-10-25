@@ -1880,6 +1880,10 @@ no new tools or permissions to any role. Local operators install the pinned
 tools explicitly; skill-bearing Sandbox build dispatches install them and Chrome
 dependencies inside their own VM before provider execution. Setup failure
 prevents that dispatch from running; no host fallback or false proof is permitted.
+On Linux ARM64, setup uses the Debian-compatible system Chromium and sandbox
+packages because Chrome for Testing has no Linux ARM64 download. Package setup
+requires root or noninteractive sudo inside the selected environment; Chrome
+must still pass the launch check with its normal sandbox enabled.
 
 Each dispatch receives separate browser session identifiers for both CLIs.
 Claude and Codex receive the same scoped environment, with telemetry disabled.

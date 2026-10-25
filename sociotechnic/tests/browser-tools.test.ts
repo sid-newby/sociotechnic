@@ -22,7 +22,7 @@ if(args.includes('doctor')) { const missing=process.env.BROWSER_TEST_NO_CHROME &
 if(args.includes('install')) fs.writeFileSync(${JSON.stringify(installed)},'ready');
 if(args.includes('stop')&&process.env.BROWSER_TEST_STOP_FAILURE)process.exit(1);
 `;
-for (const name of ["agent-browser", "chrome-devtools", "npm"]) writeFileSync(join(root, name), source, { mode: 0o755 });
+for (const name of ["agent-browser", "chrome-devtools", "npm", "sudo", "apt-get"]) writeFileSync(join(root, name), source, { mode: 0o755 });
 process.env.PATH = `${root}:${oldPath ?? ""}`;
 after(() => { if (oldPath === undefined) delete process.env.PATH; else process.env.PATH = oldPath; rmSync(root, { recursive: true, force: true }); });
 const calls = (): { name: string; args: string[]; session?: string; devtools?: string }[] => readFileSync(log, "utf8").trim().split("\n").map((line) => JSON.parse(line));
@@ -51,8 +51,37 @@ test("preflight checks actual CLI output and Chrome launch, and installation rep
     assert.throws(verifyBrowserTools, /Chrome could not launch/);
     installBrowserTools();
     assert.equal(verifyBrowserTools(), process.execPath);
-    assert.ok(calls().some((call) => call.name === "agent-browser" && call.args.includes("install")));
+    assert.ok(calls().some((call) => call.args.includes("install")));
   } finally { delete process.env.BROWSER_TEST_NO_CHROME; }
+});
+
+test("Linux ARM64 installs system Chromium with its sandbox and reuses a healthy runtime", () => {
+  const platform = Object.getOwnPropertyDescriptor(process, "platform");
+  const arch = Object.getOwnPropertyDescriptor(process, "arch");
+  assert.ok(platform && arch);
+  rmSync(installed, { force: true });
+  process.env.BROWSER_TEST_NO_CHROME = "1";
+  Object.defineProperty(process, "platform", { value: "linux" });
+  Object.defineProperty(process, "arch", { value: "arm64" });
+  try {
+    const start = calls().length;
+    installBrowserTools();
+    const setup = calls().slice(start);
+    const command = process.getuid?.() === 0 ? "apt-get" : "sudo";
+    const prefix = command === "apt-get" ? [] : ["-n", "apt-get"];
+    assert.deepEqual(setup.filter((call) => call.name === command).map((call) => call.args), [
+      [...prefix, "update"],
+      [...prefix, "install", "-y", "--no-install-recommends", "chromium", "chromium-sandbox"],
+    ]);
+    assert.equal(setup.some((call) => call.name === "agent-browser" && call.args.includes("install")), false);
+    const ready = calls().length;
+    installBrowserTools();
+    assert.equal(calls().slice(ready).some((call) => call.args.includes("install") || call.args.includes("update")), false);
+  } finally {
+    Object.defineProperty(process, "platform", platform);
+    Object.defineProperty(process, "arch", arch);
+    delete process.env.BROWSER_TEST_NO_CHROME;
+  }
 });
 
 test("session ownership is stable within a dispatch and distinct across engines, jobs and dispatches", () => {
