@@ -838,7 +838,7 @@ already running), 403 (origin or host refused).
 | `GET /api/jobs/:id/records/<path>` | | `{ path, text }`; the logical path must belong to this job |
 | `POST /api/repositories/browse` | `{ path?: string, fallback?: boolean }` | Canonical `path`, `parent` (null at root), sorted child `directories`; defaults to `~/Prog` if accessible, otherwise home. `fallback: true` uses home for an inaccessible supplied path. Read-only and same-origin protected |
 | `POST /api/repositories/create` | `{ path: string, name: string }` | Creates one new child directory and returns its browsing listing; no recursive creation, overwrite or Git initialization. Same-origin protected |
-| `POST /api/jobs` | `{ repo, feature, base?, initialize?: boolean }` | `NewResult`; explicit initialization prepares a missing repository before using the existing job creation path |
+| `POST /api/jobs` | `{ repo, feature, base?, initialize?: boolean, githubRepository?: string }` | `NewResult`; explicit initialization prepares a missing repository; `githubRepository` requires initialization and publishes the base branch before job creation |
 | `POST /api/jobs/:id/archive` | `{ archived: boolean }` | `{ id, archived }`; visibility-only, persisted in the database job document |
 | `POST /api/jobs/:id/design-response` | `{ digest, response }` | Records a validated human design decision, then continues the same run with a plan hold |
 | `GET /api/jobs/:id/design-assets/<path>?digest=<digest>` | | Current fingerprinted preview; sandboxed HTML or image |
@@ -879,7 +879,16 @@ without blocking browsing. New folder accepts a single child name, refuses `.git
 dot entries, separators and existing paths, and opens the created folder. Creating
 a directory does not start a run. New repository is a setup preset for the ordinary
 feature planning flow: Git initialization is required, with the same starter commit
-and plan hold. It does not select a scaffold, create a remote or change engine gates.
+and plan hold. Starting explicitly creates a private GitHub repository at the shown
+destination, connects `origin`, and publishes the initial base branch before creating
+the run. `githubRepository` names the repository or `owner/repository`; an omitted
+owner uses the authenticated GitHub user. Auth, creation or push failure prevents
+job creation and preserves local files for retry. An existing matching origin is
+reused on retry; a different origin or a remote base at another commit is refused.
+Only the selected base branch is pushed, without force; untracked files and run
+branches are excluded. Ordinary Git initialization remains local. No scaffold or
+engine gate changes. This explicit setup action is the sole pre-accept publication
+exception: agents still never push, and publishing run changes still requires accept.
 For UI work without an existing UI scaffold, planning routes to the design ceremony
 and the interview recommends the bundled React + NestJS house special. The human
 still chooses existing, bundled or custom stack; requests for another scaffold
@@ -1014,14 +1023,20 @@ Unknown languages fall back to plain code; large records and code blocks bypass
 expensive formatting. Raw view displays the exact original text and whitespace;
 Formatted view restores the reader. Record HTML and code never execute. Markdown
 images are links rather than automatic network requests. Record selection
-preserves keyboard focus. Job-specific drafts cannot cross jobs.
+preserves keyboard focus. If the formatter fails to load or render, the records
+dialog and console stay usable, explain the failure, show the unchanged source,
+and offer a console reload. Raw view does not depend on loading the formatter.
+Job-specific drafts cannot cross jobs.
 Ready and needs-human states do not offer redundant Run/Step controls.
 
 `task build` builds the web package. `task dev` runs an isolated development
 API on port 4748 and Vite on 5173, forwarding `/api` and `/events`. Before either
 starts, it stops TCP listeners on those two ports, waits up to five seconds for
 graceful shutdown, then force-stops remaining listeners. Cleanup must succeed
-before startup. Vite uses a strict port and opens the page when ready. Only the
+before startup. Vite pre-optimizes the lazy record formatter's dependencies at
+startup. Rendering tests use disposable Vite caches so they cannot replace the
+running development server's dependency files. Vite uses a strict port and opens
+the page when ready. Only the
 explicit `SOCIOTECHNIC_API_URL` loopback override reuses an existing API instead of
 starting one; with that override, cleanup covers only 5173 and the existing API
 is never stopped by the development process. Only the
@@ -1721,6 +1736,10 @@ A local merge puts the main checkout one merge commit ahead of `origin`. A
 later `merge --remote --confirm` adds GitHub's own merge commit; `git pull`
 on the base branch reconciles the two without conflicts because the content is
 identical. Sociotechnic never pushes the base branch.
+
+New repository setup is an explicit pre-run action: it may create a private remote
+and publish the initial base branch as described in section 13. It does not publish
+a job branch or accept a run. The remaining publishing rules concern run changes.
 
 Agents commit on the job branch and nothing else. Sociotechnic touches a remote only
 on a command the human typed, and only after `accept`, which is the human's

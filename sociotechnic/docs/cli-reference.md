@@ -271,7 +271,15 @@ shows an error and keeps the previous preference. Browser storage failures are
 visible but do not prevent browsing. **New folder** creates one child and opens
 it; **Use this folder** selects it. Browsing alone does not modify files.
 **New repository** is a UI preset for feature planning that requires Git
-initialization; it uses the same job route without a new engine workflow.
+initialization and publishes the base branch before starting the run. Its GitHub
+repository field defaults to the folder name; enter `owner/repository` to choose
+another owner. Start creates a private GitHub repository, connects `origin` and
+pushes only the selected base branch. GitHub authentication, creation or push
+errors leave local files intact and prevent the run from starting. A failed push
+can be retried using the same destination and matching origin; a different origin
+or an existing remote base at another commit is refused. The normal acceptance
+and PR gates still apply to the run's changes. It uses the same job route without
+a new engine workflow.
 **Initialize Git if needed** is enabled
 by default: Start initializes an existing directory outside Git on the supplied
 base branch (default `main`), adds missing `readme.md` (`tbd\n`) and `.gitignore`
@@ -286,7 +294,13 @@ HTTP clients use `POST /api/repositories/browse` with
 paths fail. `POST /api/repositories/create` takes `{ path, name }`, creates one
 child without Git setup, and returns its listing. Dot entries, `.git`, separators,
 control characters and existing entries are refused. `POST /api/jobs` with
-`initialize: true` opts into Git setup. All use the existing JSON and same-origin
+`initialize: true` opts into local Git setup. Adding `githubRepository: "name"`
+or `"owner/name"` explicitly creates the private remote and publishes the base
+before job creation; this requires `initialize: true` and ordinary feature planning.
+A name without an owner uses the authenticated GitHub account. Setup requires
+authenticated `gh` and a repository root, not a selected subdirectory. Existing
+remote bases must match the selected local commit. No force push is used.
+All use the existing JSON and same-origin
 protections. The CLI and
 legacy console continue to require an existing committed repository.
 

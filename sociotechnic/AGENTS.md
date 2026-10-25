@@ -139,7 +139,9 @@ move a job past a human gate on its own.
 
 Agents commit and nothing more. The standard order at the gate is merge
 locally, test in the main checkout, accept, then publish. Sociotechnic touches a
-remote only on a command the human typed, and only after `accept`, the human's
+remote only on an explicit human action. New repository setup may create its private
+GitHub remote and publish the starter base before planning; this does not publish
+run changes. Publishing run changes requires `accept`, the human's
 signature that the change was tested (in the main checkout after a local merge,
 or in the worktree). `pr` generates `pr.md` from the records (plan, acceptance
 evidence, checks, verdicts, usage) at any time from `ready`; `pr --push`, from

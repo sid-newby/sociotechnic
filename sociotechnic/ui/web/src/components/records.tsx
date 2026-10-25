@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { Component, lazy, Suspense, useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { Dialog } from "radix-ui";
 import { FileText, X } from "lucide-react";
 import { getRecord } from "../api";
@@ -6,8 +7,21 @@ import { errorMessage } from "../model";
 import type { Detail } from "../model";
 import type { Load } from "../use-console";
 import { Button } from "./ui/button";
+import "../records.css";
 
 const RecordContent = lazy(() => import("./record-content"));
+
+class RecordFormattingBoundary extends Component<{ children: ReactNode; path: string; text: string }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  render() {
+    if (!this.state.failed) return this.props.children;
+    return <>
+      <div className="error-state" role="alert"><p>Formatted view could not load. The original source is shown below. Reload the console to try formatting again.</p><Button variant="outline" onClick={() => window.location.reload()}>Reload console</Button></div>
+      <pre tabIndex={0} aria-label={this.props.path} className="record-content code-record raw-record">{this.props.text}</pre>
+    </>;
+  }
+}
 
 export function Records({ detail, path, onSelect, onClose, opener }: {
   detail: Detail; path: string; onSelect: (path: string) => void; onClose: () => void; opener: HTMLElement | null;
@@ -42,7 +56,8 @@ export function Records({ detail, path, onSelect, onClose, opener }: {
             <div className="record-toolbar"><code>{path}</code><Button variant="outline" aria-pressed={raw} onClick={() => setRaw(!raw)}>{raw ? "Formatted view" : "Raw view"}</Button></div>
             <p className="sr-only" role="status">{content.kind === "ready" ? `${path} loaded` : content.kind === "loading" ? `Loading ${path}` : "Record could not be loaded"}</p>
             {content.kind === "loading" || (content.kind === "ready" && content.value.path !== path) ? <div className="loading-state">Loading record…</div> : content.kind === "error" ? <div className="error-state" role="alert"><p>{content.message}</p><Button variant="outline" onClick={() => setRetry((n) => n + 1)}>Retry record</Button></div> :
-              <Suspense fallback={<div className="loading-state">Formatting record…</div>}><RecordContent path={path} text={content.value.text} raw={raw} /></Suspense>}
+              raw ? <pre tabIndex={0} aria-label={path} className="record-content code-record raw-record">{content.value.text}</pre> :
+              <RecordFormattingBoundary path={path} text={content.value.text}><Suspense fallback={<div className="loading-state">Formatting record…</div>}><RecordContent path={path} text={content.value.text} raw={false} /></Suspense></RecordFormattingBoundary>}
           </section>
         </div>
       </Dialog.Content>

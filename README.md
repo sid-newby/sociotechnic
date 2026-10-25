@@ -28,8 +28,10 @@ For a first-time installation, follow [local setup](sociotechnic/docs/developmen
 4. Read the plan. The React console always pauses before building so you can check its scope and acceptance criteria.
 5. Choose **Continue build** when the plan is right. To change the pinned plan, stop the run and start another with a revised request.
 
-Choose **New repository** for a fresh project. It requires local Git tracking and
-uses the same initial commit and planning flow. If UI work has no existing
+Choose **New repository** for a fresh project. It commits the starter README and
+ignore file, creates a private GitHub repository at the shown destination and
+publishes the base branch before planning. Your run's changes still need acceptance
+and **Push and open PR**. If UI work has no existing
 scaffold, the design interview suggests our React + NestJS house special. You
 can request another scaffold; you choose the stack before implementation.
 

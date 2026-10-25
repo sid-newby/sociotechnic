@@ -120,6 +120,10 @@ export function NewRun({ onCreated, disabled = false }: { onCreated: (id: string
   const [repo, setRepo] = useState("");
   const [browsing, setBrowsing] = useState(false);
   const [initialize, setInitialize] = useState(true);
+  const [githubName, setGithubName] = useState<string | null>(null);
+  const githubRepository = githubName ?? (repo.trim().replace(/\/+$/, "").split("/").at(-1) ?? "").replace(/[^a-zA-Z0-9_.-]/g, "-");
+  const validGithubRepository = /^(?:[a-zA-Z0-9][a-zA-Z0-9-]*\/)?[a-zA-Z0-9_.][a-zA-Z0-9_.-]*$/.test(githubRepository.trim()) && ![".", ".."].includes(githubRepository.trim().split("/").at(-1) ?? "");
+  const githubRef = useRef<HTMLInputElement>(null);
   const browseRef = useRef<HTMLButtonElement>(null);
   const [feature, setFeature] = useState("");
   const [base, setBase] = useState("");
@@ -146,12 +150,15 @@ export function NewRun({ onCreated, disabled = false }: { onCreated: (id: string
       setError(!repo.trim() ? "Enter a repository path." : workflow === "comments" ? "Enter at least one file or directory to inspect." : "Describe the change.");
       (!repo.trim() ? repoRef.current : workflow === "comments" ? scopeRef.current : featureRef.current)?.focus(); return;
     }
+    if (workflow === "repository" && !validGithubRepository) {
+      setError("Enter a GitHub repository name or owner/repository."); githubRef.current?.focus(); return;
+    }
     if (inFlight.current) return;
     inFlight.current = true; setBusy(true); setError(null);
     let created: string | null = null;
     try {
       const execution = parseExecution(executionKind === "local" ? { kind: "local" } : { kind: executionKind, cpus: Number(cpus), memoryGiB: Number(memoryGiB), parallelAgents: Number(parallelAgents) });
-      const response = object(await request("/api/jobs", undefined, { repo: repo.trim(), feature: feature.trim(), initialize: workflow === "repository" || initialize, agentVersions, agentAssignments, execution, ...(base.trim() ? { base: base.trim() } : {}), ...(workflow === "comments" ? { workflow, scope: scope.split("\n").map((s) => s.trim()).filter(Boolean) } : workflow === "design" ? { workflow } : {}) }));
+      const response = object(await request("/api/jobs", undefined, { repo: repo.trim(), feature: feature.trim(), initialize: workflow === "repository" || initialize, ...(workflow === "repository" ? { githubRepository: githubRepository.trim() } : {}), agentVersions, agentAssignments, execution, ...(base.trim() ? { base: base.trim() } : {}), ...(workflow === "comments" ? { workflow, scope: scope.split("\n").map((s) => s.trim()).filter(Boolean) } : workflow === "design" ? { workflow } : {}) }));
       created = text(response.job);
       if (!created) throw new Error("The server did not return a job ID. Refresh before creating another run.");
       onCreated(created);
@@ -172,12 +179,13 @@ export function NewRun({ onCreated, disabled = false }: { onCreated: (id: string
     <Dialog.Trigger asChild><Button disabled={disabled}><Plus /> New run</Button></Dialog.Trigger>
     <Dialog.Portal><Dialog.Overlay className="dialog-overlay" /><Dialog.Content className="action-dialog" onEscapeKeyDown={(event) => { if (busy || browsing) event.preventDefault(); }}>
       <div className="dialog-heading"><Dialog.Title>Start a run</Dialog.Title><Dialog.Close asChild><Button variant="ghost" size="icon" disabled={busy} aria-label="Close new run"><X /></Button></Dialog.Close></div>
-      <Dialog.Description className="dialog-description">{workflow === "comments" ? "Choose the files to inspect. Sociotechnic will inventory tracked source and prepare a cleanup plan for your review." : workflow === "design" ? "Fable will interview you, explore design directions and show composition previews. Approve a design before implementation planning begins." : workflow === "repository" ? "Choose or create a folder for your new repository. Starting sets up local Git tracking, then plans your project for review." : "Describe the change. Sociotechnic will plan first and wait for you before building."}</Dialog.Description>
+      <Dialog.Description className="dialog-description">{workflow === "comments" ? "Choose the files to inspect. Sociotechnic will inventory tracked source and prepare a cleanup plan for your review." : workflow === "design" ? "Fable will interview you, explore design directions and show composition previews. Approve a design before implementation planning begins." : workflow === "repository" ? "Starting creates a private GitHub repository and publishes the initial base branch, then plans your project for review." : "Describe the change. Sociotechnic will plan first and wait for you before building."}</Dialog.Description>
       <form noValidate className="form-stack" onSubmit={(event) => void submit(event)}>
         <div><label htmlFor="workflow">Run type</label><select id="workflow" value={workflow} disabled={busy} onChange={(event) => { setWorkflow(event.target.value === "comments" ? "comments" : event.target.value === "design" ? "design" : event.target.value === "repository" ? "repository" : "feature"); setError(null); }}><option value="feature">Feature or fix</option><option value="repository">New repository</option><option value="design">Design ceremony</option><option value="comments">Comment cleanup</option></select></div>
         <div><label htmlFor="repo">Repository path</label><div className="repository-path-row"><input id="repo" disabled={busy} ref={repoRef} value={repo} onChange={(event) => { setRepo(event.target.value); setError(null); }} placeholder="/path/to/repository" autoComplete="off" spellCheck={false} aria-invalid={!!error && !repo.trim()} aria-describedby={error ? "repo-help new-error" : "repo-help"} /><Button ref={browseRef} variant="outline" type="button" disabled={busy} aria-expanded={browsing} onClick={() => setBrowsing((value) => !value)}>Browse</Button></div><p id="repo-help" className="technical-description">Choose a folder on this computer, or use Browse to create one.</p></div>
         {browsing ? <RepositoryBrowser onBusyChange={setFolderBusy} onClose={closeBrowser} onSelect={(path) => { setRepo(path); setError(null); closeBrowser(); }} /> : null}
         <div><label className="checkbox-label"><input type="checkbox" checked={workflow === "repository" || initialize} disabled={busy || workflow === "repository"} onChange={(event) => setInitialize(event.target.checked)} aria-describedby="initialize-help" />{workflow === "repository" ? "Initialize Git (required for a new repository)" : "Initialize Git if needed"}</label><p id="initialize-help" className="technical-description">Starting creates readme.md with “tbd”, a generic .gitignore and an initial commit if needed. Existing starter files are kept; other files stay untracked.</p></div>
+        {workflow === "repository" ? <div><label htmlFor="github-repository">GitHub repository</label><input id="github-repository" ref={githubRef} disabled={busy} value={githubRepository} onChange={(event) => { setGithubName(event.target.value); setError(null); }} placeholder="repository or owner/repository" autoComplete="off" spellCheck={false} aria-invalid={!!error && !validGithubRepository} aria-describedby={error ? "github-help new-error" : "github-help"} /><p id="github-help" className="technical-description">Private repository on GitHub. Leave off the owner to use your signed-in account. The base branch is published before planning.</p></div> : null}
         <div><label htmlFor="base">Base branch (optional)</label><input id="base" disabled={busy} value={base} onChange={(event) => setBase(event.target.value)} placeholder="Current branch" /></div>
         <div><label htmlFor="execution">Run environment</label><select id="execution" value={executionKind} disabled={busy} onChange={(event) => { setExecutionKind(event.target.value === "docker-sandbox" ? "docker-sandbox" : "local"); setError(null); }} aria-describedby="execution-help"><option value="local">Local — current workflow</option><option value="docker-sandbox">Docker Sandbox — experimental</option></select><p id="execution-help" className="technical-description">{executionKind === "local" ? "Agents and repository checks run on this computer as usual." : "Agents and checks share one isolated Linux environment for this run. Requires Docker sbx and provider sign-in. Your source checkout is not mounted; commits return to a local review worktree."}</p></div>
         <p role="status" className="technical-description">{environmentNotice || "Environment and valid sandbox resources are remembered in this browser."}</p>
@@ -191,7 +199,7 @@ export function NewRun({ onCreated, disabled = false }: { onCreated: (id: string
         {workflow === "repository" ? <p className="technical-description">For a UI without an existing scaffold, we suggest our house special: React + NestJS. You can request another scaffold; the design interview confirms your choice before implementation.</p> : null}
         <VersionOverrides assignments={agentAssignments} onAssign={setAgentAssignments} value={agentVersions} onChange={setAgentVersions} disabled={busy} />
         {error ? <p id="new-error" role="alert" className="inline-error">{error}</p> : null}
-        <div className="dialog-footer"><Button variant="outline" type="button" disabled={busy} onClick={() => { setOpen(false); setBrowsing(false); }}>Cancel</Button><Button type="submit" disabled={busy || browsing} aria-busy={busy}>{busy ? "Starting…" : workflow === "comments" ? "Prepare cleanup plan" : workflow === "design" ? "Start design ceremony" : "Start planning"}</Button></div>
+        <div className="dialog-footer"><Button variant="outline" type="button" disabled={busy} onClick={() => { setOpen(false); setBrowsing(false); }}>Cancel</Button><Button type="submit" disabled={busy || browsing} aria-busy={busy}>{busy ? "Starting…" : workflow === "comments" ? "Prepare cleanup plan" : workflow === "design" ? "Start design ceremony" : workflow === "repository" ? "Publish and start planning" : "Start planning"}</Button></div>
       </form>
     </Dialog.Content></Dialog.Portal>
   </Dialog.Root>;

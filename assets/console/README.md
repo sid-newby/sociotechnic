@@ -34,3 +34,12 @@ typography and wrapping actions; the original full-console set above is retained
 
 - [Desktop header](version-header-desktop-dark.png)
 - [Narrow header](version-header-mobile.png)
+
+## New repository publishing
+
+[New repository publishing](new-repository-publishing.png) is a targeted capture
+from `sociotechnic/scripts/verify-run-wizard.mjs` on October 25, 2026, after rebasing
+the publishing fix onto `2007ea4`. It uses disposable folders, an in-memory store,
+fake agents and a local fake GitHub transport. The direct dark-theme capture is
+1440 × 1100 at 1× scale with reduced motion. It shows the destination and explicit
+publish action; no user repository or production run appears in the image.
