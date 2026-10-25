@@ -53,7 +53,9 @@ publishing. Agent chat alone is not evidence of completion.
 - New runs can opt into experimental Docker Sandbox execution. A published v3
   shell workload and provider mixins share one local VM per run; the console,
   database and human gates stay on the host. Host review worktrees receive
-  committed work through Git bundles. Local execution remains the default.
+  committed work through Git bundles. Local execution is the initial default;
+  the console remembers the owner's environment choice and valid sandbox
+  resources in this browser for future runs.
 
 The product baseline above was confirmed by the owner during initialization.
 Implementation details below come from the current repository;

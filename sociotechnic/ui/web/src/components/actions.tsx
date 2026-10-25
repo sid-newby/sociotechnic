@@ -9,6 +9,7 @@ import { Button } from "./ui/button";
 import { SandboxCapacity, SandboxManager } from "./sandboxes";
 import { RepositoryBrowser } from "./repository-browser";
 import { parseExecution } from "../../../../src/execution.ts";
+import { useRunEnvironment } from "../use-run-environment";
 
 type Action = "accept" | "rework" | "override" | "stop" | "pr" | "merge" | "merge-remote" | "reopen" | "clean";
 const labels: Record<Action, string> = { accept: "Accept", rework: "Request rework", override: "Override and continue", stop: "Stop run", pr: "Push and open PR", merge: "Merge locally", "merge-remote": "Merge PR on GitHub", reopen: "Reopen run", clean: "Remove worktree" };
@@ -122,10 +123,7 @@ export function NewRun({ onCreated, disabled = false }: { onCreated: (id: string
   const browseRef = useRef<HTMLButtonElement>(null);
   const [feature, setFeature] = useState("");
   const [base, setBase] = useState("");
-  const [executionKind, setExecutionKind] = useState<"local" | "docker-sandbox">("local");
-  const [cpus, setCpus] = useState("4");
-  const [memoryGiB, setMemoryGiB] = useState("8");
-  const [parallelAgents, setParallelAgents] = useState("2");
+  const { executionKind, setExecutionKind, cpus, setCpus, memoryGiB, setMemoryGiB, parallelAgents, setParallelAgents, notice: environmentNotice } = useRunEnvironment();
   const cpuRef = useRef<HTMLInputElement>(null);
   const memoryRef = useRef<HTMLInputElement>(null);
   const parallelRef = useRef<HTMLInputElement>(null);
@@ -182,6 +180,7 @@ export function NewRun({ onCreated, disabled = false }: { onCreated: (id: string
         <div><label className="checkbox-label"><input type="checkbox" checked={workflow === "repository" || initialize} disabled={busy || workflow === "repository"} onChange={(event) => setInitialize(event.target.checked)} aria-describedby="initialize-help" />{workflow === "repository" ? "Initialize Git (required for a new repository)" : "Initialize Git if needed"}</label><p id="initialize-help" className="technical-description">Starting creates readme.md with “tbd”, a generic .gitignore and an initial commit if needed. Existing starter files are kept; other files stay untracked.</p></div>
         <div><label htmlFor="base">Base branch (optional)</label><input id="base" disabled={busy} value={base} onChange={(event) => setBase(event.target.value)} placeholder="Current branch" /></div>
         <div><label htmlFor="execution">Run environment</label><select id="execution" value={executionKind} disabled={busy} onChange={(event) => { setExecutionKind(event.target.value === "docker-sandbox" ? "docker-sandbox" : "local"); setError(null); }} aria-describedby="execution-help"><option value="local">Local — current workflow</option><option value="docker-sandbox">Docker Sandbox — experimental</option></select><p id="execution-help" className="technical-description">{executionKind === "local" ? "Agents and repository checks run on this computer as usual." : "Agents and checks share one isolated Linux environment for this run. Requires Docker sbx and provider sign-in. Your source checkout is not mounted; commits return to a local review worktree."}</p></div>
+        <p role="status" className="technical-description">{environmentNotice || "Environment and valid sandbox resources are remembered in this browser."}</p>
         {executionKind === "docker-sandbox" ? <div className="form-stack" role="group" aria-label="Sandbox resources">
           <div><label htmlFor="sandbox-cpus">CPUs</label><input ref={cpuRef} id="sandbox-cpus" type="number" min={1} max={32} step={1} value={cpus} disabled={busy} onChange={(event) => { setCpus(event.target.value); setError(null); }} aria-invalid={!!error && (!Number.isInteger(Number(cpus)) || Number(cpus) < 1 || Number(cpus) > 32)} aria-describedby={error ? "new-error" : undefined} /></div>
           <div><label htmlFor="sandbox-memory">Memory (GiB)</label><input ref={memoryRef} id="sandbox-memory" type="number" min={1} max={64} step={1} value={memoryGiB} disabled={busy} onChange={(event) => { setMemoryGiB(event.target.value); setError(null); }} aria-invalid={!!error && (!Number.isInteger(Number(memoryGiB)) || Number(memoryGiB) < 1 || Number(memoryGiB) > 64)} aria-describedby={error ? "new-error" : undefined} /></div>

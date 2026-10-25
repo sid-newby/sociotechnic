@@ -251,6 +251,15 @@ run. Restore and single-step controls remain in the legacy console or CLI.
 
 ### Starting a run
 
+The React console remembers the chosen run environment and last valid sandbox
+CPU, memory and parallel-agent settings across sessions on the same browser and
+console origin. Edits save automatically, including when canceling the dialog.
+Switching to Local keeps sandbox resources for later. Invalid resource drafts
+do not replace saved resources; missing or malformed preferences restore Local
+and 4 CPUs, 8 GiB and 2 agents. Storage failures show a nonblocking status.
+These form preferences do not change existing runs, CLI/API defaults or the
+installation-wide sandbox slot limit.
+
 The **New run** form takes a repository path, an optional base branch and a multi-line prompt. Start creates the job and runs it. The React console always holds at `planned` so you can read `plan.json` before any build; the legacy console also offers a hold toggle. Press Continue to build. A plan is never edited in place. To change it, stop the job and start a new one with a better prompt.
 
 In the React console, **Browse** opens an inline folder browser on the server's

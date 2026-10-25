@@ -10,6 +10,9 @@ This reference describes role configuration, records, validation, limits and per
 setting, or `{ kind: "docker-sandbox", cpus, memoryGiB, parallelAgents }` on an
 experimental sandbox run. Job operations validate it and refuse changes after
 creation. Agent identity/version selection remains separate from execution.
+The React console remembers its new-run environment choice and valid sandbox
+resources in browser storage. This only initializes future forms; it cannot
+change existing jobs, CLI/API defaults or installation-wide sandbox capacity.
 
 One owned, mountless local VM contains an independent repository and executes
 agents/checks. The host worktree is its commit-verified review mirror. PostgreSQL

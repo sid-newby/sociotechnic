@@ -195,6 +195,9 @@ actions wrap below it as needed. The release guide defines the build-time source
 New run's optional Docker Sandbox environment uses the existing labeled native
 select and form fields. The browser owns the select popup. CPU, memory and
 concurrency fields appear only for that choice; drafts survive validation errors.
+The environment choice and last valid sandbox resources persist in this browser
+across sessions, including after canceling. An inline status explains automatic
+saving or unavailable browser storage without blocking the form.
 Activity identifies the pinned environment. Stopped sandbox runs reuse the
 existing destructive confirmation dialog and name both VM and worktree cleanup.
 No visual tokens or shared control ownership change for this experiment.

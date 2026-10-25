@@ -860,6 +860,16 @@ already running), 403 (origin or host refused).
 `finish` is deliberately not exposed: only a driver that ran a dispatch may
 record it. The console never edits a record, `job.json` or the plan.
 
+New run remembers the selected execution environment and last complete valid
+Docker Sandbox resource settings in local browser storage on the same console
+origin. Changes are saved without starting a run, including when the dialog is
+canceled. Switching to local execution retains sandbox resources for later use.
+Invalid resource drafts never replace the saved valid resources. Missing or
+malformed preferences use local execution and 4 CPUs, 8 GiB and 2 parallel agents.
+Storage failures show a nonblocking status; the current form remains usable.
+These preferences only initialize new-run forms: existing jobs, CLI/API defaults,
+installation-wide sandbox capacity and human gates are unchanged.
+
 New run's folder browser remembers a successfully entered Go path in local browser
 storage across sessions on the same console origin. Folder/parent clicks and new
 folder creation do not change this starting point. Entering another valid Go path
