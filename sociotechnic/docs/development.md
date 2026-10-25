@@ -28,6 +28,34 @@ SOCIOTECHNIC_API_URL=http://127.0.0.1:4747 task dev
 
 This clears only port 5173 and leaves the existing API running when development stops. See [console lifecycle](cli-reference.md#run-console) for ports, the foreground server, legacy UI and development CSP.
 
+### Console screenshots
+
+[The README screenshot set](../../assets/console/README.md) uses one 1600 × 1000
+dark viewport. Refresh it with [console-screenshots.mjs](../scripts/console-screenshots.mjs)
+after building the console; let the build finish before capturing. The script reuses the UI tests' in-memory store,
+committed demo records, release catalog and real HTTP server. A runner guard
+refuses agent dispatch. It opens an isolated headless Chrome profile, fills and
+discards an agent draft, captures eight views, checks for browser/HTTP errors,
+then closes the browser and server and removes its temporary home. It does not
+connect to PostgreSQL, start a run, publish an agent or restart your live console.
+
+Requires Node 24+, Google Chrome and Playwright. Playwright is optional capture
+tooling, not an application dependency. If it is already resolvable from the
+script, run `node sociotechnic/scripts/console-screenshots.mjs`. Otherwise install
+it in a disposable tools directory and pass its module path:
+
+```bash
+task build
+mkdir -p /tmp/sociotechnic-screenshot-tools
+pnpm --dir /tmp/sociotechnic-screenshot-tools add --save-exact playwright@1.62.1
+SOCIOTECHNIC_PLAYWRIGHT_MODULE=/tmp/sociotechnic-screenshot-tools/node_modules/playwright/index.mjs node sociotechnic/scripts/console-screenshots.mjs
+```
+
+Review all eight images at their native size, check that each is 1600 × 1000,
+and verify the README links before committing. Keep unavailable measurements
+and skipped reviews visible. Update the capture date and application commit in
+the screenshot notes when refreshing the set.
+
 ## Development
 
 For contribution scope, issue reports and PR expectations, read
@@ -175,6 +203,7 @@ browser interaction was exercised.
 | Formatted Run records and source view | [records.tsx](../ui/web/src/components/records.tsx), [record-content.tsx](../ui/web/src/components/record-content.tsx), [record-format.ts](../ui/web/src/record-format.ts), [records.css](../ui/web/src/records.css) | [record-content.test.ts](../tests/record-content.test.ts) (real React rendering via Vite SSR); browser-check Markdown, JSON, diffs, raw source, keyboard and responsive themes |
 | React views, actions, records and server updates | [App.tsx](../ui/web/src/App.tsx), [components/](../ui/web/src/components/), [use-console.ts](../ui/web/src/use-console.ts), [api.ts](../ui/web/src/api.ts), [model.ts](../ui/web/src/model.ts) | [console.test.ts](../tests/console.test.ts) (console data helpers); build and exercise the affected view |
 | Welcome state and README banner | [App.tsx](../ui/web/src/App.tsx), [index.css](../ui/web/src/index.css), [transparent banner](../../assets/sociotechnic-banner-v4-transparent.png), [original banner](../../assets/sociotechnic-banner-v4.png) | Build verifies both theme assets are bundled; browser-check the banner, header New run action and narrow layout |
+| README console screenshots | [Capture script](../scripts/console-screenshots.mjs), [capture notes and images](../../assets/console/README.md), [demo records](../ui/seed/demo-job/) | Build, run the capture script, inspect all eight views, verify dimensions and README image links |
 | Builder verification in the Checks milestone | [model.ts](../ui/web/src/model.ts) (`parseBuildVerification`, `evidence`), [api.ts](../ui/web/src/api.ts) (`getDetail`), [experience.tsx](../ui/web/src/components/experience.tsx) (`Workflow`, `BuilderEvidence`), [technical.tsx](../ui/web/src/components/technical.tsx) | [console.test.ts](../tests/console.test.ts) (current, stale, missing and unchecked evidence); browser-check the milestone and original-record link |
 | Usage and token reporting | [usage.ts](../src/usage.ts), [token-usage.ts](../src/token-usage.ts) (shared; web re-export retained), [telemetry.ts](../ui/web/src/telemetry.ts) | [token-usage.test.ts](../tests/token-usage.test.ts), [console.test.ts](../tests/console.test.ts) |
 | Development servers and port cleanup | [dev.ts](../ui/dev.ts), [kill-ports.sh](../ui/kill-ports.sh), [vite.config.ts](../ui/web/vite.config.ts) | [dev-ports.test.ts](../tests/dev-ports.test.ts) |
