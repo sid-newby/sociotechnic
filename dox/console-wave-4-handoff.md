@@ -3,8 +3,9 @@
 Wave 4 implements History, Agents in a run, browser defaults and restore-only
 recovery on the merged run-page foundation. The branch is `codex/console-history`;
 PR #28 merged at `11d1a1b01ef93bb6e92b2f0c5a51e43eb0e1db71` after review and
-passing checks, with the owner's explicit approval. This wave remains reviewable
-work for a `release:none` PR; its merge is not authorized by the prior approval.
+passing checks, with the owner's explicit approval. Wave 4 is [PR #29](https://github.com/sid-newby/sociotechnic/pull/29), labeled
+`release:none`. The owner subsequently authorized merging after checks and
+cleaning up the remaining completed branches and worktrees.
 
 ## Implemented behavior
 
@@ -96,11 +97,17 @@ this handoff does not claim a provider invocation or silently repin old runs.
 
 ## Checkout state and cleanup
 
-The primary checkout is synchronized to the PR #28 merge while preserving owner
-edits. The merged `codex/run-page` remote branch is deleted. Its clean local
-worktree is retained because Node PID 52932 is serving the user's preview at
-127.0.0.1:58751 with connected Chrome and Codex browser clients (checked during
-this handoff). Recheck consumers before retiring that exact preview and worktree.
-The owning app refused attachment because another task owns the worktree; no
-app metadata was modified. Do not remove the primary checkout or the unrelated
-dirty Claude worktree. The wave 4 worktree remains needed for PR review.
+The owner requested all completed branches be merged and cleaned up. An audit
+verified that the old Stop-note branch matches the merged patch, the banner
+branch matches merged commit 9636446 except an accidental worktree gitlink, and
+all twelve dirty files in the old Claude checkout exactly match the already
+merged continuation snapshot d8a19de. Those files were committed as a recovery
+snapshot. Ancestry-only merges preserve those histories while leaving the
+verified wave 4 tree unchanged and excluding the accidental gitlink.
+
+After PR #29 checks pass, merge it, synchronize the primary checkout and remove
+completed linked worktrees and feature branches with safe deletion. The old
+wave-2 preview is a read-only fixture with no live driver; shut it down gracefully
+before removing its source checkout. Use the owning app's archive workflow where
+available. Recheck Git and runtime state immediately before removal. Preserve
+the owner's unrelated `.gitignore` changes in the primary checkout.
