@@ -875,8 +875,8 @@ export function accept(job: Job, note: string, now = nowIso()): { job: string; s
   return { job: job.id, status: job.status };
 }
 
-export function stopJob(job: Job, now = nowIso()): { job: string; status: Status } {
-  jobfns.stop(job, now);
+export function stopJob(job: Job, now = nowIso(), note = ""): { job: string; status: Status } {
+  jobfns.stop(job, now, note);
   return { job: job.id, status: job.status };
 }
 

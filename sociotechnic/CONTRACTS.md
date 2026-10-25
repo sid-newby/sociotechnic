@@ -707,7 +707,7 @@ is what lets the driver skill read a result without reasoning about prose.
 | `pr <job> [--push]` | from ready, needs-human, merged-local, accepted or merged: generate `pr.md` from records (section 9). `--push`, from accepted only: push the job branch to the repo's GitHub remote and open the pull request with `gh` (section 18) | `{ record: "pr.md", title, pushed: false }` or `{ record: "pr.md", title, pushed: true, url, number }` |
 | `merge <job>` | from ready or needs-human: in the main checkout require a clean tree (tracked files) and current branch == base; `git merge --no-ff` with message `sociotechnic: <plan title> (<id>)`; record `localMerge`; keep the worktree and branch; status merged-local. Refused with `already-merged` when the branch head is already in the base. From accepted: merge the same way when no local merge is recorded, then remove the worktree, delete the branch, status merged. Never pushes. | `{ job, status, mergeCommit, merged, warnings? }` (`merged` is false when the accepted branch was already in the base; warnings when cleanup after a successful merge failed) |
 | `merge <job> --remote --confirm [--method merge\|squash\|rebase]` | Human-confirmed GitHub PR merge, including after local merge | `{ job, remote: true, url, mergeCommit, alreadyMerged }`; local checkout preserved |
-| `stop <job>` | status stopped; records `stoppedFrom` | `{ job, status }` |
+| `stop <job> [note...]` | status stopped; records `stoppedFrom` and the optional note in human history | `{ job, status }` |
 | `reopen <job> [--discard]` | from stopped: back to `stoppedFrom` (section 17) | `{ job, status, worktree: "present" \| "restored", changes: "kept" \| "discarded" \| "none", files: [...] }` |
 | `clean <job>` | from merged or stopped: remove worktree if present | `{ job, removed }` |
 | `usage <job>` | per-role totals from dispatch usage | `{ roles: [{ role, model, effort, dispatches, usage }] }` |
@@ -925,7 +925,7 @@ already running), 403 (origin or host refused).
 | `POST /api/jobs/:id/pr` | `{ push?: boolean }` | `{ record: "pr.md", title, text, pushed, url?, number? }`; `push: true` needs status accepted (409 otherwise) |
 | `POST /api/jobs/:id/merge` | `{ confirm: true }` | engine result (`merged-local` from ready or needs-human, `merged` from accepted); 400 without `confirm` |
 | `POST /api/jobs/:id/merge-remote` | `{ confirm: true, url, head, method? }` | Confirmed GitHub merge; URL/head must match the published PR. Default method: merge |
-| `POST /api/jobs/:id/stop` | | engine result; also stops the driver |
+| `POST /api/jobs/:id/stop` | `{ note?: string }` | engine result; also stops the driver; rejects a supplied non-string note before stopping anything |
 | `POST /api/jobs/:id/reopen` | `{ discard?: boolean }` | engine result (section 17) |
 | `POST /api/jobs/:id/clean` | | engine result |
 | `POST /api/jobs/:id/run` | `{ mode: "run" \| "step", hold?: Status[] }` | `DriverState`; 409 when a driver is active |
@@ -1086,6 +1086,12 @@ transition made during the same `step` call, so a `step` that starts at a held
 status continues; only statuses reached without a dispatch (planned, built,
 checked, reviewed) can be held. Tests may set `SOCIOTECHNIC_TIMEOUT_MINUTES_OVERRIDE`
 to shorten every dispatch deadline.
+
+A run stop may include an optional string note. The engine stores that exact string
+in its `human` entry with `action: "stop"`; omission keeps the existing empty
+string. The stop reason and aborted dispatch notes remain "stopped by human",
+and reopening and retry behavior are unchanged. The HTTP route validates a
+supplied note before requesting a driver stop or changing the job.
 
 ### 12.5 Engine change: `hold`
 

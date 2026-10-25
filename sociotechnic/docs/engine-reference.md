@@ -363,7 +363,7 @@ The approver sees only records. It must ESCALATE, naming the rule, when: (a) a p
 
 ## Reopening a stopped job
 
-A stopped job keeps its plan, dispatch history, branch, worktree and whatever the interrupted agent left uncommitted. `stop` records `stoppedFrom`. `reopen` is the way back, from `stopped` only.
+A stopped job keeps its plan, dispatch history, branch, worktree and whatever the interrupted agent left uncommitted. `stop` records `stoppedFrom` and an optional note verbatim in its `human` history entry. Without a note, that entry keeps the existing empty string. The status reason and aborted dispatch notes remain "stopped by human". `reopen` is the way back, from `stopped` only.
 
 ```bash
 sociotechnic/bin/sociotechnic reopen 20261023-add-a-login-page

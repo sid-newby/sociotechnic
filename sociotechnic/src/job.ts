@@ -353,11 +353,11 @@ export function markMergedLocal(job: Job, merge: LocalMerge, now: string): void 
   transition(job, "merged-local", `merged into ${job.base.branch} as ${merge.commit}; test it in ${job.repo}, then accept or rework`, now);
 }
 
-export function stop(job: Job, now: string): void {
+export function stop(job: Job, now: string, note = ""): void {
   if (isTerminal(job.status)) throw new IllegalTransition(`stop is not allowed from status ${job.status}`);
   const from = job.status;
   const parkedFrom = job.parkedFrom;
-  addHuman(job, "stop", "", now);
+  addHuman(job, "stop", note, now);
   transition(job, "stopped", STOPPED_NOTE, now);
   job.stoppedFrom = from;
   job.parkedFrom = parkedFrom;
