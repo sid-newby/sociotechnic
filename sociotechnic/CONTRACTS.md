@@ -645,18 +645,30 @@ or reviewed stop before the next transition. Stop/reopen, retained uncommitted
 work, overrides, ownership/input/completion digests and idempotent replay retain
 their existing protections; preserve evidence rather than discard it.
 
+New builder releases default to focused development and acceptance verification.
 The engine owns the full configured canonical repository suite at the committed
-build HEAD. One independent integration owner owns the complete
+build HEAD. Generated briefs preserve the union of pinned-definition, repository
+and approved-plan obligations, including legacy/custom full-suite requirements.
+READY records the builder's actual verification and does not assert that future
+engine checks passed. One independent integration owner owns the complete
 required-suite inventory, test documentation and final combined-revision proof.
 New application tests belong under `tests/`, never beside source; historical
 release-tooling/scaffold placement is not relocated by this change. Prefer real
 behavior with temporary Git and isolated storage; mock external providers and
 Sandbox boundaries rather than the behavior under test.
 
+Agent improvements are additive immutable semantic releases. Preserve published
+definitions, bundles, run pins, models, efforts, tools, budgets, profiles and
+skills. New/default runs receive new releases only after the ordinary authorized
+catalog import; existing and explicit legacy runs keep their pinned definitions.
 Pins do not freeze the engine binary: after an operator-controlled upgrade, the
 new routing applies to an eligible unreviewed checked round. Already-issued
 review waves finish normally and saved dispatch envelopes are never rewritten.
-Existing holds stay in force. No live catalog mutation is part of development.
+Existing holds stay in force. Unpublished bundles live in
+`seeds/agent-release-candidates/`, outside automatic startup and `db init`
+migrations. Candidate imports must first reconcile versions with the target
+catalog; conflicting identities remain errors. No live catalog mutation is part
+of development.
 
 Runner evidence may add finite reported SDK API/request/first-token timings.
 Keep existing end-to-end durations and counter semantics; missing fields remain

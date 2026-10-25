@@ -82,9 +82,12 @@ graceful/forced cleanup or unrelated-listener preservation checks.
 | A1 failed checks | [check-repair.test.ts](../tests/check-repair.test.ts): real temporary Git and harmless checks cover failure, signal, timeout, full-suite completion, zero red-round reviews, one repair, passing all applicable reviews/approval, stale HEAD, dirty tree, changed plan, missing/empty suite, caps and comment structural proof |
 | A1 + B1 handoff | Same test asserts actual generated report path, exact checked commit, command/name, exit/signal/timeout and exactly one fenced output tail per failure |
 | A2 lifecycle | [check-repair-lifecycle.test.ts](../tests/check-repair-lifecycle.test.ts): checked/reviewed holds, stop during checks/repair, retained edits, reopen/reload, interruption, malformed/timeout retry bounds, BLOCKED/round exhaustion, override, old review waves, owner/input/replay protection and all-started-sibling waiting |
+| B1 briefs | [brief-policy.test.ts](../tests/brief-policy.test.ts): real plan/record parsers, strict JSON example, unchanged required docs/testing fields, rubric, research/design escapes, assignment locks and cumulative legacy/custom obligations |
+| B2 immutable releases | [release-policy.test.ts](../tests/release-policy.test.ts): exact metadata preservation, new/default/explicit legacy/custom/existing pins, offline publication helpers, additive/repeated/conflicting imports and definition/row/bundle/skill digests; [dbpg.test.ts](../tests/dbpg.test.ts) and [backup-restore-pg.test.ts](../tests/backup-restore-pg.test.ts) add real PostgreSQL catalog constraints and restore |
 | C1 timing | [runner-evidence.test.ts](../tests/runner-evidence.test.ts): fake SDK result boundary with real runner/persistence, finite supported fields, missing/old/invalid fields, result replacement, error, partial stream and timeout; raw wall/origin clocks stay raw |
 | C2 envelope | [runner-envelope.test.ts](../tests/runner-envelope.test.ts): two staged IDs preserve profile bodies while task paths differ; baseline/legacy/custom builder and reader tools/guards, malformed output and ingestion refusal; comment coordinator with/without Agent retains nested adapter; packaged-skill path residual |
 | Comment cleanup regression | [comment-inventory.test.ts](../tests/comment-inventory.test.ts) distinguishes the red-proof repair builder from reviewers with exact agent/record/empty-review assertions |
+| Catalog consumers | Agent discovery, Azure and library tests expect the newly imported latest releases while preserving explicit old-version pins and skill bytes |
 
 Mocks cover external provider/GitHub/Sandbox boundaries. Temporary Git, actual
 parsers, the real engine/guards/staging/storage and harmless check processes carry
@@ -92,6 +95,17 @@ workflow proof. No live model calls, provider spend, Docker launch, service rest
 live catalog mutation or publication is required or performed by this verification.
 
 ## Compatibility and limits
+
+[The engine reference](engine-reference.md#verification-policy-release-compatibility)
+contains the new/existing/legacy run matrix and upgrade/rollback procedure.
+[The candidate inventory](evidence/workflow-integration/candidate-releases.json)
+records eleven unpublished releases and all their digests. Automatic migrations
+preserve 32 historical releases. The explicitly imported candidate fixture has
+43 total; candidates are excluded from startup and `db init`. New instructions
+become defaults only after an authorized catalog import; pins do not freeze
+engine binary behavior. The release-policy suite also starts the real HTTP server
+with customized browser-builder releases, verifies its health and unchanged
+catalog, and proves that explicit conflicting imports still abort atomically.
 
 Optional C3 reader-recovery concurrency is deferred. Native Impeccable execution
 is separately opt-in via `SOCIOTECHNIC_TEST_IMPECCABLE_SKILL`; an unrun opt-in is
