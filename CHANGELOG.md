@@ -3,6 +3,12 @@
 Release notes are committed before publication. [GitHub Releases](https://github.com/sid-newby/sociotechnic/releases) confirms which versions shipped.
 Dates on backfilled entries use America/Chicago. See the [release guide](sociotechnic/docs/releasing.md).
 
+## v0.2.0
+
+- Create a new folder directly from the run wizard and remember a chosen browsing start point across browser sessions, defaulting to `~/Prog` or the user's home folder.
+- Add a New repository run type that requires local Git tracking and retains the initial commit and planning review flow.
+- Suggest the bundled React + NestJS house special for UI work without an existing scaffold, while preserving the user's stack choice and design approval.
+
 ## v0.1.5
 
 - Show the changelog's semantic version beside the application name in matching typography.

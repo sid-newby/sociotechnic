@@ -4,7 +4,7 @@ import { readJob } from "../src/job-store.ts";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { after, before, test } from "node:test";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -49,6 +49,48 @@ test("browse lists folders without writing and rejects invalid or foreign reques
   assert.equal((await call("/api/repositories/browse", { path: `${path}/missing` })).status, 400);
   assert.equal((await call("/api/repositories/browse", { path: 123 })).status, 400);
   assert.equal((await call("/api/repositories/browse", { path }, "http://evil.example")).status, 403);
+});
+
+test("browsing defaults to Prog, falls back to home, and only falls back on request", async () => {
+  const home = directory();
+  const previous = process.env.HOME;
+  process.env.HOME = home;
+  try {
+    assert.equal(homedir(), home);
+    assert.equal((await call("/api/repositories/browse", {})).body.path, home);
+    mkdirSync(join(home, "Prog"));
+    assert.equal((await call("/api/repositories/browse", {})).body.path, join(home, "Prog"));
+    const missing = join(home, "deleted");
+    assert.equal((await call("/api/repositories/browse", { path: missing, fallback: true })).body.path, home);
+    assert.equal((await call("/api/repositories/browse", { path: missing })).status, 400);
+    assert.equal((await call("/api/repositories/browse", { fallback: "true" })).status, 400);
+    rmSync(join(home, "Prog"), { recursive: true });
+    writeFileSync(join(home, "Prog"), "not a directory");
+    assert.equal((await call("/api/repositories/browse", {})).body.path, home);
+  } finally {
+    if (previous === undefined) delete process.env.HOME;
+    else process.env.HOME = previous;
+  }
+});
+
+test("create opens exactly one new child directory without Git or overwrites", async () => {
+  const path = directory();
+  const created = await call("/api/repositories/create", { path, name: "new project" });
+  assert.equal(created.status, 200);
+  assert.deepEqual(created.body, { path: join(path, "new project"), parent: path, directories: [] });
+  assert.deepEqual(readdirSync(created.body.path), []);
+  writeFileSync(join(created.body.path, "keep.txt"), "keep");
+  assert.equal((await call("/api/repositories/create", { path, name: "new project" })).status, 400);
+  assert.equal(readFileSync(join(created.body.path, "keep.txt"), "utf8"), "keep");
+  writeFileSync(join(path, "file"), "keep");
+  symlinkSync(created.body.path, join(path, "link"));
+  for (const name of ["", ".", "..", ".git", ".GIT", "../escaped", "nested/child", "nested\\child", "bad\u0000name", "bad\nname", "bad\u007fname", "file", "link", 123]) {
+    assert.equal((await call("/api/repositories/create", { path, name })).status, 400, String(name));
+  }
+  assert.equal((await call("/api/repositories/create", { path, name: "foreign" }, "http://evil.example")).status, 403);
+  assert.equal((await call("/api/repositories/create", { path: join(path, "missing"), name: "child" })).status, 400);
+  assert.equal((await call("/api/repositories/create", { name: "child" })).status, 400);
+  assert.deepEqual(readdirSync(path).sort(), ["file", "link", "new project"]);
 });
 
 test("one create request initializes starter files and the driver holds at the plan", async () => {

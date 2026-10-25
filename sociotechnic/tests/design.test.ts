@@ -22,6 +22,8 @@ import type { ServerHandle } from "../ui/server.ts";
 import { startServer } from "../ui/server.ts";
 import { fakeRunner, sdkOptions } from "../ui/runner.ts";
 import { roleOf } from "../src/roles.ts";
+import { planBrief } from "../src/brief.ts";
+import { designBrief } from "../src/design-brief.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = mkdtempSync(join(tmpdir(), "sociotechnic-design-"));
@@ -127,6 +129,24 @@ test("planner can request the ceremony; ordinary feature runs retain their plan 
   assert.equal(ordinary.status, "planned"); assert.equal(ordinary.design, undefined);
   assert.equal(parsePlanText('{"status":"needs-design","reason":"major UI"}', false).kind, "needs-design");
   assert.equal(parsePlanText('{"status":"needs-design","reason":"again"}', false, true).kind, "malformed");
+});
+
+test("missing UI scaffolds get the optional house special recommendation through human stack choice", async () => {
+  const input = { feature: "Build a new UI", repo: root, planPath: "plan.json", planMdPath: "plan.md", researchFiles: [], allowResearch: true, easyTierMaxFiles: 8, retryReason: null };
+  const planner = planBrief({ ...input, allowDesign: true });
+  assert.match(planner, /If none exists, use needs-design/);
+  assert.match(planner, /React \+ NestJS house special/);
+  assert.match(planner, /Respect an explicitly requested scaffold/);
+  assert.doesNotMatch(planBrief({ ...input, allowDesign: false }), /house special/);
+  const job = await create();
+  if (!job.design || job.design.state !== "waiting") throw new Error("Missing interview");
+  const designer = designBrief({ ...job, design: { ...job.design, state: "generating", steering: null, next: "interview" } }, root, null);
+  assert.match(designer, /If none exists, always recommend the bundled React \+ NestJS house special/);
+  assert.match(designer, /The human chooses the stack through the console/);
+  const chosen = await respond(job.id, { ...answer, stack: "custom", customStack: "Use the requested Svelte scaffold" });
+  assert.deepEqual(chosen.design?.stack, { kind: "custom", description: "Use the requested Svelte scaffold" });
+  assert.equal(chosen.plan, null);
+  assert.equal(git(chosen.worktree, "rev-parse", "HEAD"), chosen.base.commit);
 });
 
 test("revision preserves the run, waits without a dispatch, and stop/reopen returns to the decision", async () => {

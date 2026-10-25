@@ -793,7 +793,8 @@ already running), 403 (origin or host refused).
 | `GET /api/jobs` | | `{ jobs: [ StatusLine & { feature, repo, branch, tier, updatedAt, driver, archived: boolean } ] }` |
 | `GET /api/jobs/:id` | | `{ job, plan, records: [ { path, bytes, mtime } ], pr: boolean, driver }` |
 | `GET /api/jobs/:id/records/<path>` | | `{ path, text }`; the logical path must belong to this job |
-| `POST /api/repositories/browse` | `{ path?: string }` | Canonical `path`, `parent` (null at root), sorted child `directories`; defaults to the user's home. Read-only and same-origin protected |
+| `POST /api/repositories/browse` | `{ path?: string, fallback?: boolean }` | Canonical `path`, `parent` (null at root), sorted child `directories`; defaults to `~/Prog` if accessible, otherwise home. `fallback: true` uses home for an inaccessible supplied path. Read-only and same-origin protected |
+| `POST /api/repositories/create` | `{ path: string, name: string }` | Creates one new child directory and returns its browsing listing; no recursive creation, overwrite or Git initialization. Same-origin protected |
 | `POST /api/jobs` | `{ repo, feature, base?, initialize?: boolean }` | `NewResult`; explicit initialization prepares a missing repository before using the existing job creation path |
 | `POST /api/jobs/:id/archive` | `{ archived: boolean }` | `{ id, archived }`; visibility-only, persisted in the database job document |
 | `POST /api/jobs/:id/design-response` | `{ digest, response }` | Records a validated human design decision, then continues the same run with a plan hold |
@@ -815,6 +816,21 @@ already running), 403 (origin or host refused).
 
 `finish` is deliberately not exposed: only a driver that ran a dispatch may
 record it. The console never edits a record, `job.json` or the plan.
+
+New run's folder browser remembers a successfully entered Go path in local browser
+storage across sessions on the same console origin. Folder/parent clicks and new
+folder creation do not change this starting point. Entering another valid Go path
+replaces it. Initial browsing falls back to home if the saved path is unavailable;
+later invalid navigation shows a recoverable error. Storage failure is reported
+without blocking browsing. New folder accepts a single child name, refuses `.git`,
+dot entries, separators and existing paths, and opens the created folder. Creating
+a directory does not start a run. New repository is a setup preset for the ordinary
+feature planning flow: Git initialization is required, with the same starter commit
+and plan hold. It does not select a scaffold, create a remote or change engine gates.
+For UI work without an existing UI scaffold, planning routes to the design ceremony
+and the interview recommends the bundled React + NestJS house special. The human
+still chooses existing, bundled or custom stack; requests for another scaffold
+are respected. The same recommendation applies to explicit design ceremonies.
 
 New run offers folder browsing on the console host and an enabled-by-default
 "Initialize Git if needed" option. Starting once initializes the selected existing
@@ -1445,6 +1461,12 @@ imported file. Later maintenance updates the template in this repository; the
 import manifest remains the baseline, not a claim that maintained files still
 match upstream. Record changes and verification in
 `docs/scaffolds.md`.
+
+For requested UI work without an existing UI scaffold, generated planner and
+designer briefs recommend this React + NestJS house special through the existing
+design ceremony. An explicit scaffold request is respected. The recommendation
+is optional and never substitutes for the human's stack choice or design approval;
+non-UI projects need no scaffold.
 
 The starter is outside the engine's pnpm workspace and TypeScript compilation.
 Its dependency policy and checks are separate from the engine's. Keeping it here
