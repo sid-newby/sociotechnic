@@ -110,6 +110,14 @@ Bounds: rounds, dispatches per round, retries per step, and a deadline per
 dispatch. Past any bound the job parks as `needs-human` with the bound named.
 An override lifts one bound by one and is remembered forever.
 
+A human may interrupt one unfinished dispatch with `interrupt <job> <dispatch>
+[note]`. The owning console's driver aborts only that agent, records it
+`interrupted` with the note and a human entry, and lets the rest of the step
+finish. The next step retries it as a failed attempt under the retry bound,
+with the note as the retry reason. Drivers never interrupt on their own, and
+Docker Sandbox runs refuse it. Local dispatches may wait for an installation
+concurrency slot; that wait counts against their deadlines.
+
 ## Human gates
 
 | Status | What it means | Actions |

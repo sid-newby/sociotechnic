@@ -527,11 +527,11 @@ Job document:
       "lens": null | "reviewer-code" | ..., "attempt": 1,
       "agent": "sociotechnic-builder", "model": "opus", "effort": "high",
       "record": "round-1/build.md", "startedAt": "ISO", "deadlineAt": "ISO",
-      "finishedAt": null | "ISO", "outcome": null | "ok" | "failed" | "timeout",
+      "finishedAt": null | "ISO", "outcome": null | "ok" | "failed" | "timeout" | "interrupted",
       "parsed": null | Parsed, "usage": null | <object passed verbatim>, "note": null | "..."
     }
   ],
-  "human": [ { "at": "ISO", "action": "accept" | "rework" | "stop" | "override" | "merge" | "merge-remote" | "reopen" | "pr-push", "note": "..." } ],
+  "human": [ { "at": "ISO", "action": "accept" | "rework" | "stop" | "override" | "merge" | "merge-remote" | "reopen" | "pr-push" | "interrupt", "note": "..." } ],
   "localMerge": { "commit": "<sha of the --no-ff merge in the main checkout>", "head": "<job branch sha merged>", "mergedAt": "ISO" },  // after a local merge (section 18)
   "pr": { "url": "...", "number": 7, "pushedAt": "ISO", "head": "<sha>", "merge": { "commit": "<sha>", "mergedAt": "ISO", "method": "merge" | "squash" | "rebase" | "external" } }  // after pr --push, and merge --remote
 }
@@ -630,13 +630,32 @@ Otherwise APPROVE. It never edits code and never reruns checks.
   conformance, approver, retries) count against `dispatchesPerRound`. Past the
   cap -> needs-human, reason `loop-bound:dispatchesPerRound`. Plan and research
   dispatches count in round 0 with the same cap.
-- A **retry** re-dispatches the same step after a malformed, stale, failed or
-  timed-out record, with the reason in the brief, as `attempt + 1`. Past
-  `retriesPerStep` -> needs-human, reason `retry-bound:<step>`.
+- A **retry** re-dispatches the same step after a malformed, stale, failed,
+  timed-out or interrupted record, with the reason in the brief, as
+  `attempt + 1`. Past `retriesPerStep` -> needs-human, reason
+  `retry-bound:<step>`.
 - A **timeout**: each dispatch has `deadlineAt = startedAt + role timeout`.
   `step` reports unfinished dispatches past their deadline as `action: "stop"`;
   the driver stops them and calls `finish --outcome timeout`, which counts as a
   failed attempt.
+- An **interrupt** is a human ending one unfinished dispatch early with
+  `interrupt <job> <dispatch> [note]` or
+  `POST /api/jobs/:id/dispatches/:dispatchId/interrupt` (12.3, 12.4). The
+  dispatch is finished with `outcome: "interrupted"`, `note` set to the human's
+  trimmed note (null when none), and its record parsed as `finish` does. A
+  `human` entry `{ action: "interrupt", note: "<dispatch>" | "<dispatch>: <note>" }`
+  records the human as the source. Only `interrupt` records this outcome;
+  `finish` refuses it. Job status, the pinned plan, gates and every other
+  dispatch are unchanged. An interrupted dispatch is a failed attempt, the same
+  as a dispatch a stop aborted (section 17): the next `step` after the step
+  settles re-dispatches that step as `attempt + 1` with the retry reason
+  `interrupted by human` or `interrupted by human: <note>`, and the new attempt
+  counts against `retriesPerStep` and `dispatchesPerRound`. Past
+  `retriesPerStep` the job parks with `retry-bound:<step>`. To keep a further
+  attempt, raise the bound first with `override` (accepted in any non-terminal
+  status). Interrupt refuses a finished or unknown dispatch, and refuses runs
+  pinned to `docker-sandbox` with `sandbox-interrupt`, because terminating one
+  sandbox process stops the shared sandbox; stop those runs instead.
 
 ### 7.5 Fresh agents, pull-based briefs
 
@@ -679,7 +698,8 @@ is what lets the driver skill read a result without reasoning about prose.
 | `init <repo>` | write a starter `.sociotechnic.json` in the target repo (refuses to overwrite) | `{ path, checks }` |
 | `new <repo> <feature...> [--base <branch>]` | commit database job, create branch `sociotechnic/<id>` from base, worktree; status new | `{ job, source: "db", worktree, branch, base }` |
 | `step <job> [--hold <status,...>] [--force]` | advance deterministically and say what to do next (section 8.1); `--hold` stops at a listed status (12.5); `--force` ignores a live driver lock (12.4) | step result |
-| `finish <job> <dispatch-id> [--outcome ok\|failed\|timeout] [--usage <json>] [--note <text>]` | mark a dispatch finished, parse its record | `{ dispatch, outcome, parsed }` |
+| `finish <job> <dispatch-id> [--outcome ok\|failed\|timeout] [--usage <json>] [--note <text>]` | mark a dispatch finished, parse its record; `interrupted` is recorded only by `interrupt` | `{ dispatch, outcome, parsed }` |
+| `interrupt <job> <dispatch-id> [note...] [--port <n>]` | end one unfinished dispatch as `interrupted` (7.4). When a driver owns the job, the request goes to that driver's console (its recorded loopback URL, or `--port`), which aborts only that agent; a console that is not the owner refuses with `driver-active`. With no driver owner, the engine records the unfinished dispatch directly | `{ job, dispatch, outcome: "interrupted", note, terminated }` (`terminated` is true when a running agent was aborted) |
 | `status [<job>]` | one job's one-line truth, or all jobs | `{ job, status, statusReason, round, pending, overdue, nextAction }` or `{ jobs: [...] }` |
 | `override <job> <bound> <note...>` | append an override for `rounds\|dispatchesPerRound\|retriesPerStep`; needs-human -> the status before parking | `{ job, bound, effective }` |
 | `rework <job> <note...>` | failed planning with no pinned plan: record feedback, grant one retry, status planning and return round 0; after a build from ready, needs-human or merged-local: write `round-N/review-human.md`, grant one `rounds` override, status building | `{ job, round }` |
@@ -870,7 +890,8 @@ picker. No other environment adds this allowance.
 
 ### 12.3 HTTP API
 
-Every response is JSON except `GET /`. Errors are `{ "error", "code" }` with
+Every response is JSON except `GET /`, `/events`, static assets, design
+artifacts and previews, and record downloads. Errors are `{ "error", "code" }` with
 400 (bad input), 404 (unknown job or record), 409 (illegal transition or driver
 already running), 403 (origin or host refused).
 
@@ -884,12 +905,17 @@ already running), 403 (origin or host refused).
 | `GET /api/jobs` | | `{ jobs: [ StatusLine & { feature, repo, branch, tier, updatedAt, driver, archived: boolean } ] }` |
 | `GET /api/jobs/:id` | | `{ job, plan, records: [ { path, bytes, mtime } ], pr: boolean, driver }` |
 | `GET /api/jobs/:id/records/<path>` | | `{ path, text }`; the logical path must belong to this job |
+| `GET /api/jobs/:id/records/<path>?download=1` | | The record's exact stored bytes, binary records included. `Content-Type` follows the extension (`.md` text/markdown, `.json` application/json, `.txt` text/plain, `.patch` and `.diff` text/x-diff, each UTF-8; `.png`, `.jpg`, `.jpeg` and `.webp` images; anything else application/octet-stream). `Content-Disposition: attachment` names the record path with `/` replaced by `-`. Responses carry `nosniff` and a `sandbox; default-src 'none'` CSP. Path rules and errors match the JSON form, which is unchanged without `download=1` |
+| `GET /api/jobs/:id/log?after=<seq>&limit=<n>` | | `{ job, entries: [ { seq, at, level, dispatchId, line } ], first, last, more }` from this console's log buffer for the job (12.4): entries with `seq > after` (default 0), oldest first, at most `limit` (default 200, 1 to 1000). `first` and `last` are the oldest and newest retained `seq`, null when empty; `more` is true when later entries remain. `after + 1 < first` means the buffer dropped entries the client has not seen. Non-integer or out-of-range values are 400 |
+| `POST /api/jobs/:id/dispatches/:dispatchId/interrupt` | `{ note?: string }` | `{ job, dispatch, outcome: "interrupted", note, terminated }` after the dispatch is recorded (7.4). When this console's driver runs the job it aborts only that dispatch, running or queued for a local slot, and the driver keeps running. With no driver owner the unfinished dispatch is recorded directly. 409 `driver-active` when another console or process owns the job, 409 `dispatch-starting` when this driver owns the job but has not yet queued that dispatch, 409 `illegal-transition` for a finished dispatch, 409 `sandbox-interrupt` for a Docker Sandbox run, 404 for an unknown dispatch, 400 for a malformed id or a non-string note |
+| `GET /api/local/capacity` | | `{ limit, configurable, running, queued }`: the installation limit on local dispatches running at once (`null` is unlimited, the default), whether it can be changed here (false while `SOCIOTECHNIC_LOCAL_MAX_DISPATCHES` is set), and this console's running and queued local dispatches |
+| `POST /api/local/capacity` | `{ limit: 1..64 \| null, expectedLimit }` | `{ limit }`; persists the limit in `.sociotechnic/local-settings.json` under the admission lock. A stale `expectedLimit` returns 409 `stale-local-capacity`; an environment-managed limit returns 409 `local-capacity-managed`; an invalid limit is 400 |
 | `POST /api/repositories/browse` | `{ path?: string, fallback?: boolean }` | Canonical `path`, `parent` (null at root), sorted child `directories`; defaults to `~/Prog` if accessible, otherwise home. `fallback: true` uses home for an inaccessible supplied path. Read-only and same-origin protected |
 | `POST /api/repositories/create` | `{ path: string, name: string }` | Creates one new child directory and returns its browsing listing; no recursive creation, overwrite or Git initialization. Same-origin protected |
 | `POST /api/jobs` | `{ repo, feature, base?, initialize?: boolean, githubRepository?: string }` | `NewResult`; explicit initialization prepares a missing repository; `githubRepository` requires initialization and publishes the base branch before job creation |
 | `POST /api/jobs/:id/archive` | `{ archived: boolean }` | `{ id, archived }`; visibility-only, persisted in the database job document |
 | `POST /api/jobs/:id/design-response` | | Retired packet mutation; returns an explicit error |
-| `POST /api/jobs/:id/design-session/{messages,answer,interrupt,resume,approve}` | See design guide | Resume the native session, resolve human input or approve exact artifacts |
+| `POST /api/jobs/:id/design-session/{messages,answer,interrupt,resume,handoff,migrate,approve}` | See design guide | Resume the native session, resolve human input, return the work product, migrate an unused designer binding, or approve exact artifacts (`approve` is kept for compatibility; new clients use `handoff`) |
 | `GET /api/jobs/:id/design-artifacts/<encoded-path>` | | Saved artifact bytes belonging to the current session; sandboxed HTML |
 | `GET /api/jobs/:id/design-assets/<path>?digest=<digest>` | | Current fingerprinted preview; sandboxed HTML or image |
 | `POST /api/jobs/:id/step` | `{ hold?: Status[] }` | step result (12.5) |
@@ -905,7 +931,7 @@ already running), 403 (origin or host refused).
 | `POST /api/jobs/:id/run` | `{ mode: "run" \| "step", hold?: Status[] }` | `DriverState`; 409 when a driver is active |
 | `POST /api/jobs/:id/pause` | | `DriverState` (stops after in-flight dispatches) |
 | `GET /api/jobs/:id/driver` | | `DriverState` |
-| `GET /events` | | SSE: `jobs` `{ id }` on committed database job/record changes; `driver` `{ id, event, state }` for lifecycle events (started, step, dispatch-started, dispatch-finished, paused, stopped, error) and `{ id, event: "activity", active, log: [entry...] }` for forwarded agent activity; `ping` every 15 s (the console treats 40 s of silence as a drop) |
+| `GET /events` | | SSE: `jobs` `{ id }` on committed database job/record changes; `driver` `{ id, event, state }` for lifecycle events (started, step, dispatch-started, dispatch-finished, paused, stopped, error) and `{ id, event: "activity", active, log: [entry...] }` for forwarded agent activity; `log` `{ jobId, dispatchId, seq, at, level, line }` for every driver log line as it is written (12.4); `ping` every 15 s (the console treats 40 s of silence as a drop) |
 
 `finish` is deliberately not exposed: only a driver that ran a dispatch may
 record it. The console never edits a record, `job.json` or the plan.
@@ -964,7 +990,8 @@ type DriverState = {
   running: boolean; mode: "run" | "step" | null; hold: string[];
   startedAt: string | null; finishedAt: string | null;
   active: { dispatchId: string; agent: string; startedAt: string; deadlineAt: string; lastActivity: string | null }[];
-  log: { at: string; level: "info" | "warn" | "error"; text: string }[];   // last 200
+  queued: string[];   // local dispatches waiting for a slot (12.4)
+  log: { seq: number; at: string; level: "info" | "warn" | "error"; text: string; dispatchId: string | null }[];   // newest 200 of the log buffer
   lastStep: StepResult | null; error: string | null;
 };
 ```
@@ -974,9 +1001,10 @@ type DriverState = {
 `driver.ts` runs the section 10 loop in-process:
 
 1. `step(job, { hold })`.
-2. `dispatch`: run every entry concurrently through the runner; when each
-   returns, `finish(job, id, outcome, usage)`. Then back to 1 (mode `run`) or
-   stop (mode `step`).
+2. `dispatch`: run every entry concurrently through the runner, local
+   dispatches within the local concurrency limit below; when each returns,
+   `finish(job, id, outcome, usage)`, or `interrupt` for a dispatch a human
+   interrupted. Then back to 1 (mode `run`) or stop (mode `step`).
 3. `stop`: `finish(..., "timeout")` for each overdue id, back to 1.
 4. `hold`, `human`, `done`: stop. `pause` requested: stop after in-flight
    dispatches finish.
@@ -1007,6 +1035,45 @@ The runner contract: `run(entry, role, ctx) -> { outcome: "ok" | "failed" | "tim
   `SOCIOTECHNIC_ROUND`. Exit 0 is `ok`, non-zero `failed`, deadline `timeout`. Usage is
   `{ fake: true, duration_ms }`. Tests ship `tests/fixtures/fake-agent.mjs`
   that writes what each role would.
+
+**Per-dispatch interrupt.** Each dispatch of a step has its own abort signal,
+joined to the run's signal. An interrupt (7.4) for a dispatch the driver is
+running aborts only that signal. The runner ends that agent as it does on stop:
+the SDK query is aborted, and Codex and fake agents' processes are killed. Its
+staged outputs are ingested as evidence like any completion, and the driver
+records it with `interrupt` instead of `finish`. Once accepted, the interrupt
+decides the outcome even when the agent finished, or a stop arrived, before the
+result was recorded. A dispatch still queued for a local slot is recorded
+`interrupted` without launching. Other dispatches of the step keep running. The
+driver returns to `step` only after all of them settle, so the retry follows
+the ordinary retry rules in the same run; pause first to stop the run before
+that retry. The interactive design conversation is not a dispatch and keeps
+`design-session/interrupt`.
+
+**Local concurrency limit.** An installation limit caps how many local
+dispatches each console process runs at once, across all its jobs. It is
+unlimited by default, so every dispatch of a step starts at once, as before.
+`SOCIOTECHNIC_LOCAL_MAX_DISPATCHES` (an integer from 1 to 64) sets it and makes
+it read-only; otherwise `.sociotechnic/local-settings.json`, written by
+`POST /api/local/capacity`, holds it. Dispatches beyond the limit wait in start
+order without claiming staging and are listed in `DriverState.queued`. Waiting
+dispatches see a changed limit within a second; lowering it never stops a
+running agent. Queued time counts against the dispatch deadline: a dispatch
+whose deadline passes while it waits is recorded `timeout` with the note
+"deadline reached while waiting for a local dispatch slot" and never launches.
+Stop or shutdown leaves a queued dispatch unfinished and unlaunched; the next
+driver run launches it as the same attempt. Docker Sandbox runs keep their own
+`parallelAgents` slots and do not count against this limit.
+
+**Driver log.** Each console process keeps a log buffer per job for its
+lifetime. Every driver line gets a per-job `seq` (increasing from 1 in this
+process), its time, level, text, and the dispatch it belongs to (the design
+session id for conversation lines, null for driver lines). The buffer keeps the
+newest entries within 1 MiB of text per job, cutting any line to 8 KiB and
+dropping the oldest entries first. Each line is broadcast as an SSE `log` event
+when written, and `GET /api/jobs/:id/log` pages the buffer for catch-up.
+`DriverState.log` remains the newest 200 entries. A restarted console starts
+with an empty buffer at `seq` 1.
 
 **Driver ownership.** PostgreSQL holds a driver's session lock and owner
 identity. The driver also serializes mutations through the shared job operation
@@ -1422,6 +1489,18 @@ into role agents.
   is gone after, CLI `step` is refused with `driver-active` while it runs, a
   fake agent that exits non-zero is retried then parks, and an aborted deadline
   records `timeout`.
+- `interrupt.test.ts`: in-memory store (a disposable PostgreSQL database under
+  `task test:pg`), console on port 0 and a controllable
+  fake runner. Interrupting one of two in-flight research dispatches records it
+  `interrupted` with the human entry while the other finishes `ok`; the retry
+  carries the note and counts as the next attempt; a second interrupt parks at
+  `retry-bound`, and an early `retriesPerStep` override keeps the run going. It
+  covers the direct engine path with no driver, the CLI through the owning
+  console, refusals (finished, unknown, malformed, sandbox), the local limit
+  route and its enforcement including a queued interrupt and queued deadline,
+  SSE `log` events and log paging.
+- `ui.test.ts` also downloads text and binary records with their headers and
+  checks that the JSON record form is unchanged.
 
 ## 13. State store (PostgreSQL)
 
@@ -1739,12 +1818,18 @@ next attempt under the retry bound, and a job past that bound parks as
 `needs-human` for an `override` like any other retry. When kept changes exist,
 the retry block of the builder's brief says so and lists the files: the
 builder inspects them, keeps what is sound, and commits before it writes the
-record; the builder prompt's clean-tree rule has that one exception.
+record; the builder prompt's clean-tree rule has that one exception. A build
+attempt a human interrupted (7.4) is retried the same way, with its uncommitted
+changes listed.
 
-Console: the human gate panel for a `stopped` job shows Reopen, Reopen and
-discard changes (behind a confirm), and Clean. Both skills: `/sociotechnic reopen
-<job>` (`--discard` only when the user says so), followed by `run` in the
-global or project skill through the shared console driver.
+Console: the React human gate panel for a `stopped` job shows Reopen run and
+Remove worktree (Remove sandbox and worktree for a Docker Sandbox run); its
+Reopen keeps uncommitted changes. The legacy console at `/legacy` also offers
+Reopen and discard changes behind a confirm. Discarding is available to every
+client through `POST /api/jobs/:id/reopen` with `{ discard: true }` and
+`reopen <job> --discard`. Both skills: `/sociotechnic reopen <job>`
+(`--discard` only when the user says so), followed by `run` in the global or
+project skill through the shared console driver.
 
 ## 18. Publishing: the human gate before any remote
 

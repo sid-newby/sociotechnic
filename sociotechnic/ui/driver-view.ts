@@ -33,7 +33,7 @@ export async function consoleDriverState(drivers: DriverRegistry, id: string, cu
   return {
     running: true, mode: owner.mode === "run" || owner.mode === "step" ? owner.mode : null,
     startedAt: typeof owner.startedAt === "string" ? owner.startedAt : null,
-    hold: [], finishedAt: null, active: [], log: [], lastStep: null, error: null,
+    hold: [], finishedAt: null, active: [], queued: [], log: [], lastStep: null, error: null,
     ownership: { kind: "external", owner: kind, url },
   };
 }

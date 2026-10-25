@@ -37,8 +37,8 @@ export const STATUSES = [
 export type Status = (typeof STATUSES)[number];
 export type Step = "plan" | "research" | "design" | "build" | "review" | "approve";
 export type Bound = keyof Caps;
-export type Outcome = "ok" | "failed" | "timeout";
-export type HumanAction = "accept" | "rework" | "stop" | "override" | "merge" | "merge-remote" | "reopen" | "pr-push" | "design-answer" | "design-select" | "design-revise" | "design-approve" | "design-migrate" | "design-handoff";
+export type Outcome = "ok" | "failed" | "timeout" | "interrupted";
+export type HumanAction = "accept" | "rework" | "stop" | "override" | "merge" | "merge-remote" | "reopen" | "pr-push" | "interrupt" | "design-answer" | "design-select" | "design-revise" | "design-approve" | "design-migrate" | "design-handoff";
 
 export const BOUNDS: readonly Bound[] = ["rounds", "dispatchesPerRound", "retriesPerStep"];
 export const HUMAN_REVIEW_KEY = "review-human";
@@ -493,6 +493,12 @@ export function finishDispatch(job: Job, id: string, outcome: Outcome, parsed: P
   d.usage = usage ?? null;
   d.note = note;
   job.updatedAt = now;
+  return d;
+}
+
+export function interruptDispatch(job: Job, id: string, parsed: Parsed | null, usage: unknown, note: string | null, now: string): Dispatch {
+  const d = finishDispatch(job, id, "interrupted", parsed, usage, note, now);
+  addHuman(job, "interrupt", note === null ? id : `${id}: ${note}`, now);
   return d;
 }
 

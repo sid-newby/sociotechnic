@@ -178,6 +178,7 @@ function dispatchCapReason(job: Job): string {
 function failureOf(d: Dispatch): string | null {
   if (d.outcome === "timeout") return "timed out";
   if (d.outcome === "failed") return `agent failed${d.note === null ? "" : `: ${d.note}`}`;
+  if (d.outcome === "interrupted") return `interrupted by human${d.note === null ? "" : `: ${d.note}`}`;
   return null;
 }
 
@@ -380,7 +381,7 @@ function failingChecksFrom(job: Job, round: Round): FailingCheck[] {
 }
 
 function keptAfterStop(job: Job, latest: Dispatch): string[] {
-  return latest.note === STOPPED_NOTE ? git.uncommittedFiles(job.worktree) : [];
+  return latest.note === STOPPED_NOTE || latest.outcome === "interrupted" ? git.uncommittedFiles(job.worktree) : [];
 }
 
 function buildPrompt(job: Job, agent: string, retryReason: string | null, keptChanges: readonly string[] = []): string {
@@ -711,10 +712,29 @@ export function parseDispatchRecord(job: Job, d: Dispatch): Parsed {
 }
 
 export function finish(job: Job, id: string, outcome: Outcome, usage: unknown, note: string | null, now = nowIso()): { dispatch: string; outcome: Outcome; parsed: Parsed } {
+  if (outcome === "interrupted") throw new SociotechnicError("usage", "Record a human interruption with interrupt, not finish");
   const d = jobfns.findDispatch(job, id);
   const parsed = parseDispatchRecord(job, d);
   finishDispatch(job, id, outcome, parsed, usage, note, now);
   return { dispatch: id, outcome, parsed };
+}
+
+export type InterruptResult = { job: string; dispatch: string; outcome: "interrupted"; note: string | null; parsed: Parsed };
+
+export function assertInterruptible(job: Job, id: string): Dispatch {
+  if (job.execution?.kind === "docker-sandbox") throw new SociotechnicError("sandbox-interrupt", "Docker Sandbox dispatches share one sandbox; stop the run instead of interrupting one dispatch");
+  const d = jobfns.findDispatch(job, id);
+  if (d.finishedAt !== null) throw new IllegalTransition(`dispatch ${id} already finished at ${d.finishedAt}`);
+  return d;
+}
+
+export function interrupt(job: Job, id: string, note: string | null, usage: unknown = null, now = nowIso()): InterruptResult {
+  const d = assertInterruptible(job, id);
+  const text = note?.trim() || null;
+  const parsed = parseDispatchRecord(job, d);
+  jobfns.interruptDispatch(job, id, parsed, usage, text, now);
+  if (d.execution) d.execution.launch = "finished";
+  return { job: job.id, dispatch: id, outcome: "interrupted", note: text, parsed };
 }
 
 function uniqueJobId(repo: string, base: string): string {

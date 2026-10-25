@@ -9,6 +9,7 @@ import { agentRoster, pinAgentVersions } from "./agent-versions.ts";
 import * as engine from "./engine.ts";
 import { mergeMethod, mergeRemote } from "./remote-merge.ts";
 import { driverSummary, postConsole } from "./console-client.ts";
+import { owningConsoleUrl } from "./driver-location.ts";
 import { SociotechnicError, IllegalTransition } from "./errors.ts";
 import { parseExecution } from "./execution.ts";
 import { exportCatalogBundle, checkCatalogBundles } from "./db/catalog-migrations.ts";
@@ -324,6 +325,24 @@ async function runOnConsole(args: Args): Promise<unknown> {
   };
 }
 
+async function interruptDispatch(args: Args): Promise<unknown> {
+  const id = assertJobId(need(args, 0, "<job>"));
+  const dispatch = need(args, 1, "<dispatch-id>");
+  const note = rest(args, 2);
+  const owner = await driverState(id);
+  if (owner) {
+    const recorded = owner.owner === "ui" ? owningConsoleUrl(owner.consoleUrl, id) : null;
+    const port = args.flags.port !== undefined ? parsePort(args.flags.port) : recorded === null ? null : Number(new URL(recorded).port);
+    if (port === null) throw new SociotechnicError("driver-active", `Job ${id} is owned by a driver without a known console; interrupt it there or pass --port`);
+    return postConsole(port, `/api/jobs/${encodeURIComponent(id)}/dispatches/${encodeURIComponent(dispatch)}/interrupt`, { note });
+  }
+  const out = await mutate(id, async (job) => {
+    await assertNoForeignDriver(id, process.pid);
+    return engine.interrupt(job, dispatch, note);
+  });
+  return { job: out.job, dispatch: out.dispatch, outcome: out.outcome, note: out.note, terminated: false };
+}
+
 async function pauseOnConsole(args: Args): Promise<unknown> {
   const id = assertJobId(need(args, 0, "<job>"));
   const port = parsePort(args.flags.port);
@@ -372,6 +391,8 @@ export async function run(argv: readonly string[]): Promise<unknown> {
       return runOnConsole(args);
     case "pause":
       return pauseOnConsole(args);
+    case "interrupt":
+      return interruptDispatch(args);
     case "restore":
       return restoreJob(assertJobId(need(args, 0, "<job>")), args.flags.force === "true");
     case "jobs":
@@ -453,7 +474,7 @@ export async function run(argv: readonly string[]): Promise<unknown> {
       return parseRecord(text, role.record);
     }
     case undefined:
-      return usageError("usage: sociotechnic <init|new|inventory|verify-comments|step|finish|status|override|rework|accept|pr|merge|stop|reopen|clean|usage|agents|roster|verdict|ui|db|jobs|projects|restore|resume|run|pause|design-respond> [args]");
+      return usageError("usage: sociotechnic <init|new|inventory|verify-comments|step|finish|status|override|rework|accept|pr|merge|stop|reopen|clean|usage|agents|roster|verdict|ui|db|jobs|projects|restore|resume|run|pause|interrupt|design-respond> [args]");
     default:
       return usageError(`unknown command: ${command}`);
   }
