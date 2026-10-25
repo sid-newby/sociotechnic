@@ -1,0 +1,7 @@
+{
+  "profile": "product-admin",
+  "sourceRoots": ["sociotechnic/ui/web/src"],
+  "canonicalMap": "sociotechnic/CONTRACTS.md",
+  "requiredCapabilities": ["Select/Listbox", "Form", "Scrollbar", "CRUD"],
+  "ownership": { "Select/Listbox": "native" }
+}

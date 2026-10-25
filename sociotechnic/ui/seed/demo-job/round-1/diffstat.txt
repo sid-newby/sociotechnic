@@ -1,0 +1,4 @@
+ README.md          | 18 ++++++++++++++++++
+ src/greet.ts       |  4 ++++
+ test/greet.test.ts |  3 ++-
+ 3 files changed, 24 insertions(+), 1 deletion(-)

@@ -1,0 +1,27 @@
+schemaVersion: "1"
+name: ${{ env.args.name }}
+agent: sbx-kit-shell
+
+args:
+  name:
+    required: true
+    pattern: '^sociotechnic-[a-f0-9]{12}-[0-9]{8}-[a-z0-9-]+$'
+  cpus:
+    required: true
+    pattern: '^([1-9]|[12][0-9]|3[0-2])$'
+  memoryGiB:
+    required: true
+    pattern: '^([1-9]|[1-5][0-9]|6[0-4])$'
+
+# Published v3 workloads/mixins require no local kit builder. The environment
+# schema is version 1; each selected kit uses the independent v3 kit schema.
+kits:
+  - docker.io/docker/sbx-kit-shell:1.0.0@sha256:367c9a4b3fd550f777e1d57cc53550afb4a1385055d79111acf6f996272ff6de
+  - docker.io/docker/sbx-kit-codex-mixin:0.162.1@sha256:04938d868baacd2ac2e11acd65a6a90e319d131b5f458b6d3f141cab7c85ffd7
+  - docker.io/docker/sbx-kit-claude-mixin:2.1.292@sha256:38797566d13559dd8388409a557aba5820fa2adc50fbc6497cba4be2649d41b4
+
+# No workspace, host lifecycle commands, SSH capability, MCP, or published ports.
+sandboxOptions:
+  cpus: ${{ env.args.cpus }}
+  memory: "${{ env.args.memoryGiB }}g"
+  skills: off

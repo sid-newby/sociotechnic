@@ -1,0 +1,9 @@
+#!/bin/sh
+if [ -n "$SOCIOTECHNIC_HOME" ]; then
+  home="$SOCIOTECHNIC_HOME"
+else
+  self=$(readlink -f "$0" 2>/dev/null || printf '%s' "$0")
+  home=$(cd "$(dirname "$self")/../.." && pwd)
+fi
+export SOCIOTECHNIC_HOME="$home"
+exec "$home/sociotechnic/bin/sociotechnic" "$@"

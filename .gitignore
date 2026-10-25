@@ -1,0 +1,39 @@
+source
+source/*
+sociotechnic/node_modules
+node_modules
+.sociotechnic/worktrees/
+.sociotechnic/agent-versions/
+tmp/
+.DS_Store
+.sociotechnic/console-archives/
+.sociotechnic/ui.pid
+.sociotechnic/ui.log
+sociotechnic/package-lock.json
+sociotechnic/ui/web/node_modules/
+sociotechnic/ui/web/dist/
+.sociotechnic/jobs/*/driver.json
+.sociotechnic/jobs/*/job.lock
+notes/
+
+.sociotechnic/jobs/
+.sociotechnic/staging/
+.sociotechnic/backups/
+.pnpm-store/
+.sociotechnic/sandboxes/
+
+# Keep the pinned Azure skill's recipe source documents despite the source rule.
+!sociotechnic/skills/azure-sme/upstream/**/source/
+!sociotechnic/skills/azure-sme/upstream/**/source/*.md
+
+# Provider authentication and local environment files are never project source.
+.env
+.env.*
+.claude/settings.local.json
+.claude/credentials.json
+.codex/auth.json
+
+# Local design critiques and review captures may contain private run data.
+.impeccable/critique/
+.impeccable/review/
+.impeccable/hook.cache.json

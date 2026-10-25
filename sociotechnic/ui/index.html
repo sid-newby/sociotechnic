@@ -1,0 +1,1369 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>sociotechnic console</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
+  --radius: 8px; --radius-sm: 5px;
+  --fs-xs: 11px; --fs-sm: 12.5px; --fs: 14px; --fs-lg: 17px; --fs-xl: 20px;
+  --rail-w: 340px;
+
+  --bg: #f6f7f9; --surface: #ffffff; --surface-2: #f0f2f5; --border: #dde1e7; --border-strong: #c3c9d2;
+  --text: #1b1f24; --muted: #5d6673; --faint: #8a93a0;
+  --accent: #2463d1; --accent-text: #ffffff; --accent-soft: #e6eefc;
+  --danger: #c0352b; --danger-soft: #fdecea; --warn-soft: #fff4dc;
+  --focus: #2463d1;
+  --overdue-bg: #fde8e6; --overdue-text: #9f2a20;
+  --bar: #6b8fd6;
+  --live: #1f9d55;
+
+  --st-neutral-bg: #eceff3; --st-neutral-fg: #3f4752;
+  --st-blue-bg: #dde9fd; --st-blue-fg: #1c4fae;
+  --st-green-bg: #d9f2e2; --st-green-fg: #17663a;
+  --st-amber-bg: #fdefc9; --st-amber-fg: #8a5a00;
+  --st-purple-bg: #ece2fb; --st-purple-fg: #5d2fa3;
+  --st-grey-bg: #e3e4e6; --st-grey-fg: #6a6d72;
+
+  --v-pass: #17663a; --v-changes: #b2401f; --v-skipped: #6a6d72; --v-pending: #8a93a0;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111418; --surface: #191d23; --surface-2: #20252d; --border: #2c323b; --border-strong: #3c444f;
+    --text: #e4e8ee; --muted: #9aa4b2; --faint: #6f7987;
+    --accent: #6d9cf2; --accent-text: #0d1320; --accent-soft: #1d2a42;
+    --danger: #f07b70; --danger-soft: #3a1d1b; --warn-soft: #3a2f16;
+    --focus: #8ab2ff;
+    --overdue-bg: #43201d; --overdue-text: #ffb3ab;
+    --bar: #5b84d0;
+    --live: #4cc97f;
+
+    --st-neutral-bg: #2a3038; --st-neutral-fg: #c5ccd6;
+    --st-blue-bg: #1b2d4d; --st-blue-fg: #9ec0ff;
+    --st-green-bg: #163522; --st-green-fg: #86dba5;
+    --st-amber-bg: #3d2f0c; --st-amber-fg: #f4c75a;
+    --st-purple-bg: #2f2147; --st-purple-fg: #c9aaf7;
+    --st-grey-bg: #2a2c30; --st-grey-fg: #9a9da3;
+
+    --v-pass: #86dba5; --v-changes: #f39a7c; --v-skipped: #9a9da3; --v-pending: #6f7987;
+  }
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--text); font: var(--fs)/1.45 var(--font); min-width: 320px; }
+.mono, code, pre, kbd { font-family: var(--mono); font-size: 0.92em; }
+h1, h2, h3 { margin: 0; line-height: 1.25; }
+h2 { font-size: var(--fs-lg); }
+h3 { font-size: var(--fs); }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 3px; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button {
+  background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  padding: var(--s1) var(--s3); cursor: pointer; min-height: 30px;
+}
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .55; cursor: not-allowed; }
+button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+button.danger { color: var(--danger); }
+button.link { background: none; border: none; padding: 0; min-height: 0; color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+input[type=text], textarea, select {
+  width: 100%; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  padding: var(--s2);
+}
+textarea { resize: vertical; min-height: 80px; }
+label { display: block; font-size: var(--fs-sm); color: var(--muted); margin-bottom: var(--s1); }
+.check { display: flex; align-items: center; gap: var(--s2); color: var(--text); font-size: var(--fs); }
+.muted { color: var(--muted); }
+.faint { color: var(--faint); }
+.small { font-size: var(--fs-sm); }
+.err { color: var(--danger); background: var(--danger-soft); border-radius: var(--radius-sm); padding: var(--s2) var(--s3); margin: var(--s2) 0 0; font-size: var(--fs-sm); white-space: pre-wrap; }
+.err:empty { display: none; }
+.row { display: flex; gap: var(--s2); align-items: center; flex-wrap: wrap; }
+.stack > * + * { margin-top: var(--s3); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.app-head {
+  display: flex; align-items: center; gap: var(--s4); padding: var(--s3) var(--s5);
+  background: var(--surface); border-bottom: 1px solid var(--border);
+}
+.app-head h1 { font-size: var(--fs-xl); letter-spacing: -.01em; }
+.app-head .home { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.summary { font-size: var(--fs-sm); color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.summary:empty { display: none; }
+.conn { font-size: var(--fs-sm); color: var(--muted); display: flex; align-items: center; gap: var(--s1); }
+.conn::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
+.conn[data-state=live]::before { background: var(--live); }
+.conn[data-state=reconnecting] { color: var(--st-amber-fg); }
+.conn[data-state=reconnecting]::before { background: var(--st-amber-fg); }
+.banner { margin: var(--s3) var(--s5) 0; padding: var(--s2) var(--s3); background: var(--warn-soft); border-radius: var(--radius-sm); font-size: var(--fs-sm); }
+.banner:empty { display: none; }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s4); padding: var(--s4) var(--s5) var(--s6); }
+@media (min-width: 1100px) { .layout { grid-template-columns: var(--rail-w) minmax(0, 1fr); align-items: start; } .rail { position: sticky; top: var(--s4); } }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--s4); }
+.card > h2 { margin-bottom: var(--s3); display: flex; align-items: center; gap: var(--s2); }
+.card > h2 .spacer { flex: 1; }
+.card > h2 button { font-size: var(--fs-sm); font-weight: 400; }
+main > .card + .card, main > section + section, main > * + * { margin-top: var(--s4); }
+
+.rail { display: flex; flex-direction: column; gap: var(--s4); }
+.newrun summary { cursor: pointer; font-weight: 600; font-size: var(--fs-lg); list-style: none; display: flex; align-items: center; gap: var(--s2); }
+.newrun summary::-webkit-details-marker { display: none; }
+.newrun summary::before { content: "+"; font-family: var(--mono); color: var(--accent); width: 1ch; }
+.newrun[open] summary::before { content: "\2212"; }
+.newrun form { margin-top: var(--s3); }
+.newrun.prominent { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.joblist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s2); }
+.jobitem {
+  width: 100%; text-align: left; display: block; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: var(--s3); min-height: 0;
+}
+.jobitem[aria-current=true] { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.jobitem .feat { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: var(--s1) 0; }
+.jobitem .meta { font-size: var(--fs-xs); color: var(--muted); display: flex; gap: var(--s2); flex-wrap: wrap; align-items: center; }
+.joblist li.gone .jobitem { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.jobgone { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); padding: var(--s1) var(--s3); background: var(--surface-2); border: 1px solid var(--border); border-top: none; border-radius: 0 0 var(--radius) var(--radius); font-size: var(--fs-sm); }
+.filters { display: grid; gap: var(--s2); }
+.chips { display: flex; flex-wrap: wrap; gap: var(--s1); }
+.chip { min-height: 0; padding: 1px var(--s2); border-radius: 999px; font-size: var(--fs-xs); font-weight: 600; background: var(--surface); color: var(--muted); }
+.chip[aria-pressed=true] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--live); display: inline-block; animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
+
+.pill { display: inline-block; font-size: var(--fs-xs); font-weight: 600; padding: 1px var(--s2); border-radius: 999px; white-space: nowrap; }
+.st-neutral { background: var(--st-neutral-bg); color: var(--st-neutral-fg); }
+.st-blue { background: var(--st-blue-bg); color: var(--st-blue-fg); }
+.st-green { background: var(--st-green-bg); color: var(--st-green-fg); }
+.st-amber { background: var(--st-amber-bg); color: var(--st-amber-fg); }
+.st-purple { background: var(--st-purple-bg); color: var(--st-purple-fg); }
+.st-grey { background: var(--st-grey-bg); color: var(--st-grey-fg); }
+.tag { font-size: var(--fs-xs); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 0 var(--s1); color: var(--muted); }
+
+.empty { text-align: center; padding: var(--s6) var(--s4); color: var(--muted); }
+.empty strong { color: var(--text); display: block; font-size: var(--fs-lg); margin-bottom: var(--s2); }
+
+.runhead .feature { font-size: var(--fs-xl); font-weight: 600; white-space: pre-wrap; overflow-wrap: anywhere; }
+.runhead .statusline { margin: var(--s2) 0 var(--s3); display: flex; gap: var(--s2); align-items: baseline; flex-wrap: wrap; }
+.runhead .statusline span, .gate .reason { overflow-wrap: anywhere; min-width: 0; }
+.kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--s1) var(--s4); margin: 0; font-size: var(--fs-sm); }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; overflow-wrap: anywhere; }
+
+.stages { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: var(--s1); }
+.stages li { text-align: center; padding: var(--s2) var(--s1); border-radius: var(--radius-sm); background: var(--surface-2); color: var(--faint); font-size: var(--fs-sm); font-weight: 600; text-transform: capitalize; border: 1px solid transparent; }
+.stages li.done { color: var(--muted); }
+.stages li.done::before { content: "\2713  "; }
+.stages li.current { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.stages li.current.halt { background: var(--st-amber-bg); color: var(--st-amber-fg); border-color: currentColor; }
+.stages li.current.end { background: var(--st-grey-bg); color: var(--st-grey-fg); border-color: currentColor; }
+
+.gate { border-color: var(--st-amber-fg); }
+.gate .reason { margin: 0 0 var(--s3); }
+.gate .actions { display: grid; gap: var(--s3); }
+.gate .action { display: grid; gap: var(--s2); padding: var(--s3); background: var(--surface-2); border-radius: var(--radius-sm); }
+.gate .action textarea { min-height: 56px; }
+.gate .history { margin-top: var(--s3); font-size: var(--fs-sm); }
+.gate .history ul { margin: var(--s1) 0 0; padding-left: var(--s4); }
+
+.rounds { display: grid; gap: var(--s3); }
+.round { border: 1px solid var(--border); border-radius: var(--radius); padding: var(--s3); }
+.round h3 { display: flex; gap: var(--s2); align-items: baseline; margin-bottom: var(--s2); }
+.round .grid { display: grid; gap: var(--s3); grid-template-columns: 1fr; }
+@media (min-width: 900px) { .round .grid { grid-template-columns: 1fr 1fr; } }
+.round h4 { margin: 0 0 var(--s1); font-size: var(--fs-sm); color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.lenses { list-style: none; margin: 0; padding: 0; font-size: var(--fs-sm); }
+.lenses li { display: flex; justify-content: space-between; gap: var(--s2); padding: 2px 0; border-bottom: 1px dashed var(--border); }
+.v-PASS, .v-READY, .v-APPROVE, .v-DONE, .v-ok { color: var(--v-pass); font-weight: 600; }
+.v-CHANGES, .v-BLOCKED, .v-ESCALATE, .v-failed, .v-timeout, .v-fail { color: var(--v-changes); font-weight: 600; }
+.v-SKIPPED { color: var(--v-skipped); }
+.v-pending { color: var(--v-pending); font-style: italic; }
+.reasons { margin: 0; padding-left: var(--s4); font-size: var(--fs-sm); }
+
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: var(--fs-sm); }
+th, td { text-align: left; padding: var(--s1) var(--s2); border-bottom: 1px solid var(--border); vertical-align: top; white-space: nowrap; }
+th { color: var(--muted); font-weight: 600; font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .03em; }
+tr.overdue td { background: var(--overdue-bg); color: var(--overdue-text); }
+td.wrap { white-space: normal; }
+details.tail pre { max-height: 200px; }
+
+.bars { display: grid; gap: var(--s2); }
+.bar { display: grid; grid-template-columns: minmax(120px, 210px) minmax(0, 1fr) max-content; gap: var(--s3); align-items: center; font-size: var(--fs-sm); }
+.bar .track { height: 12px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+.bar .fill { height: 100%; background: var(--bar); border-radius: 999px; min-width: 2px; }
+
+.driver .status { display: flex; gap: var(--s3); align-items: center; flex-wrap: wrap; margin-bottom: var(--s3); font-size: var(--fs-sm); }
+.active { list-style: none; margin: 0 0 var(--s3); padding: 0; font-size: var(--fs-sm); }
+.active li { padding: var(--s1) var(--s2); border-radius: var(--radius-sm); display: flex; gap: var(--s3); flex-wrap: wrap; }
+.active .activity { flex: 1 1 200px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.active li.overdue { background: var(--overdue-bg); color: var(--overdue-text); }
+.log { list-style: none; margin: 0; padding: var(--s2); background: var(--surface-2); border-radius: var(--radius-sm); font-family: var(--mono); font-size: var(--fs-xs); max-height: 240px; overflow: auto; }
+.log li { white-space: pre-wrap; overflow-wrap: anywhere; }
+.log .warn { color: var(--st-amber-fg); }
+.log .error { color: var(--danger); }
+.log .at { color: var(--faint); margin-right: var(--s2); }
+
+pre.raw { margin: 0; padding: var(--s3); background: var(--surface-2); border-radius: var(--radius-sm); overflow: auto; white-space: pre; font-size: var(--fs-sm); line-height: 1.5; }
+.plan ol { margin: var(--s2) 0 0; padding-left: var(--s5); }
+.plan li { margin-bottom: var(--s1); }
+
+dialog.drawer {
+  margin: 0 0 0 auto; height: 100vh; max-height: 100vh; width: min(980px, 100%); max-width: 100%;
+  border: none; border-left: 1px solid var(--border); padding: 0; background: var(--surface); color: var(--text);
+}
+dialog.drawer::backdrop { background: rgb(0 0 0 / .35); }
+.drawer-inner { display: flex; flex-direction: column; height: 100%; }
+.drawer-head { display: flex; align-items: center; gap: var(--s3); padding: var(--s3) var(--s4); border-bottom: 1px solid var(--border); }
+.drawer-head h2 { flex: 1; }
+.drawer-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr; }
+@media (min-width: 900px) { .drawer-body.split { grid-template-columns: 260px minmax(0, 1fr); } }
+.reclist { list-style: none; margin: 0; padding: var(--s2); overflow: auto; border-right: 1px solid var(--border); font-size: var(--fs-sm); max-height: 30vh; }
+@media (min-width: 900px) { .reclist { max-height: none; } }
+.reclist button { width: 100%; text-align: left; background: none; border: 1px solid transparent; padding: var(--s1) var(--s2); min-height: 0; display: flex; justify-content: space-between; gap: var(--s2); }
+.reclist button[aria-current=true] { background: var(--accent-soft); border-color: var(--accent); }
+.viewer { min-height: 0; overflow: hidden; display: flex; flex-direction: column; padding: var(--s3); gap: var(--s2); }
+.viewer pre.raw { flex: 1; }
+</style>
+</head>
+<body>
+<header class="app-head">
+  <h1>sociotechnic</h1>
+  <span class="home muted small mono" id="home" title="SOCIOTECHNIC_HOME"></span>
+  <span class="summary" id="summary" title="Every project and job under this SOCIOTECHNIC_HOME"></span>
+  <span class="conn" id="db" data-state="down" hidden>db</span>
+  <span class="conn" id="conn" data-state="connecting" role="status">connecting</span>
+  <button type="button" id="help-btn" aria-haspopup="dialog">Help</button>
+</header>
+<p class="banner" id="banner" role="status"></p>
+
+<div class="layout">
+  <nav class="rail" aria-label="Jobs">
+    <div class="filters" id="filters">
+      <div id="proj-wrap" hidden>
+        <label for="proj-sel">Project</label>
+        <select id="proj-sel"><option value="">All projects</option></select>
+      </div>
+      <div class="chips" id="status-chips" role="group" aria-label="Filter jobs by status"></div>
+    </div>
+    <details class="card newrun" id="newrun">
+      <summary>New run</summary>
+      <p class="muted small" id="newrun-hint" hidden>No jobs yet. Point sociotechnic at a git repository and describe the change; it plans, builds, reviews and stops at a human gate.</p>
+      <form id="newrun-form" class="stack" novalidate>
+        <div>
+          <label for="nr-repo">Repository path</label>
+          <input type="text" id="nr-repo" class="mono" placeholder="/abs/path/to/repo" autocomplete="off" spellcheck="false" required>
+        </div>
+        <div>
+          <label for="nr-base">Base branch (optional)</label>
+          <input type="text" id="nr-base" class="mono" placeholder="current branch" autocomplete="off" spellcheck="false">
+        </div>
+        <div>
+          <label for="nr-prompt">Prompt</label>
+          <textarea id="nr-prompt" rows="5" placeholder="What should change, for whom, and how you would know it worked." required></textarea>
+        </div>
+        <label class="check"><input type="checkbox" id="nr-hold" checked> Hold after plan</label>
+        <div class="row"><button type="submit" class="primary" id="nr-start">Start</button></div>
+        <p class="err" id="nr-err" role="alert"></p>
+      </form>
+    </details>
+    <section aria-labelledby="jobs-h">
+      <h2 id="jobs-h" class="sr-only">Jobs</h2>
+      <ul class="joblist" id="joblist"></ul>
+    </section>
+  </nav>
+
+  <main id="run" aria-live="off">
+    <div class="card empty" id="run-empty"><strong>Loading</strong></div>
+    <header class="card runhead" id="run-head" hidden></header>
+    <nav class="card" id="stages-wrap" aria-label="Stage" hidden><ol class="stages" id="stages"></ol></nav>
+    <section class="card gate" id="gate" aria-labelledby="gate-h" hidden></section>
+    <section class="card driver" id="driver" aria-labelledby="driver-h" hidden>
+      <h2 id="driver-h">Driver</h2>
+      <div id="driver-body"></div>
+      <h3 class="small muted" style="margin:var(--s3) 0 var(--s1)">Log</h3>
+      <ul class="log" id="driver-log" aria-live="polite" aria-relevant="additions"></ul>
+    </section>
+    <section class="card plan" id="plan" aria-labelledby="plan-h" hidden></section>
+    <section class="card" id="rounds" aria-labelledby="rounds-h" hidden></section>
+    <section class="card" id="dispatches" aria-labelledby="disp-h" hidden></section>
+    <section class="card" id="usage" aria-labelledby="usage-h" hidden></section>
+  </main>
+</div>
+
+<dialog class="drawer" id="records-dlg" aria-labelledby="records-h">
+  <div class="drawer-inner">
+    <div class="drawer-head">
+      <h2 id="records-h">Records</h2>
+      <button type="button" data-close>Close</button>
+    </div>
+    <div class="drawer-body split">
+      <ul class="reclist" id="reclist" aria-label="Records"></ul>
+      <div class="viewer">
+        <div class="row small"><span class="mono" id="rec-path"></span><span class="muted" id="rec-meta"></span></div>
+        <p class="err" id="rec-err" role="alert"></p>
+        <pre class="raw" id="rec-text" tabindex="0" aria-label="Record contents"></pre>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<dialog class="drawer" id="help-dlg" aria-labelledby="help-h">
+  <div class="drawer-inner">
+    <div class="drawer-head">
+      <h2 id="help-h">Orchestration contract (AGENTS.md)</h2>
+      <button type="button" data-close>Close</button>
+    </div>
+    <div class="viewer"><pre class="raw" id="help-text" tabindex="0" style="white-space:pre-wrap"></pre></div>
+  </div>
+</dialog>
+
+<script>
+"use strict";
+(() => {
+const STAGES = ["plan", "build", "checks", "review", "gate", "approve", "human"];
+const STATUS_GROUP = {
+  new: "neutral", planning: "neutral", researching: "neutral", planned: "neutral",
+  building: "blue", built: "blue", checked: "blue", reviewing: "blue", reviewed: "blue", approving: "blue",
+  ready: "green", "merged-local": "green", accepted: "green", "needs-human": "amber", merged: "purple", stopped: "grey",
+};
+const TERMINAL = new Set(["merged", "stopped"]);
+const PRE_PLAN = new Set(["new", "planning", "researching"]);
+const STATUS_CHIPS = ["", "active", "ready", "needs-human", "merged-local", "accepted", "merged", "stopped"];
+const NOT_ACTIVE = new Set(STATUS_CHIPS.slice(2));
+const DB_REFRESH_MS = 60000;
+const SSE_SILENCE_MS = 40000;
+const BOUNDS = ["rounds", "dispatchesPerRound", "retriesPerStep"];
+const LENS_RECORD = { "reviewer-code": "review-code.md", "reviewer-ux": "review-ux.md", "reviewer-ui": "review-ui.md", "reviewer-security": "review-security.md", conformance: "conformance.md" };
+
+const S = {
+  meta: null, jobs: [], jobsLoaded: false, selected: null, detail: null, driver: null,
+  drafts: {}, busy: null, errors: {}, checks: new Map(), recPath: null,
+  sseState: "connecting", es: null, lastEvent: 0, pollTimer: null, reconnectTimer: null, refetchTimers: new Map(),
+  filter: { project: "", status: "" }, projects: null, known: new Map(), jobsSeq: 0, absent: new Set(), allJobs: null,
+};
+
+const $ = (id) => document.getElementById(id);
+const arr = (v) => (Array.isArray(v) ? v : []);
+const obj = (v) => (v && typeof v === "object" && !Array.isArray(v) ? v : {});
+const str = (v, d = "") => (v == null ? d : String(v));
+
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  let value;
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === "class") el.className = v;
+    else if (k === "text") el.textContent = v;
+    else if (k === "value") value = v;
+    else if (k === "checked") el.checked = !!v;
+    else if (k.startsWith("on") && typeof v === "function") el.addEventListener(k.slice(2), v);
+    else if (k === "dataset") Object.assign(el.dataset, v);
+    else el.setAttribute(k, v === true ? "" : String(v));
+  }
+  for (const kid of kids.flat(Infinity)) {
+    if (kid == null || kid === false) continue;
+    el.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+  }
+  if (value !== undefined) el.value = value;
+  return el;
+}
+
+function patch(el, key, build) {
+  if (el._key === key) return;
+  el._key = key;
+  const focusId = document.activeElement && el.contains(document.activeElement) ? document.activeElement.id : null;
+  el.replaceChildren(...[build()].flat(Infinity).filter((n) => n != null && n !== false));
+  if (focusId) { const f = document.getElementById(focusId); if (f && !f.disabled) f.focus(); }
+}
+
+function short(sha) { return typeof sha === "string" && sha.length > 12 ? sha.slice(0, 10) : str(sha, "—"); }
+function shaEl(sha) { return sha ? h("span", { class: "mono", title: sha, text: short(sha) }) : h("span", { class: "faint", text: "—" }); }
+function ms(iso) { const t = Date.parse(iso); return Number.isFinite(t) ? t : null; }
+function fmtTime(iso) {
+  const t = ms(iso); if (t == null) return "—";
+  const d = new Date(t), now = new Date();
+  const time = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  return d.toDateString() === now.toDateString() ? time : `${d.toLocaleDateString([], { month: "short", day: "numeric" })} ${time}`;
+}
+function timeEl(iso) { return h("time", { datetime: str(iso), title: str(iso), text: fmtTime(iso) }); }
+function dur(msec) {
+  if (!Number.isFinite(msec) || msec < 0) return "—";
+  const s = Math.floor(msec / 1000), hh = Math.floor(s / 3600), mm = Math.floor((s % 3600) / 60), ss = s % 60;
+  if (hh) return `${hh}h ${String(mm).padStart(2, "0")}m`;
+  if (mm) return `${mm}m ${String(ss).padStart(2, "0")}s`;
+  return `${ss}s`;
+}
+function ago(iso) {
+  const t = ms(iso); if (t == null) return "—";
+  const s = Math.max(0, Math.round((Date.now() - t) / 1000));
+  if (s < 60) return "just now";
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
+}
+function bytes(n) { return !Number.isFinite(n) ? "" : n < 1024 ? `${n} B` : `${(n / 1024).toFixed(1)} KB`; }
+function pill(status) { return h("span", { class: `pill st-${STATUS_GROUP[status] || "neutral"}`, text: str(status, "unknown") }); }
+function verdictEl(v, extra) { const s = str(v, "pending"); return h("span", { class: `v-${s}` }, s, extra ? h("span", { class: "muted", text: ` ${extra}` }) : null); }
+
+function stageOf(status) {
+  switch (status) {
+    case "new": case "planning": case "researching": case "planned": return "plan";
+    case "building": case "built": return "build";
+    case "checked": return "checks";
+    case "reviewing": return "review";
+    case "reviewed": return "gate";
+    case "approving": return "approve";
+    default: return "human";
+  }
+}
+
+async function api(method, path, body) {
+  const opt = { method, headers: { Accept: "application/json" } };
+  if (method !== "GET") { opt.headers["Content-Type"] = "application/json"; opt.body = JSON.stringify(body ?? {}); }
+  let res;
+  try { res = await fetch(path, opt); } catch (e) { throw new Error(`Network error: ${e && e.message ? e.message : e}`); }
+  const text = await res.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch { data = null; }
+  if (!res.ok) {
+    const err = new Error(data && data.error ? String(data.error) : `HTTP ${res.status}`);
+    err.status = res.status; err.code = data && data.code;
+    throw err;
+  }
+  if (method !== "GET") afterMutation();
+  return data;
+}
+let mutationTimer = null;
+function afterMutation() {
+  if (mutationTimer) return;
+  mutationTimer = setTimeout(() => { mutationTimer = null; loadDb(); loadProjects(); }, 300);
+}
+const jobPath = (id, rest = "") => `/api/jobs/${encodeURIComponent(id)}${rest}`;
+const recPath = (id, p) => jobPath(id, `/records/${String(p).split("/").map(encodeURIComponent).join("/")}`);
+
+async function act(area, key, fn) {
+  if (S.busy) return;
+  S.busy = key; S.errors[area] = "";
+  renderRun(); renderJobs();
+  try { await fn(); }
+  catch (e) { S.errors[area] = e && e.message ? e.message : String(e); }
+  finally { S.busy = null; renderRun(); renderJobs(); }
+}
+
+function btn(label, key, area, fn, opts = {}) {
+  return h("button", {
+    type: "button", id: `b-${key}`, class: opts.cls, disabled: !!S.busy || !!opts.disabled,
+    "aria-busy": S.busy === key ? "true" : null, title: opts.title,
+    onclick: () => { if (opts.confirm && !window.confirm(opts.confirm)) return; act(area, key, fn); },
+  }, S.busy === key ? `${label}…` : label);
+}
+const baseBtn = btn;
+function draftArea(id, labelText, placeholder, rows = 2) {
+  return [
+    h("label", { for: id, text: labelText }),
+    h("textarea", { id, rows, placeholder, value: str(S.drafts[id]), oninput: (e) => { S.drafts[id] = e.target.value; } }),
+  ];
+}
+const draft = (id) => str(S.drafts[id]).trim();
+
+async function loadMeta() {
+  try {
+    S.meta = await api("GET", "/api/meta");
+    $("home").textContent = str(S.meta && S.meta.sociotechnicHome);
+    $("help-text").textContent = str(S.meta && S.meta.agentsMd, "AGENTS.md was not provided by the server.");
+    const ag = obj(S.meta && S.meta.agents);
+    const probs = arr(ag.problems);
+    $("banner").textContent = ag.ok === false ? `Agent definitions do not match roles.ts: ${probs.map((p) => (typeof p === "string" ? p : JSON.stringify(p))).join("; ") || "see sociotechnic agents"}` : "";
+  } catch (e) {
+    $("banner").textContent = `Could not load /api/meta: ${e.message}`;
+  }
+}
+
+const jid = (j) => str(j && (j.job ?? j.id));
+const baseName = (p) => str(p).replace(/\/+$/, "").split("/").pop();
+const projectFilter = () => (S.projects ? S.filter.project : "");
+const filtering = () => !!(S.filter.status || projectFilter());
+
+function matchesFilter(j) {
+  const st = S.filter.status, p = projectFilter();
+  if (st === "active" ? NOT_ACTIVE.has(j.status) : st && j.status !== st) return false;
+  return !p || j.project === p || j.repo === p || baseName(j.repo) === p;
+}
+
+async function loadJobs() {
+  const seq = ++S.jobsSeq;
+  const q = new URLSearchParams();
+  if (projectFilter()) q.set("project", projectFilter());
+  if (S.filter.status && S.filter.status !== "active") q.set("status", S.filter.status);
+  const qs = q.toString();
+  try {
+    const [data, everything] = await Promise.all([api("GET", `/api/jobs${qs ? `?${qs}` : ""}`), qs ? api("GET", "/api/jobs").catch(() => null) : null]);
+    if (seq !== S.jobsSeq) return;
+    const all = arr(data && data.jobs).filter((j) => j && typeof j === "object");
+    if (!qs || everything) S.allJobs = qs ? arr(everything.jobs).filter((j) => j && typeof j === "object") : all;
+    for (const j of all) S.known.set(jid(j), j);
+    S.jobs = all.filter(matchesFilter).sort((a, b) => (ms(b.updatedAt) || 0) - (ms(a.updatedAt) || 0));
+    S.jobsLoaded = true;
+    S.errors.jobs = "";
+  } catch (e) {
+    if (seq !== S.jobsSeq) return;
+    S.errors.jobs = `Could not load jobs: ${e.message}`;
+  }
+  renderJobs();
+  renderSummary();
+  renderRun();
+}
+
+async function loadProjects() {
+  if (S.absent.has("projects")) return;
+  try { S.projects = arr(obj(await api("GET", "/api/projects")).projects).filter((p) => p && (p.project || p.repo)); }
+  catch (e) { S.projects = null; if (e.status === 404) S.absent.add("projects"); }
+  renderFilters();
+  renderSummary();
+}
+
+function dbName(url) {
+  const m = /^[a-z][a-z0-9+.-]*:\/\/[^/]*\/([^/?#]+)/i.exec(str(url));
+  if (!m) return "";
+  try { return decodeURIComponent(m[1]); } catch { return m[1]; }
+}
+function dbWarning(d) {
+  const w = arr(d.warnings).map((x) => str(x)).filter(Boolean).join("; ");
+  return w || str(d.warning) || str(d.error) || str(d.reason) || "database unreachable";
+}
+async function loadDb() {
+  const el = $("db");
+  if (S.absent.has("db")) return;
+  let d;
+  try { d = obj(await api("GET", "/api/db")); }
+  catch (e) {
+    if (e.status === 404) { el.hidden = true; S.absent.add("db"); return; }
+    d = { reachable: false, error: e.message };
+  }
+  const ok = d.reachable === true;
+  const name = dbName(d.url);
+  el.hidden = false;
+  el.dataset.state = ok ? "live" : "down";
+  el.textContent = ok ? `db ${name || "connected"}` : "db offline";
+  el.title = ok
+    ? [str(d.url), d.version ? str(d.version) : "", `${Number(d.jobs) || 0} jobs · ${Number(d.records) || 0} records · ${Number(d.events) || 0} events`].filter(Boolean).join("\n")
+    : dbWarning(d);
+}
+
+function worktreeMissing(id) {
+  if (!id) return false;
+  if (S.detail && S.detail.job && S.detail.job.id === id) return S.detail.worktreePresent === false;
+  return obj(S.known.get(id)).worktreePresent === false;
+}
+async function resumeJob(id, body) {
+  const r = obj(await api("POST", jobPath(id, "/resume"), body));
+  const state = "running" in r ? r : r.driver && typeof r.driver === "object" && "running" in r.driver ? r.driver : null;
+  if (state && S.selected === id) S.driver = state;
+  await loadJobs();
+  if (S.selected === id) await loadDetail(id);
+}
+
+function readHash() {
+  const q = new URLSearchParams(location.hash.replace(/^#/, ""));
+  const status = q.get("status") || "";
+  return { job: q.get("job") || null, project: q.get("project") || "", status: STATUS_CHIPS.includes(status) ? status : "" };
+}
+function writeHash() {
+  const parts = [];
+  if (S.selected) parts.push(`job=${encodeURIComponent(S.selected)}`);
+  if (S.filter.project) parts.push(`project=${encodeURIComponent(S.filter.project)}`);
+  if (S.filter.status) parts.push(`status=${encodeURIComponent(S.filter.status)}`);
+  const next = parts.length ? `#${parts.join("&")}` : "";
+  if (location.hash !== next) history.replaceState(null, "", next || `${location.pathname}${location.search}`);
+}
+function setFilter(next) {
+  S.filter = { ...S.filter, ...next };
+  writeHash(); renderFilters(); renderJobs();
+  loadJobs();
+}
+
+async function loadDetail(id) {
+  if (!id) return;
+  try {
+    const data = await api("GET", jobPath(id));
+    if (S.selected !== id) return;
+    S.detail = data;
+    if (data && data.driver) S.driver = data.driver;
+    S.errors.detail = "";
+    loadChecks();
+  } catch (e) {
+    if (S.selected !== id) return;
+    S.errors.detail = e.status === 404 ? `Job ${id} was not found.` : `Could not load job: ${e.message}`;
+    if (e.status === 404) S.detail = null;
+  }
+  renderRun();
+}
+
+async function loadDriver(id) {
+  try {
+    const d = await api("GET", jobPath(id, "/driver"));
+    if (S.selected === id) { S.driver = d; renderRun(); }
+  } catch {}
+}
+
+function loadChecks() {
+  const d = S.detail; if (!d || !d.job) return;
+  const recs = new Map(arr(d.records).map((r) => [r && r.path, r]));
+  for (const r of arr(d.job.rounds)) {
+    const p = r && r.checks && r.checks.path; if (!p || !recs.has(p)) continue;
+    const key = `${d.job.id}:${p}:${str(recs.get(p).mtime)}`;
+    if (S.checks.has(key)) continue;
+    S.checks.set(key, { loading: true });
+    api("GET", recPath(d.job.id, p))
+      .then((res) => { let parsed = null; try { parsed = JSON.parse(str(res && res.text)); } catch { parsed = null; } S.checks.set(key, { data: parsed }); })
+      .catch((e) => S.checks.set(key, { error: e.message }))
+      .finally(renderRun);
+  }
+}
+function checksFor(job, round) {
+  const p = round && round.checks && round.checks.path; if (!p) return null;
+  const rec = arr(S.detail && S.detail.records).find((r) => r && r.path === p);
+  return rec ? S.checks.get(`${job.id}:${p}:${str(rec.mtime)}`) || null : null;
+}
+
+function select(id, { push = true } = {}) {
+  if (!id) return;
+  if (S.selected !== id) { S.selected = id; S.detail = null; S.driver = null; S.errors.detail = ""; S.errors.gate = ""; S.errors.driver = ""; S.recPath = null; }
+  if (push) writeHash();
+  renderJobs(); renderRun();
+  loadDetail(id);
+}
+
+function scheduleRefetch(id) {
+  if (S.refetchTimers.has(id)) return;
+  S.refetchTimers.set(id, setTimeout(() => { S.refetchTimers.delete(id); if (id === S.selected) loadDetail(id); }, 150));
+}
+let jobsTimer = null;
+function scheduleJobs() { if (jobsTimer) return; jobsTimer = setTimeout(() => { jobsTimer = null; loadJobs(); }, 200); }
+
+function setConn(state) {
+  S.sseState = state;
+  const el = $("conn");
+  el.dataset.state = state;
+  el.textContent = state === "live" ? "live" : state === "reconnecting" ? "reconnecting (polling every 3 s)" : "connecting";
+}
+function watchdog() {
+  if (!S.es || S.sseState !== "live" || Date.now() - S.lastEvent < SSE_SILENCE_MS) return;
+  S.es.close(); S.es = null;
+  setConn("reconnecting"); startPolling();
+  if (!S.reconnectTimer) S.reconnectTimer = setTimeout(() => { S.reconnectTimer = null; connect(); }, 3000);
+}
+function startPolling() {
+  if (S.pollTimer) return;
+  S.pollTimer = setInterval(() => { loadJobs(); if (S.selected) loadDetail(S.selected); }, 3000);
+}
+function stopPolling() { clearInterval(S.pollTimer); S.pollTimer = null; }
+function parseEvt(e) { try { return JSON.parse(e.data); } catch { return null; } }
+
+function connect() {
+  if (typeof EventSource !== "function") { setConn("reconnecting"); startPolling(); return; }
+  if (S.es) S.es.close();
+  const es = new EventSource("/events");
+  S.es = es;
+  S.lastEvent = Date.now();
+  es.addEventListener("ping", () => { S.lastEvent = Date.now(); });
+  es.addEventListener("open", () => {
+    S.lastEvent = Date.now();
+    const wasDown = S.sseState === "reconnecting";
+    setConn("live"); stopPolling();
+    if (wasDown) { loadJobs(); if (S.selected) loadDetail(S.selected); }
+  });
+  es.addEventListener("error", () => {
+    setConn("reconnecting"); startPolling();
+    if (es.readyState === EventSource.CLOSED && !S.reconnectTimer) {
+      S.reconnectTimer = setTimeout(() => { S.reconnectTimer = null; connect(); }, 5000);
+    }
+  });
+  es.addEventListener("jobs", (e) => {
+    S.lastEvent = Date.now();
+    const d = obj(parseEvt(e));
+    scheduleJobs();
+    if (d.id && d.id === S.selected) scheduleRefetch(d.id);
+  });
+  es.addEventListener("driver", (e) => {
+    S.lastEvent = Date.now();
+    const d = obj(parseEvt(e));
+    scheduleJobs();
+    if (!d.id || d.id !== S.selected) return;
+    const state = d.state && typeof d.state === "object" ? d.state : ("running" in d && Array.isArray(d.log) && Array.isArray(d.active) ? d : null);
+    if (state) { S.driver = state; renderRun(); }
+    else if ("active" in d || "log" in d) { S.driver = mergeDriver(obj(S.driver), d); renderRun(); }
+    else loadDriver(d.id);
+  });
+}
+
+const DRIVER_FIELDS = ["running", "mode", "hold", "startedAt", "finishedAt", "active", "lastStep", "error"];
+function mergeDriver(cur, d) {
+  const next = { ...cur };
+  for (const k of DRIVER_FIELDS) if (k in d) next[k] = d[k];
+  if ("log" in d) {
+    const add = Array.isArray(d.log) ? d.log : d.log ? [d.log] : [];
+    const seen = new Set(arr(cur.log).map((e) => `${str(e && e.at)}|${str(e && e.text)}`));
+    next.log = [...arr(cur.log), ...add.filter((e) => !seen.has(`${str(e && e.at)}|${str(e && e.text)}`))].slice(-200);
+  }
+  return next;
+}
+
+function consoleDriven(j) {
+  const drv = obj(j && j.driver);
+  return drv.running === true || (drv.pid != null && drv.running !== false);
+}
+const sessionDriven = (j) => arr(j && j.pending).length > 0;
+const isRunning = (j) => consoleDriven(j) || sessionDriven(j);
+const plural = (n, one) => `${n} ${one}${n === 1 ? "" : "s"}`;
+
+function renderSummary() {
+  const el = $("summary");
+  if (!S.allJobs) { el.textContent = ""; return; }
+  const repos = new Set(arr(S.projects).map((p) => str(p.repo || p.project)));
+  for (const j of S.allJobs) repos.add(str(j.repo || j.project));
+  repos.delete("");
+  el.textContent = `${plural(repos.size, "project")} · ${plural(S.allJobs.length, "job")} · ${S.allJobs.filter(isRunning).length} running`;
+}
+
+function renderFilters() {
+  const sel = $("proj-sel");
+  $("proj-wrap").hidden = !S.projects;
+  if (S.projects) {
+    const rows = S.projects.map((p) => ({ project: str(p.project, baseName(p.repo)), repo: str(p.repo) }));
+    const dup = (name) => rows.filter((r) => r.project === name).length > 1;
+    const opts = rows.map((r) => (dup(r.project) && r.repo ? { value: r.repo, label: `${r.project} (${r.repo})`, title: r.repo } : { value: r.project, label: r.project, title: r.repo }));
+    if (S.filter.project && !opts.some((o) => o.value === S.filter.project)) opts.push({ value: S.filter.project, label: S.filter.project, title: "not in the project list" });
+    patch(sel, JSON.stringify(opts), () => [h("option", { value: "", text: "All projects" }), opts.map((o) => h("option", { value: o.value, title: o.title || null, text: o.label }))]);
+    sel.value = S.filter.project;
+  }
+  patch($("status-chips"), S.filter.status, () => STATUS_CHIPS.map((s) => h("button", {
+    type: "button", class: "chip", id: `chip-${s || "all"}`, "aria-pressed": S.filter.status === s ? "true" : "false", onclick: () => setFilter({ status: s }),
+  }, s || "All")));
+}
+
+function renderJobs() {
+  const list = $("joblist");
+  const noJobs = S.jobsLoaded && !S.errors.jobs && S.jobs.length === 0 && !filtering();
+  const nr = $("newrun");
+  $("newrun-hint").hidden = !noJobs;
+  nr.classList.toggle("prominent", noJobs);
+  if (noJobs) nr.open = true;
+  const key = JSON.stringify([S.jobs, S.selected, S.errors.jobs, S.jobsLoaded, filtering(), S.busy, S.errors.rail]);
+  patch(list, key, () => {
+    if (S.errors.jobs) return h("li", {}, h("p", { class: "err", role: "alert", text: S.errors.jobs }));
+    if (!S.jobsLoaded) return h("li", { class: "muted small", text: "Loading jobs…" });
+    if (!S.jobs.length) return h("li", { class: "muted small", text: filtering() ? "No jobs match this filter." : "No jobs yet." });
+    const railErr = S.errors.rail ? h("li", {}, h("p", { class: "err", role: "alert", text: S.errors.rail })) : null;
+    return [railErr, S.jobs.map((j) => {
+      const id = jid(j);
+      const live = isRunning(j);
+      const liveTitle = consoleDriven(j) ? "console driver" : "driven by a session";
+      const gone = j.worktreePresent === false;
+      return h("li", { class: gone ? "gone" : null }, h("button", {
+        type: "button", class: "jobitem", "aria-current": id === S.selected ? "true" : "false", onclick: () => select(id),
+      },
+        h("div", { class: "row" }, pill(j.status), live ? h("span", { class: "live-dot", title: liveTitle, "aria-label": liveTitle, role: "img" }) : null,
+          h("span", { class: "mono small muted", text: id })),
+        h("div", { class: "feat", text: str(j.feature, "(no feature text)") }),
+        h("div", { class: "meta" },
+          h("span", { text: `round ${Number.isFinite(j.round) ? j.round : 0}` }),
+          j.tier ? h("span", { class: "tag", text: j.tier }) : null,
+          j.updatedAt ? h("span", { title: str(j.updatedAt), dataset: { ago: str(j.updatedAt) }, text: ago(j.updatedAt) }) : null,
+        )),
+        gone ? h("div", { class: "jobgone" },
+          h("span", { class: "muted", title: "Records remain available. A runnable job can recover its worktree from its existing repository and branch.", text: "worktree unavailable" })) : null);
+    })];
+  });
+}
+
+function showRunSections(on) {
+  for (const id of ["run-head", "stages-wrap", "gate", "driver", "plan", "rounds", "dispatches", "usage"]) $(id).hidden = !on;
+}
+
+function renderRun() {
+  const empty = $("run-empty");
+  const job = S.detail && S.detail.job;
+  if (!job) {
+    showRunSections(false);
+    empty.hidden = false;
+    patch(empty, JSON.stringify([S.jobsLoaded, S.jobs.length, S.selected, S.errors.detail, S.errors.jobs, filtering()]), () => {
+      if (S.errors.jobs && !S.selected) return [h("strong", { text: "Run data unavailable" }), h("p", { class: "err", role: "alert", text: S.errors.jobs })];
+      if (S.errors.detail) return [h("strong", { text: "Could not show this job" }), h("p", { class: "err", role: "alert", text: S.errors.detail })];
+      if (S.jobsLoaded && !S.jobs.length && !filtering()) return [h("strong", { text: "No runs yet" }), h("p", { text: "Fill in the New run form to start one. The run holds after planning so you can read the plan before anything is built." })];
+      if (S.selected) return h("strong", { text: "Loading job…" });
+      return h("strong", { text: S.jobsLoaded ? "Select a job" : "Loading" });
+    });
+    return;
+  }
+  empty.hidden = true;
+  patch(empty, "job", () => []);
+  showRunSections(true);
+  renderHead(job);
+  renderStages(job);
+  renderGate(job);
+  renderDriver(job);
+  renderPlan(job);
+  renderRounds(job);
+  renderDispatches(job);
+  renderUsage(job);
+  tick();
+}
+
+function holdBody(id, status) {
+  const k = "d-drvhold";
+  if (S.drafts[k] === undefined || S.drafts._holdJob !== id) { S.drafts[k] = PRE_PLAN.has(status); S.drafts._holdJob = id; }
+  return S.drafts[k] && PRE_PLAN.has(status) ? { hold: ["planned"] } : {};
+}
+function holdBox(status) {
+  return PRE_PLAN.has(status) ? h("label", { class: "check small" }, h("input", { type: "checkbox", id: "d-drvhold", checked: !!S.drafts["d-drvhold"], onchange: (e) => { S.drafts["d-drvhold"] = e.target.checked; } }), "hold after plan") : null;
+}
+function resumeBtn(id, status) {
+  return btn("Recover worktree and continue", "resume", "driver", () => resumeJob(id, holdBody(id, status)), { cls: "primary", disabled: !!S.errors.detail || !!S.errors.jobs, title: "Recover the Git worktree from the existing repository and branch, then continue the run" });
+}
+const WORKTREE_TEXT = "The worktree is unavailable. Records remain available. Continue a runnable job to recover its worktree when the repository and branch still exist.";
+
+function effectiveCap(job, bound) {
+  const base = Number(obj(job.caps)[bound]) || 0;
+  return base + arr(job.overrides).filter((o) => o && o.bound === bound).length;
+}
+
+function renderHead(job) {
+  const d = S.detail;
+  const tier = (job.plan && job.plan.tier) || "";
+  const base = obj(job.base);
+  const nrec = arr(d.records).length;
+  const missing = worktreeMissing(job.id);
+  patch($("run-head"), JSON.stringify([missing, job.id, job.feature, job.status, job.statusReason, job.repo, job.branch, base, job.worktree, tier, job.round, job.caps, arr(job.overrides).length, nrec, job.updatedAt, S.errors.detail]), () => [
+    h("div", { class: "row", style: "justify-content:space-between" },
+      h("span", { class: "mono small muted", text: str(job.id) }),
+      h("button", { type: "button", id: "open-records", onclick: () => openRecords(null) }, `Records (${nrec})`)),
+    h("h2", { class: "feature", text: str(job.feature, "(no feature text)") }),
+    h("div", { class: "statusline" }, pill(job.status), missing ? h("span", { class: "tag", text: "worktree unavailable" }) : null, h("span", { class: "muted", text: str(job.statusReason) })),
+    S.errors.detail ? h("p", { class: "err", role: "alert", text: S.errors.detail }) : null,
+    h("dl", { class: "kv" },
+      h("dt", { text: "Repo" }), h("dd", { class: "mono", text: str(job.repo, "—") }),
+      h("dt", { text: "Branch" }), h("dd", { class: "mono", text: str(job.branch, "—") }),
+      h("dt", { text: "Base" }), h("dd", {}, h("span", { class: "mono", text: str(base.branch, "—") }), " @ ", shaEl(base.commit)),
+      h("dt", { text: "Worktree" }), h("dd", { class: "mono", text: str(job.worktree, "—") }),
+      h("dt", { text: "Tier" }), h("dd", { text: tier || "not planned yet" }),
+      h("dt", { text: "Round" }), h("dd", { text: `${Number(job.round) || 0} of ${effectiveCap(job, "rounds")}` }),
+      h("dt", { text: "Caps" }), h("dd", { class: "small", text: BOUNDS.map((b) => `${b} ${effectiveCap(job, b)}`).join(" · ") + (arr(job.overrides).length ? ` (${arr(job.overrides).length} override${arr(job.overrides).length > 1 ? "s" : ""})` : "") }),
+      h("dt", { text: "Updated" }), h("dd", {}, timeEl(job.updatedAt)),
+    ),
+  ]);
+}
+
+function renderStages(job) {
+  const cur = stageOf(job.status);
+  const idx = STAGES.indexOf(cur);
+  patch($("stages"), `${job.status}`, () => STAGES.map((s, i) => {
+    const cls = [i < idx ? "done" : "", i === idx ? "current" : "", i === idx && job.status === "needs-human" ? "halt" : "", i === idx && TERMINAL.has(job.status) ? "end" : ""].filter(Boolean).join(" ");
+    return h("li", { class: cls, "aria-current": i === idx ? "step" : null, text: s });
+  }));
+}
+
+function gateActions(job, stale) {
+  const st = job.status;
+  const id = job.id;
+  const running = !!(S.driver && S.driver.running);
+  const out = [];
+  const btn = (label, key, area, fn, opts = {}) => baseBtn(label, key, area, fn, stale ? { ...opts, disabled: true, title: "Refresh database state before making a decision" } : opts);
+  const post = (rest, body) => api("POST", jobPath(id, rest), body);
+  const after = async () => { await loadDetail(id); loadJobs(); };
+  const stopBtn = () => btn("Stop", "stop", "gate", async () => { await post("/stop", {}); await after(); },
+    { cls: "danger", confirm: `Stop job ${id}?\n\nA running driver is stopped too. A stopped job can be reopened where it left off, or cleaned.` });
+  const prBtn = () => btn("Generate PR text", "pr", "gate", async () => {
+    const r = obj(await post("/pr", {}));
+    await after();
+    openRecords(str(r.path, "pr.md"), { text: str(r.text), title: str(r.title) });
+  });
+  const base = str(obj(job.base).branch, "the base branch");
+  const branch = str(job.branch, "the job branch");
+  const acceptBlock = (primary) => h("div", { class: "action" }, draftArea("d-accept", "Accept note (optional)", job.localMerge ? `What you tested in ${str(job.repo)}` : "Why this is good to land"),
+    h("div", { class: "row" }, btn("Accept", "accept", "gate", async () => { const n = draft("d-accept"); await post("/accept", n ? { note: n } : {}); S.drafts["d-accept"] = ""; await after(); }, primary ? { cls: "primary" } : {})));
+  const mergeLocalBtn = () => btn("Merge locally", "merge", "gate", async () => { await post("/merge", { confirm: true }); await after(); }, {
+    cls: "primary",
+    confirm: `Merge ${branch} into ${base} so you can test it in your own checkout?\n\nThis is LOCAL ONLY: git merge --no-ff in the main checkout (${str(job.repo)}), which must be clean and on ${base}. The worktree and job branch are kept for rework and publishing. Nothing is pushed.`,
+  });
+  const reworkBlock = () => h("div", { class: "action" }, draftArea("d-rework", "Rework note (required)", "What the next builder must change", 3),
+    h("div", { class: "row" }, btn("Rework", "rework", "gate", async () => {
+      const n = draft("d-rework"); if (!n) throw new Error("A rework note is required: it becomes the [high] finding the next builder fixes.");
+      await post("/rework", { note: n }); S.drafts["d-rework"] = ""; await after();
+    })));
+
+  if (st === "planned") {
+    out.push(h("div", { class: "action" },
+      h("p", { class: "small muted", style: "margin:0", text: "Continue runs the build with no hold. To change the plan, stop this job and start a new one with a better prompt." }),
+      h("div", { class: "row" },
+        btn("Continue", "continue", "gate", async () => { const r = await post("/run", { mode: "run" }); S.driver = r || S.driver; await after(); }, { cls: "primary", disabled: running, title: running ? "a driver is already running" : null }),
+        stopBtn())));
+  } else if (st === "ready") {
+    out.push(h("div", { class: "row" }, mergeLocalBtn()), acceptBlock(false), reworkBlock(), h("div", { class: "row" }, prBtn(), stopBtn()));
+  } else if (st === "merged-local") {
+    out.push(acceptBlock(true), reworkBlock(), h("div", { class: "row" }, prBtn(), stopBtn()));
+  } else if (st === "needs-human") {
+    const bsel = S.drafts["d-bound"] || "rounds";
+    out.push(h("div", { class: "row" }, mergeLocalBtn()), acceptBlock(false), reworkBlock(), h("div", { class: "action" },
+      h("label", { for: "d-bound", text: "Override bound" }),
+      h("select", { id: "d-bound", value: bsel, onchange: (e) => { S.drafts["d-bound"] = e.target.value; } },
+        BOUNDS.map((b) => h("option", { value: b, text: `${b} (now ${effectiveCap(job, b)}, becomes ${effectiveCap(job, b) + 1})` }))),
+      ...draftArea("d-override", "Override note (required)", "Why one more is justified"),
+      h("div", { class: "row" }, btn("Override and run", "override", "gate", async () => {
+        const n = draft("d-override"); if (!n) throw new Error("An override note is required.");
+        const bound = S.drafts["d-bound"] || "rounds";
+        await post("/override", { bound, note: n });
+        S.drafts["d-override"] = "";
+        await after();
+        const r = await post("/run", { mode: "run" }); S.driver = r || S.driver; await after();
+      }, { disabled: running }))),
+      h("div", { class: "row" }, stopBtn()));
+  } else if (st === "accepted") {
+    out.push(h("div", { class: "row" },
+      btn("Push and open PR", "pr-push", "gate", async () => { await post("/pr", { push: true }); await after(); }, {
+        cls: "primary",
+        confirm: `Push ${branch} to the GitHub remote "origin" of ${str(job.repo)} and open a pull request into ${base}?\n\nThis runs git push -u origin ${branch}, then gh pr create (or reuses an open pull request for that branch). Nothing is merged.`,
+      }),
+      btn(job.localMerge ? "Finish locally" : "Merge locally", "merge", "gate", async () => { await post("/merge", { confirm: true }); await after(); }, {
+        confirm: job.localMerge
+          ? `${branch} is already merged into ${base} in ${str(job.repo)}. Finish this run locally?\n\nThe worktree is removed and the job branch deleted. Nothing is pushed.`
+          : `Merge ${branch} into ${base}?\n\nThis is LOCAL ONLY: git merge --no-ff in the main checkout (${str(job.repo)}), which must be clean and on ${base}. The worktree is removed and the job branch deleted. Nothing is pushed.`,
+      }), prBtn(), stopBtn()));
+  } else if (st === "merged") {
+    out.push(h("div", { class: "row" }, prBtn(), btn("Clean", "clean", "gate", async () => { await post("/clean", {}); await after(); })));
+  } else if (st === "stopped") {
+    out.push(h("div", { class: "row" },
+      btn("Reopen", "reopen", "gate", async () => { await post("/reopen", {}); await after(); }, { cls: "primary" }),
+      btn("Reopen and discard changes", "reopen-discard", "gate", async () => { await post("/reopen", { discard: true }); await after(); },
+        { cls: "danger", confirm: `Reopen job ${id} and discard its uncommitted changes?\n\nThis runs git checkout -- . and git clean -fd in the worktree (${str(job.worktree)}). Committed work is kept; uncommitted edits and untracked files are lost.` }),
+      btn("Clean", "clean", "gate", async () => { await post("/clean", {}); await after(); })));
+  }
+  const pr = obj(job.pr);
+  if ((st === "accepted" || st === "merged") && pr.url && !pr.merge) {
+    out.push(h("div", { class: "row" }, btn("Merge PR on GitHub", "merge-remote", "gate", async () => {
+      await post("/merge-remote", { confirm: true, url: pr.url, head: pr.head, method: "merge" }); await after();
+    }, { cls: "primary", disabled: running,
+      confirm: `Merge ${pr.url} into ${str(obj(job.base).branch)} on GitHub?\n\nPublished commit: ${pr.head}\nMethod: create a merge commit.\n\nThis changes the remote repository. GitHub must permit the merge at this commit. Local branches and worktrees are kept.` })));
+  }
+  return out;
+}
+
+const GATE_TEXT = {
+  planned: "Held after planning. Read the plan, then continue or stop.",
+  ready: "The approver approved this branch. Merge it locally to test it in your own checkout (or test it in the worktree), then accept or ask for rework. Nothing is pushed from here.",
+  "needs-human": "Parked for a human.",
+  "merged-local": "Merged into your checkout. Test it there, then accept or ask for rework. Nothing is pushed until you accept.",
+  accepted: "Accepted after testing. Publish a pull request, merge it on GitHub, or finish locally.",
+  merged: "Finished locally. A published PR still needs a separate merge on GitHub.",
+  stopped: "Stopped. Reopen to continue where it left off (uncommitted changes are kept unless you discard them), or clean the worktree.",
+};
+
+function renderGate(job) {
+  const el = $("gate");
+  const show = job.status in GATE_TEXT;
+  el.hidden = !show;
+  if (!show) return;
+  const running = !!(S.driver && S.driver.running);
+  const stale = !!S.errors.detail || !!S.errors.jobs;
+  patch(el, JSON.stringify([job.id, job.status, job.statusReason, S.busy, S.errors.gate, running, stale, job.caps, arr(job.overrides).length, arr(job.human).length, S.detail.pr, obj(job.pr).url]), () => [
+    h("h2", { id: "gate-h" }, "Human gate", pill(job.status)),
+    h("p", { class: "reason" }, obj(job.pr).merge ? "Merged on GitHub. Local checkout unchanged." : GATE_TEXT[job.status], job.statusReason ? h("span", { class: "muted" }, " ", h("span", { class: "mono small", text: job.statusReason })) : null),
+    stale ? h("p", { class: "small muted", text: "The last refresh failed. Refresh database state before making a decision." }) : null,
+    h("div", { class: "actions" }, gateActions(job, stale)),
+    h("p", { class: "err", role: "alert", text: str(S.errors.gate) }),
+    S.detail.pr ? h("p", { class: "small" }, h("button", { type: "button", class: "link", onclick: () => openRecords("pr.md") }, "View pr.md")) : null,
+    pullLink(job),
+    historyEl(job),
+  ]);
+}
+
+function pullLink(job) {
+  const url = str(obj(job.pr).url);
+  if (!/^https:\/\//.test(url)) return null;
+  return h("p", { class: "small" }, "Pull request ", h("a", { href: url, target: "_blank", rel: "noopener noreferrer", class: "mono", text: url }));
+}
+
+function historyEl(job) {
+  const items = [
+    ...arr(job.overrides).map((o) => ({ at: o && o.at, text: `override ${str(o && o.bound)}`, note: o && o.note })),
+    ...arr(job.human).map((x) => ({ at: x && x.at, text: str(x && x.action), note: x && x.note })),
+  ].sort((a, b) => (ms(a.at) || 0) - (ms(b.at) || 0));
+  if (!items.length) return null;
+  return h("div", { class: "history" }, h("span", { class: "muted", text: "Human history" }),
+    h("ul", {}, items.map((i) => h("li", {}, timeEl(i.at), " ", h("strong", { text: i.text }), i.note ? ` — ${i.note}` : ""))));
+}
+
+function renderDriver(job) {
+  const d = obj(S.driver);
+  const running = d.running === true;
+  const terminal = TERMINAL.has(job.status) || job.status === "accepted";
+  const holdId = "d-drvhold";
+  const holdArr = () => holdBody(job.id, job.status);
+  holdArr();
+  const missing = worktreeMissing(job.id);
+  const stale = !!S.errors.detail || !!S.errors.jobs;
+  const lock = stale ? "Refresh database state before continuing" : missing ? "Recover the worktree before continuing" : null;
+  const after = async (r) => { if (r) S.driver = r; await loadDetail(job.id); loadJobs(); };
+  const active = arr(d.active);
+  patch($("driver-body"), JSON.stringify([job.id, job.status, running, d.mode, d.hold, d.startedAt, d.finishedAt, active, d.error, d.lastStep && d.lastStep.action, d.lastStep && d.lastStep.reason, S.busy, S.errors.driver, S.drafts[holdId], missing, stale]), () => [
+    h("div", { class: "status" },
+      running ? h("span", { class: "live-dot", "aria-hidden": "true" }) : null,
+      h("strong", { text: running ? `running (${str(d.mode, "run")})` : "idle" }),
+      arr(d.hold).length ? h("span", { class: "tag", text: `hold: ${arr(d.hold).join(", ")}` }) : null,
+      d.startedAt ? h("span", { class: "muted" }, "started ", timeEl(d.startedAt)) : null,
+      !running && d.finishedAt ? h("span", { class: "muted" }, "finished ", timeEl(d.finishedAt)) : null,
+      d.lastStep && d.lastStep.action ? h("span", { class: "muted" }, "last step: ", h("span", { class: "mono", text: `${str(d.lastStep.action)}${d.lastStep.reason ? ` (${d.lastStep.reason})` : ""}` })) : null,
+    ),
+    missing ? h("p", { class: "small muted", text: WORKTREE_TEXT }) : null,
+    d.error ? h("p", { class: "err", role: "alert", text: `Driver error: ${d.error}` }) : null,
+    active.length ? h("ul", { class: "active", "aria-label": "Active dispatches" }, active.map((a) => h("li", { dataset: { deadline: str(a && a.deadlineAt) } },
+      h("span", { class: "mono", text: str(a && a.dispatchId) }), h("span", { text: str(a && a.agent) }),
+      h("span", {}, "elapsed ", h("span", { class: "mono", dataset: { since: str(a && a.startedAt) }, text: dur(Date.now() - (ms(a && a.startedAt) || Date.now())) })),
+      a && a.lastActivity ? h("span", { class: "activity mono muted", title: str(a.lastActivity), text: str(a.lastActivity) }) : null,
+      h("span", { class: "muted" }, "deadline ", timeEl(a && a.deadlineAt)), h("span", { class: "overdue-label", text: "" }),
+    ))) : null,
+    h("div", { class: "row" },
+      btn("Run", "drv-run", "driver", async () => after(await api("POST", jobPath(job.id, "/run"), { mode: "run", ...holdArr() })), { cls: missing ? null : "primary", disabled: running || terminal || missing || stale, title: lock }),
+      btn("Step", "drv-step", "driver", async () => after(await api("POST", jobPath(job.id, "/run"), { mode: "step", ...holdArr() })), { disabled: running || terminal || missing || stale, title: lock }),
+      missing && !running && !terminal && (job.status === "planned" || !(job.status in GATE_TEXT)) ? resumeBtn(job.id, job.status) : null,
+      btn("Pause", "drv-pause", "driver", async () => after(await api("POST", jobPath(job.id, "/pause"), {})), { disabled: !running, title: "stops after in-flight dispatches finish" }),
+      holdBox(job.status),
+      !terminal && !(job.status in GATE_TEXT) ? btn("Stop job", "drv-stop", "driver", async () => { await api("POST", jobPath(job.id, "/stop"), {}); await after(null); },
+        { cls: "danger", disabled: stale, title: lock, confirm: `Stop job ${job.id}?\n\nThis also stops the driver. A stopped job can be reopened.` }) : null,
+    ),
+    h("p", { class: "err", role: "alert", text: str(S.errors.driver) }),
+  ]);
+  renderLog(arr(d.log), job.id);
+}
+
+function renderLog(log, jobId) {
+  const ul = $("driver-log");
+  const keyOf = (e) => `${str(e && e.at)}|${str(e && e.text)}`;
+  const item = (e) => h("li", { class: str(e && e.level, "info") }, h("span", { class: "at", text: fmtTime(e && e.at) }), str(e && e.text));
+  const atBottom = ul.scrollHeight - ul.scrollTop - ul.clientHeight < 20;
+  if (ul._job !== jobId) { ul._job = jobId; ul._keys = null; }
+  const prev = ul._keys;
+  const keys = log.map(keyOf);
+  if (prev && prev.join("\n") === keys.join("\n")) return;
+  const at = prev && prev.length ? keys.lastIndexOf(prev[prev.length - 1]) : -1;
+  if (at >= 0) {
+    for (const e of log.slice(at + 1)) ul.append(item(e));
+    while (ul.children.length > 200) ul.firstElementChild.remove();
+  } else {
+    ul.replaceChildren(...(log.length ? log.map(item) : [h("li", { class: "faint", text: "No driver activity yet." })]));
+  }
+  ul._keys = keys;
+  if (atBottom) ul.scrollTop = ul.scrollHeight;
+}
+
+function renderPlan(job) {
+  const el = $("plan");
+  const p = S.detail.plan;
+  const hasRec = (path) => arr(S.detail.records).some((r) => r && r.path === path);
+  patch(el, JSON.stringify([job.id, p, job.plan, hasRec("plan.md")]), () => {
+    const head = h("h2", { id: "plan-h" }, "Plan", h("span", { class: "spacer" }),
+      hasRec("plan.json") ? h("button", { type: "button", onclick: () => openRecords("plan.json") }, "plan.json") : null,
+      hasRec("plan.md") ? h("button", { type: "button", onclick: () => openRecords("plan.md") }, "plan.md") : null);
+    if (!p || typeof p !== "object") return [head, h("p", { class: "muted", text: PRE_PLAN.has(job.status) ? "No plan yet. The planner writes plan.json." : "No plan available." })];
+    if (p.status === "needs-research") return [head, h("p", { text: "The planner asked for research:" }), h("ul", {}, arr(p.questions).map((q) => h("li", { text: str(q) })))];
+    const pinned = obj(job.plan);
+    return [head,
+      h("h3", { text: str(p.title, "(untitled plan)") }),
+      h("p", { text: str(p.summary) }),
+      h("p", { class: "small muted" }, h("span", { class: "tag", text: str(p.tier || pinned.tier, "?") }), " ", str(p.tierReason),
+        pinned.digest ? h("span", {}, " · pinned ", h("span", { class: "mono", title: pinned.digest, text: short(String(pinned.digest).replace(/^sha256:/, "")) })) : null),
+      h("h4", { class: "small muted", text: "Stages" }),
+      h("ol", {}, arr(p.stages).map((s) => h("li", {}, h("strong", { text: str(s && s.title, str(s && s.id)) }),
+        arr(s && s.files).length ? h("span", { class: "mono small muted", text: ` ${arr(s.files).join(", ")}` }) : null))),
+      arr(p.acceptance).length ? [h("h4", { class: "small muted", text: "Acceptance" }), h("ul", { class: "reasons" }, arr(p.acceptance).map((a) => h("li", { text: str(a) })))] : null,
+      arr(p.touches).length ? h("p", { class: "small" }, h("span", { class: "muted", text: "Touches: " }), h("span", { class: "mono", text: arr(p.touches).join("  ") })) : null,
+    ];
+  });
+}
+
+function recordLink(path, label) {
+  const exists = arr(S.detail && S.detail.records).some((r) => r && r.path === path);
+  if (!exists) return h("span", { class: "mono faint", title: "record not present", text: label || path });
+  return h("button", { type: "button", class: "link mono", onclick: () => openRecords(path) }, label || path);
+}
+
+function renderRounds(job) {
+  const el = $("rounds");
+  const rounds = arr(job.rounds);
+  const checksKey = rounds.map((r) => checksFor(job, r));
+  patch(el, JSON.stringify([job.id, rounds, arr(S.detail.records).map((r) => r && r.path), checksKey, arr(job.dispatches).map((d) => d && d.record)]), () => {
+    const head = h("h2", { id: "rounds-h" }, "Rounds", h("span", { class: "tag", text: String(rounds.length) }));
+    if (!rounds.length) return [head, h("p", { class: "muted", text: "No rounds yet. Round 1 opens when the plan is pinned and the build starts." })];
+    return [head, h("div", { class: "rounds" }, rounds.slice().reverse().map((r) => roundCard(job, obj(r))))];
+  });
+}
+
+function roundCard(job, r) {
+  const n = Number(r.n) || 0;
+  const build = obj(r.build);
+  const checks = r.checks && typeof r.checks === "object" ? r.checks : null;
+  const lenses = obj(r.lenses), reviews = obj(r.reviews);
+  const names = [...new Set([...Object.keys(lenses), ...Object.keys(reviews)])];
+  const recFor = (lens) => {
+    const ds = arr(job.dispatches).filter((d) => d && d.round === n && d.lens === lens && d.record);
+    return ds.length ? ds[ds.length - 1].record : LENS_RECORD[lens] ? `round-${n}/${LENS_RECORD[lens]}` : `round-${n}/${lens}.md`;
+  };
+  const gate = r.gate && typeof r.gate === "object" ? r.gate : null;
+  const ck = checksFor(job, r);
+  const results = ck && ck.data ? arr(ck.data.results) : [];
+  return h("article", { class: "round", "aria-label": `Round ${n}` },
+    h("h3", {}, `Round ${n}`, r.startedAt ? h("span", { class: "small muted" }, "started ", timeEl(r.startedAt)) : null,
+      gate ? h("span", { class: `pill ${gate.pass ? "st-green" : "st-amber"}`, text: gate.pass ? "gate pass" : "gate fail" }) : null),
+    h("div", { class: "grid" },
+      h("div", {},
+        h("h4", { text: "Build" }),
+        h("p", { class: "small", style: "margin:0" }, r.build ? verdictEl(build.effective, build.reason ? `(${build.reason})` : "") : verdictEl("pending"),
+          " ", shaEl(r.buildCommit || build.commit), " ", recordLink(`round-${n}/build.md`, "build.md")),
+        h("h4", { style: "margin-top:var(--s3)", text: "Checks" }),
+        checks ? h("p", { class: "small", style: "margin:0" }, verdictEl(checks.pass ? "ok" : "fail", checks.pass ? "pass" : ""), " at ", shaEl(checks.commit), " ", checks.path ? recordLink(checks.path, "checks.json") : null) : h("p", { class: "small", style: "margin:0" }, verdictEl("pending")),
+        ck && ck.data && ck.data.configured === false ? h("p", { class: "small muted", text: "No checks configured in .sociotechnic.json." }) : null,
+        ck && ck.error ? h("p", { class: "err", text: `checks.json: ${ck.error}` }) : null,
+        results.length ? h("div", { class: "tablewrap" }, h("table", {},
+          h("thead", {}, h("tr", {}, ["check", "result", "exit", "time", "tail"].map((t) => h("th", { text: t })))),
+          h("tbody", {}, results.map((c) => h("tr", {},
+            h("td", { class: "mono", title: str(c && c.run), text: str(c && c.name) }),
+            h("td", {}, verdictEl(c && c.pass ? "ok" : "fail", c && c.timedOut ? "timed out" : "")),
+            h("td", { class: "mono", text: str(c && c.exitCode, str(c && c.signal, "—")) }),
+            h("td", { text: Number(c && c.durationMs) < 1000 ? `${Number(c.durationMs)} ms` : dur(Number(c && c.durationMs)) }),
+            h("td", { class: "wrap" }, c && c.tail ? h("details", { class: "tail" }, h("summary", { class: "small", text: "tail" }), h("pre", { class: "raw", text: str(c.tail) })) : h("span", { class: "faint", text: "—" })),
+          ))))) : null,
+      ),
+      h("div", {},
+        h("h4", { text: "Lenses" }),
+        names.length ? h("ul", { class: "lenses" }, names.map((lens) => {
+          const p = reviews[lens] && typeof reviews[lens] === "object" ? reviews[lens] : null;
+          let v;
+          if (lenses[lens] === "skipped" || (p && p.effective === "SKIPPED")) v = verdictEl("SKIPPED", "by guard");
+          else if (!p) v = verdictEl("pending");
+          else if (p.effective === "CHANGES") v = verdictEl("CHANGES", `${Number(p.blocking) || 0} blocking${p.reason ? `, ${p.reason}` : ""}`);
+          else v = verdictEl(p.effective, p.reason ? `(${p.reason})` : "");
+          return h("li", {}, recordLink(recFor(lens), lens), v);
+        })) : h("p", { class: "small muted", text: "No lenses dispatched yet." }),
+        h("h4", { style: "margin-top:var(--s3)", text: "Gate" }),
+        gate ? h("div", { class: "small" },
+          h("p", { style: "margin:0" }, verdictEl(gate.pass ? "PASS" : "CHANGES", gate.pass ? "" : "blocked"), " head ", shaEl(gate.head), ` · ${Number(gate.changedFiles) || 0} changed files · `, timeEl(gate.computedAt)),
+          arr(gate.blockers).length ? [h("span", { class: "muted", text: "Blockers" }), h("ul", { class: "reasons" }, arr(gate.blockers).map((b) => h("li", { class: "mono", text: str(b) })))] : null,
+          arr(gate.flags).length ? [h("span", { class: "muted", text: "Flags" }), h("ul", { class: "reasons" }, arr(gate.flags).map((b) => h("li", { class: "mono", text: str(b) })))] : null,
+          !arr(gate.blockers).length && !arr(gate.flags).length ? h("p", { class: "muted", style: "margin:0", text: "No blockers, no flags." }) : null,
+        ) : h("p", { class: "small muted", style: "margin:0", text: "Not computed yet." }),
+      ),
+    ),
+  );
+}
+
+function tokenCount(value) {
+  const source = obj(value), nested = obj(source.usage);
+  const number = (v) => Number.isSafeInteger(v) && v >= 0 ? v : null;
+  const sum = (values) => values.length && values.every((v) => v !== null) ? values.reduce((a,b) => a + b, 0) : null;
+  const fields = ["input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens"];
+  const has = (v) => [...fields, "total_tokens"].some((key) => Object.hasOwn(v,key));
+  const counters = (v) => sum(fields.map((key) => number(v[key]))) ?? number(v.total_tokens);
+  if (has(nested)) return counters(nested);
+  if (has(source)) return counters(source);
+  return sum(Object.values(obj(source.modelUsage)).map((v) => sum(["inputTokens", "outputTokens", "cacheReadInputTokens", "cacheCreationInputTokens"].map((key) => number(obj(v)[key])))));
+}
+function tokensOf(value) {
+  const total = tokenCount(value);
+  return total === null ? "Not reported" : `${total.toLocaleString()} tokens`;
+}
+
+function renderDispatches(job) {
+  const el = $("dispatches");
+  const list = arr(job.dispatches).filter((d) => d && typeof d === "object").slice().sort((a, b) => (ms(a.startedAt) || 0) - (ms(b.startedAt) || 0));
+  patch(el, JSON.stringify([job.id, list, arr(S.detail.records).map((r) => r && r.path)]), () => {
+    const head = h("h2", { id: "disp-h" }, "Dispatches", h("span", { class: "tag", text: String(list.length) }));
+    if (!list.length) return [head, h("p", { class: "muted", text: "No dispatches yet. Run or step the driver to dispatch the planner." })];
+    return [head, h("div", { class: "tablewrap" }, h("table", {},
+      h("thead", {}, h("tr", {}, ["id", "round", "agent", "model", "try", "started", "finished / elapsed", "deadline", "outcome", "result", "tokens", "record"].map((t) => h("th", { scope: "col", text: t })))),
+      h("tbody", {}, list.map((d) => {
+        const open = !d.finishedAt;
+        const p = d.parsed && typeof d.parsed === "object" ? d.parsed : null;
+        return h("tr", { dataset: open ? { deadline: str(d.deadlineAt) } : {} },
+          h("td", { class: "mono", text: str(d.id) }),
+          h("td", { text: str(d.round, "—") }),
+          h("td", {}, str(d.agent), d.lens ? h("span", { class: "muted small", text: ` ${d.lens}` }) : null),
+          h("td", { text: `${str(d.model, "?")} / ${str(d.effort, "?")}` }),
+          h("td", { text: str(d.attempt, "1") }),
+          h("td", {}, timeEl(d.startedAt)),
+          h("td", {}, open ? h("span", {}, h("span", { class: "mono", dataset: { since: str(d.startedAt) }, text: dur(Date.now() - (ms(d.startedAt) || Date.now())) }), h("span", { class: "muted", text: " running" }))
+            : h("span", { title: str(d.finishedAt) }, fmtTime(d.finishedAt), h("span", { class: "muted", text: ` (${dur((ms(d.finishedAt) || 0) - (ms(d.startedAt) || 0))})` }))),
+          h("td", {}, timeEl(d.deadlineAt)),
+          h("td", {}, d.outcome ? verdictEl(d.outcome) : verdictEl("pending")),
+          h("td", { title: str(d.note) }, p ? verdictEl(p.effective, p.kind === "malformed" && p.reason ? `(${p.reason})` : (Number(p.blocking) ? `${p.blocking} blocking` : "")) : h("span", { class: "faint", text: "—" })),
+          h("td", { class: "mono", text: tokensOf(d.usage) || "—" }),
+          h("td", {}, d.record ? recordLink(d.record, String(d.record).split("/").pop()) : h("span", { class: "faint", text: "—" })),
+        );
+      })),
+    ))];
+  });
+}
+
+function renderUsage(job) {
+  const el = $("usage");
+  const list = arr(job.dispatches).filter((d) => d && typeof d === "object");
+  patch(el, JSON.stringify([job.id, list.map((d) => [d.agent, d.model, d.effort, d.usage])]), () => {
+    const unit = "tokens";
+    const roles = new Map();
+    let missing = 0;
+    for (const d of list) {
+      const value = tokenCount(d.usage);
+      const key = str(d.agent, "unknown");
+      const r = roles.get(key) || { agent: key, models: new Set(), n: 0, value: 0, measured: 0 };
+      r.models.add(`${str(d.model, "?")}/${str(d.effort, "?")}`);
+      r.n += 1;
+      if (value === null) missing += 1;
+      else { r.value += value; r.measured += 1; }
+      roles.set(key, r);
+    }
+    const rows = [...roles.values()].sort((a, b) => b.value - a.value);
+    const max = Math.max(1e-9, ...rows.map((r) => r.value));
+    const total = rows.reduce((s, r) => s + r.value, 0);
+    const fmt = (v) => v.toLocaleString();
+    const head = h("h2", { id: "usage-h" }, "Usage", h("span", { class: "tag", text: unit }), h("span", { class: "spacer" }), rows.some((r) => r.measured) ? h("span", { class: "small muted", text: `total ${fmt(total)}` }) : null);
+    if (!rows.length) return [head, h("p", { class: "muted", text: "No dispatches yet." })];
+    return [head, h("div", { class: "bars", role: "list" }, rows.map((r) => h("div", { class: "bar", role: "listitem" },
+      h("div", {}, h("div", { text: r.agent }), h("div", { class: "faint small", text: `${[...r.models].join(", ")} · ${r.n} dispatch${r.n > 1 ? "es" : ""}` })),
+      h("div", { class: "track", "aria-hidden": "true" }, h("div", { class: "fill", style: `width:${Math.max(0, (r.value / max) * 100).toFixed(1)}%` })),
+      h("div", { class: "mono", text: r.measured ? fmt(r.value) : "Not reported" }),
+    ))),
+    h("p", { class: "small muted", text: "Tokens include uncached input, output, cache reads and cache writes. These are recorded activity, not subscription charges or remaining allowance." }),
+    missing ? h("p", { class: "small muted", text: `${missing} dispatch${missing > 1 ? "es have" : " has"} no reported ${unit} and ${missing > 1 ? "are" : "is"} excluded.` }) : null];
+  });
+}
+
+async function openRecords(path, preset) {
+  const dlg = $("records-dlg");
+  renderRecList();
+  if (!dlg.open) dlg.showModal();
+  if (preset) { showRecord(path, preset.text, preset.title ? `PR title: ${preset.title}` : ""); return; }
+  if (path) loadRecord(path);
+  else if (!S.recPath) { $("rec-path").textContent = ""; $("rec-meta").textContent = ""; $("rec-err").textContent = ""; $("rec-text").textContent = "Select a record."; }
+}
+function renderRecList() {
+  const recs = arr(S.detail && S.detail.records).filter((r) => r && r.path).slice().sort((a, b) => {
+    const da = String(a.path).includes("/"), db = String(b.path).includes("/");
+    return da === db ? String(a.path).localeCompare(String(b.path), undefined, { numeric: true }) : da ? 1 : -1;
+  });
+  const ul = $("reclist");
+  ul.replaceChildren(...(recs.length ? recs.map((r) => h("li", {}, h("button", {
+    type: "button", "aria-current": r.path === S.recPath ? "true" : "false", onclick: () => loadRecord(r.path),
+  }, h("span", { class: "mono", text: r.path }), h("span", { class: "faint", text: bytes(Number(r.bytes)) })))) : [h("li", { class: "muted", text: "No records yet." })]));
+}
+function showRecord(path, text, meta) {
+  S.recPath = path;
+  $("rec-path").textContent = str(path);
+  $("rec-meta").textContent = str(meta);
+  $("rec-err").textContent = "";
+  let t = str(text);
+  if (/\.json$/i.test(str(path))) { try { t = JSON.stringify(JSON.parse(t), null, 2); } catch {} }
+  $("rec-text").textContent = t || "(empty)";
+  $("rec-text").scrollTop = 0;
+  renderRecList();
+}
+async function loadRecord(path) {
+  const id = S.selected; if (!id) return;
+  S.recPath = path;
+  renderRecList();
+  $("rec-path").textContent = path; $("rec-meta").textContent = "loading…"; $("rec-err").textContent = "";
+  try {
+    const r = obj(await api("GET", recPath(id, path)));
+    if (S.recPath !== path) return;
+    const rec = arr(S.detail && S.detail.records).find((x) => x && x.path === path);
+    showRecord(path, r.text, rec ? `${bytes(Number(rec.bytes))} · ${fmtTime(rec.mtime)}` : "");
+  } catch (e) {
+    if (S.recPath !== path) return;
+    $("rec-meta").textContent = ""; $("rec-text").textContent = "";
+    $("rec-err").textContent = e.status === 404 ? `${path} is not stored for this run.` : e.message;
+  }
+}
+
+function tick() {
+  const now = Date.now();
+  watchdog();
+  for (const el of document.querySelectorAll("[data-since]")) { const t = ms(el.dataset.since); if (t != null) el.textContent = dur(now - t); }
+  for (const el of document.querySelectorAll("[data-deadline]")) {
+    const t = ms(el.dataset.deadline); const over = t != null && now > t;
+    el.classList.toggle("overdue", over);
+    const lab = el.querySelector(".overdue-label"); if (lab) lab.textContent = over ? `overdue by ${dur(now - t)}` : "";
+  }
+  for (const el of document.querySelectorAll("[data-ago]")) el.textContent = ago(el.dataset.ago);
+}
+
+function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch {} }
+
+async function startRun(e) {
+  e.preventDefault();
+  const start = $("nr-start"), err = $("nr-err");
+  const repo = $("nr-repo").value.trim(), base = $("nr-base").value.trim(), feature = $("nr-prompt").value.trim();
+  const hold = $("nr-hold").checked;
+  err.textContent = "";
+  if (!repo) { err.textContent = "Repository path is required."; $("nr-repo").focus(); return; }
+  if (!feature) { err.textContent = "Prompt is required."; $("nr-prompt").focus(); return; }
+  start.disabled = true; start.textContent = "Starting…";
+  let id = null;
+  try {
+    const res = obj(await api("POST", "/api/jobs", base ? { repo, feature, base } : { repo, feature }));
+    id = typeof res.job === "string" ? res.job : res.job && typeof res.job === "object" ? str(res.job.id) : null;
+    if (!id) throw new Error("The server created a job but did not return its id.");
+    lsSet("sociotechnic.repo", repo);
+    $("nr-prompt").value = "";
+    await loadJobs();
+    select(id);
+    const st = await api("POST", jobPath(id, "/run"), hold ? { mode: "run", hold: ["planned"] } : { mode: "run" });
+    if (S.selected === id) { S.driver = st || S.driver; renderRun(); }
+  } catch (ex) {
+    err.textContent = id ? `Job ${id} was created but the driver did not start: ${ex.message}` : ex.message;
+  } finally {
+    start.disabled = false; start.textContent = "Start";
+  }
+}
+
+function wireDialogs() {
+  for (const dlg of document.querySelectorAll("dialog.drawer")) {
+    dlg.addEventListener("click", (e) => { if (e.target === dlg || (e.target instanceof Element && e.target.hasAttribute("data-close"))) dlg.close(); });
+  }
+  $("help-btn").addEventListener("click", () => $("help-dlg").showModal());
+}
+
+async function boot() {
+  wireDialogs();
+  $("newrun-form").addEventListener("submit", startRun);
+  const savedRepo = lsGet("sociotechnic.repo"); if (savedRepo) $("nr-repo").value = savedRepo;
+  const init = readHash();
+  S.filter = { project: init.project, status: init.status };
+  $("proj-sel").addEventListener("change", (e) => setFilter({ project: e.target.value }));
+  window.addEventListener("hashchange", () => {
+    const hs = readHash();
+    if (hs.project !== S.filter.project || hs.status !== S.filter.status) { S.filter = { project: hs.project, status: hs.status }; renderFilters(); loadJobs(); }
+    if (hs.job && hs.job !== S.selected) select(hs.job, { push: false });
+  });
+  setInterval(tick, 1000);
+  setInterval(loadDb, DB_REFRESH_MS);
+  renderFilters(); renderJobs(); renderRun();
+  await Promise.all([loadMeta(), loadProjects().then(loadJobs), loadDb()]);
+  const pick = readHash().job || (S.jobs[0] && jid(S.jobs[0]));
+  if (pick) select(String(pick));
+  else { writeHash(); renderRun(); }
+  connect();
+}
+
+boot();
+})();
+</script>
+</body>
+</html>

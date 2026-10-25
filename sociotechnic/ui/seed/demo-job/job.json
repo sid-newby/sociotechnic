@@ -1,0 +1,299 @@
+{
+  "id": "20261024-add-a-farewell-name-func",
+  "feature": "Add a farewell(name) function beside greet, with a test, and document both functions in the README",
+  "repo": "{{REPO}}",
+  "worktree": "{{SOCIOTECHNIC_HOME}}/.sociotechnic/worktrees/20261024-add-a-farewell-name-func",
+  "branch": "sociotechnic/20261024-add-a-farewell-name-func",
+  "base": {
+    "branch": "main",
+    "commit": "c6578fea93cea6c64a5ed8e865e7aaccc2fa0671"
+  },
+  "status": "ready",
+  "statusReason": "approver APPROVED at ab6105cc7752a8b19a2e9dadb738facea8fb68e6; accept, rework or pr",
+  "parkedFrom": null,
+  "createdAt": "2026-10-24T05:21:35.514Z",
+  "updatedAt": "2026-10-24T05:30:03.010Z",
+  "caps": {
+    "rounds": 3,
+    "dispatchesPerRound": 10,
+    "retriesPerStep": 1
+  },
+  "overrides": [],
+  "plan": {
+    "digest": "sha256:12132a43a9a0def9eb3066ea89841d00ae66da144e13b14c14d60f4933429625",
+    "tier": "EASY",
+    "pinnedAt": "2026-10-24T05:25:18.993Z",
+    "researchRound": 0
+  },
+  "research": {
+    "questions": [],
+    "done": false
+  },
+  "round": 1,
+  "rounds": [
+    {
+      "n": 1,
+      "startedAt": "2026-10-24T05:25:18.995Z",
+      "build": {
+        "kind": "ok",
+        "value": "READY",
+        "commit": "ab6105cc7752a8b19a2e9dadb738facea8fb68e6",
+        "findings": [],
+        "blocking": 0,
+        "reason": null,
+        "effective": "READY"
+      },
+      "buildCommit": "ab6105cc7752a8b19a2e9dadb738facea8fb68e6",
+      "checks": {
+        "pass": true,
+        "commit": "ab6105cc7752a8b19a2e9dadb738facea8fb68e6",
+        "path": "round-1/checks.json"
+      },
+      "lenses": {
+        "reviewer-code": "run",
+        "reviewer-ux": "skipped",
+        "reviewer-ui": "skipped",
+        "reviewer-security": "run",
+        "conformance": "run"
+      },
+      "reviews": {
+        "reviewer-ux": {
+          "kind": "ok",
+          "value": "SKIPPED",
+          "commit": "ab6105cc7752a8b19a2e9dadb738facea8fb68e6",
+          "findings": [],
+          "blocking": 0,
+          "reason": null,
+          "effective": "SKIPPED"
+        },
+        "reviewer-ui": {
+          "kind": "ok",
+          "value": "SKIPPED",
+          "commit": "ab6105cc7752a8b19a2e9dadb738facea8fb68e6",
+          "findings": [],
+          "blocking": 0,
+          "reason": null,
+          "effective": "SKIPPED"
+        },
+        "reviewer-code": {
+          "kind": "ok",
+          "value": "PASS",
+          "commit": "ab6105cc7752a8b19a2e9dadb738facea8fb68e6",
+          "findings": [],
+          "blocking": 0,
+          "reason": null,
+          "effective": "PASS"
+        },
+        "reviewer-security": {
+          "kind": "ok",
+          "value": "PASS",
+          "commit": "ab6105cc7752a8b19a2e9dadb738facea8fb68e6",
+          "findings": [],
+          "blocking": 0,
+          "reason": null,
+          "effective": "PASS"
+        },
+        "conformance": {
+          "kind": "ok",
+          "value": "PASS",
+          "commit": "ab6105cc7752a8b19a2e9dadb738facea8fb68e6",
+          "findings": [],
+          "blocking": 0,
+          "reason": null,
+          "effective": "PASS"
+        }
+      },
+      "gate": {
+        "pass": true,
+        "blockers": [],
+        "flags": [],
+        "head": "ab6105cc7752a8b19a2e9dadb738facea8fb68e6",
+        "changedFiles": 3,
+        "computedAt": "2026-10-24T05:27:49.103Z"
+      }
+    }
+  ],
+  "dispatches": [
+    {
+      "id": "d-001",
+      "round": 0,
+      "step": "plan",
+      "lens": null,
+      "attempt": 1,
+      "agent": "sociotechnic-planner",
+      "model": "fable",
+      "effort": "xhigh",
+      "record": "plan.json",
+      "startedAt": "2026-10-24T05:21:35.751Z",
+      "deadlineAt": "2026-10-24T05:46:35.751Z",
+      "finishedAt": "2026-10-24T05:25:18.873Z",
+      "outcome": "ok",
+      "parsed": {
+        "commit": null,
+        "findings": [],
+        "blocking": 0,
+        "kind": "ok",
+        "value": "plan",
+        "reason": null,
+        "effective": "DONE"
+      },
+      "usage": {
+        "total_tokens": 28079,
+        "tool_uses": 9,
+        "duration_ms": 122961
+      },
+      "note": null
+    },
+    {
+      "id": "d-002",
+      "round": 1,
+      "step": "build",
+      "lens": null,
+      "attempt": 1,
+      "agent": "sociotechnic-builder-lite",
+      "model": "sonnet",
+      "effort": "high",
+      "record": "round-1/build.md",
+      "startedAt": "2026-10-24T05:25:18.995Z",
+      "deadlineAt": "2026-10-24T06:10:18.995Z",
+      "finishedAt": "2026-10-24T05:26:23.935Z",
+      "outcome": "ok",
+      "parsed": {
+        "kind": "ok",
+        "value": "READY",
+        "commit": "ab6105cc7752a8b19a2e9dadb738facea8fb68e6",
+        "findings": [],
+        "blocking": 0,
+        "reason": null,
+        "effective": "READY"
+      },
+      "usage": {
+        "total_tokens": 20397,
+        "tool_uses": 5,
+        "duration_ms": 19128
+      },
+      "note": null
+    },
+    {
+      "id": "d-003",
+      "round": 1,
+      "step": "review",
+      "lens": "reviewer-code",
+      "attempt": 1,
+      "agent": "sociotechnic-reviewer-code",
+      "model": "sonnet",
+      "effort": "high",
+      "record": "round-1/review-code.md",
+      "startedAt": "2026-10-24T05:26:24.371Z",
+      "deadlineAt": "2026-10-24T05:46:24.371Z",
+      "finishedAt": "2026-10-24T05:27:48.771Z",
+      "outcome": "ok",
+      "parsed": {
+        "kind": "ok",
+        "value": "PASS",
+        "commit": "ab6105cc7752a8b19a2e9dadb738facea8fb68e6",
+        "findings": [],
+        "blocking": 0,
+        "reason": null,
+        "effective": "PASS"
+      },
+      "usage": {
+        "total_tokens": 20505,
+        "tool_uses": 6,
+        "duration_ms": 11641
+      },
+      "note": null
+    },
+    {
+      "id": "d-004",
+      "round": 1,
+      "step": "review",
+      "lens": "reviewer-security",
+      "attempt": 1,
+      "agent": "sociotechnic-reviewer-security",
+      "model": "opus",
+      "effort": "high",
+      "record": "round-1/review-security.md",
+      "startedAt": "2026-10-24T05:26:24.371Z",
+      "deadlineAt": "2026-10-24T05:46:24.371Z",
+      "finishedAt": "2026-10-24T05:27:48.878Z",
+      "outcome": "ok",
+      "parsed": {
+        "kind": "ok",
+        "value": "PASS",
+        "commit": "ab6105cc7752a8b19a2e9dadb738facea8fb68e6",
+        "findings": [],
+        "blocking": 0,
+        "reason": null,
+        "effective": "PASS"
+      },
+      "usage": {
+        "total_tokens": 20880,
+        "tool_uses": 6,
+        "duration_ms": 18694
+      },
+      "note": null
+    },
+    {
+      "id": "d-005",
+      "round": 1,
+      "step": "review",
+      "lens": "conformance",
+      "attempt": 1,
+      "agent": "sociotechnic-conformance",
+      "model": "opus",
+      "effort": "high",
+      "record": "round-1/conformance.md",
+      "startedAt": "2026-10-24T05:26:24.371Z",
+      "deadlineAt": "2026-10-24T05:46:24.371Z",
+      "finishedAt": "2026-10-24T05:27:48.984Z",
+      "outcome": "ok",
+      "parsed": {
+        "kind": "ok",
+        "value": "PASS",
+        "commit": "ab6105cc7752a8b19a2e9dadb738facea8fb68e6",
+        "findings": [],
+        "blocking": 0,
+        "reason": null,
+        "effective": "PASS"
+      },
+      "usage": {
+        "total_tokens": 21332,
+        "tool_uses": 7,
+        "duration_ms": 21614
+      },
+      "note": null
+    },
+    {
+      "id": "d-006",
+      "round": 1,
+      "step": "approve",
+      "lens": null,
+      "attempt": 1,
+      "agent": "sociotechnic-approver",
+      "model": "opus",
+      "effort": "high",
+      "record": "decision.md",
+      "startedAt": "2026-10-24T05:27:49.138Z",
+      "deadlineAt": "2026-10-24T05:42:49.138Z",
+      "finishedAt": "2026-10-24T05:30:02.901Z",
+      "outcome": "ok",
+      "parsed": {
+        "kind": "ok",
+        "value": "APPROVE",
+        "commit": "ab6105cc7752a8b19a2e9dadb738facea8fb68e6",
+        "findings": [],
+        "blocking": 0,
+        "reason": null,
+        "effective": "APPROVE"
+      },
+      "usage": {
+        "total_tokens": 25141,
+        "tool_uses": 14,
+        "duration_ms": 33096
+      },
+      "note": null
+    }
+  ],
+  "human": []
+}

@@ -1,0 +1,13 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "singleQuote": true,
+  "printWidth": 100,
+  // shadcn-generated files stay as the CLI writes them so `shadcn add` never breaks format:check.
+  "ignorePatterns": [
+    "**/dist/**",
+    "**/node_modules/**",
+    "pnpm-lock.yaml",
+    "apps/web/src/components/ui/**",
+    "docs/ui-standards/upstream/**",
+  ],
+}

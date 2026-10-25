@@ -1,0 +1,76 @@
+{
+  "title": "Add farewell(name) beside greet with test and README docs",
+  "summary": "Add an exported farewell(name) function directly after greet in src/greet.ts, returning the string \"Goodbye, <name>\" to mirror greet's \"Hello, <name>\". Cover it with a node:test case in the existing test/greet.test.ts and add a README section that documents both greet(name) and farewell(name) with example calls and their return values.",
+  "tier": "EASY",
+  "tierReason": "Localized change that copies the existing greet function, test and import pattern across 3 files (under easyTierMaxFiles of 8) with exact, string-equality acceptance.",
+  "stages": [
+    {
+      "id": "s1",
+      "title": "Implement farewell in src/greet.ts",
+      "description": "In the existing src/greet.ts, add export function farewell(name: string): string immediately after greet. It returns the template string \"Goodbye, \" followed by name, mirroring greet's \"Hello, \" prefix exactly (comma, single space, no trailing punctuation). Use only erasable type annotations as greet does; greet itself is not modified.",
+      "files": ["src/greet.ts"],
+      "acceptance": [
+        "src/greet.ts exports a function named farewell with signature farewell(name: string): string, declared after greet.",
+        "farewell(\"sociotechnic\") returns the exact string \"Goodbye, sociotechnic\".",
+        "greet(\"sociotechnic\") still returns the exact string \"Hello, sociotechnic\" and the greet declaration is unchanged."
+      ],
+      "risks": [
+        "Node 24 type stripping rejects TypeScript-only runtime syntax (enums, parameter properties, namespaces); farewell must use plain annotations like greet or npm test fails at module load."
+      ]
+    },
+    {
+      "id": "s2",
+      "title": "Add farewell test to test/greet.test.ts",
+      "description": "In the existing test/greet.test.ts, extend the current named import from \"../src/greet.ts\" to also import farewell, then add a second test(\"farewell\", ...) call asserting with assert.equal that farewell(\"sociotechnic\") equals \"Goodbye, sociotechnic\". Follow the one-line test style already used for greet.",
+      "files": ["test/greet.test.ts"],
+      "acceptance": [
+        "test/greet.test.ts contains a test named \"farewell\" that asserts farewell(\"sociotechnic\") equals \"Goodbye, sociotechnic\" using node:assert/strict.",
+        "farewell is imported from \"../src/greet.ts\" through the existing named import statement; the greet import still resolves.",
+        "Running npm test --silent from the repo root exits 0 and reports 2 tests passing, 0 failing."
+      ],
+      "risks": []
+    },
+    {
+      "id": "s3",
+      "title": "Document greet and farewell in README.md",
+      "description": "Append an API section to README.md (currently a title line and one-sentence description, no headings) that documents both exported functions. For each of greet(name) and farewell(name): the signature, a one-line description, and the example call with its exact return value (greet(\"sociotechnic\") returns \"Hello, sociotechnic\"; farewell(\"sociotechnic\") returns \"Goodbye, sociotechnic\"). Keep the existing two lines intact.",
+      "files": ["README.md"],
+      "acceptance": [
+        "README.md contains a heading introducing the API and entries for both greet(name) and farewell(name).",
+        "The greet entry shows greet(\"sociotechnic\") returning \"Hello, sociotechnic\" and the farewell entry shows farewell(\"sociotechnic\") returning \"Goodbye, sociotechnic\".",
+        "The original title line \"# demo-target\" and the dry-run description sentence remain at the top of README.md."
+      ],
+      "risks": []
+    }
+  ],
+  "acceptance": [
+    "npm test --silent exits 0 and reports 2 passing tests named greet and farewell.",
+    "farewell(\"sociotechnic\") returns \"Goodbye, sociotechnic\" and greet(\"sociotechnic\") returns \"Hello, sociotechnic\".",
+    "README.md documents both greet(name) and farewell(name) with their example calls and exact return values.",
+    "The diff touches only src/greet.ts, test/greet.test.ts and README.md."
+  ],
+  "touches": ["src/greet.ts", "test/greet.test.ts", "README.md"],
+  "docsImpact": {
+    "required": true,
+    "files": ["README.md"],
+    "note": "farewell is a new exported, user-facing function and the request explicitly asks for both functions to be documented; README.md currently documents neither."
+  },
+  "testing": {
+    "strategy": "Unit tests with node:test and node:assert/strict in test/greet.test.ts, the repo's only test level. The .sociotechnic.json check npm test --silent is the end-to-end gate. No integration or robustness cases: farewell is a pure string function with no I/O, concurrency, large-input or security surface.",
+    "cases": [
+      "farewell(\"sociotechnic\") returns \"Goodbye, sociotechnic\" (new test case).",
+      "greet(\"sociotechnic\") returns \"Hello, sociotechnic\" (existing test keeps passing).",
+      "npm test --silent exits 0 with 2 pass and 0 fail after all three stages."
+    ]
+  },
+  "risks": [
+    "A farewell prefix that deviates from \"Goodbye, \" (different word, missing comma or space, trailing punctuation) makes the README examples and the test disagree; the test, the README and the implementation must all use the identical string.",
+    "Putting the new test in a separate file outside test/**/*.test.ts would be silently skipped by the npm test glob; the plan pins the test to the existing test/greet.test.ts to avoid this."
+  ],
+  "outOfScope": [
+    "Creating a separate src/farewell.ts module or renaming src/greet.ts to a broader name; farewell lives beside greet in the existing file.",
+    "Input validation, trimming or empty-name handling for farewell; greet has none and farewell mirrors it.",
+    "Documenting npm scripts, setup or Node version requirements in the README beyond the two functions requested.",
+    "Adding tsconfig, lint, build or type-check tooling."
+  ]
+}

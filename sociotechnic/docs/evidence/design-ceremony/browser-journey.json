@@ -1,0 +1,20 @@
+{
+  "date": "2026-10-24",
+  "runner": "fake; browser interaction was real",
+  "status": "planned",
+  "round": 0,
+  "designApproved": true,
+  "selectedOption": "option-2",
+  "selectedStack": "react-nest",
+  "planBoundToDesign": true,
+  "buildDispatches": 0,
+  "worktreeClean": true,
+  "baseHeadUnchanged": true,
+  "humanActions": [
+    "design-answer",
+    "design-revise",
+    "design-select",
+    "design-revise",
+    "design-approve"
+  ]
+}

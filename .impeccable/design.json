@@ -1,0 +1,745 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-24T11:01:23.721662+00:00",
+  "title": "Design System: Sociotechnic",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Primary",
+        "tonalRamp": [
+          "oklch(15% 0.1660 259.96)",
+          "oklch(26% 0.1660 259.96)",
+          "oklch(38% 0.1660 259.96)",
+          "oklch(49% 0.1660 259.96)",
+          "oklch(61% 0.1660 259.96)",
+          "oklch(72% 0.1660 259.96)",
+          "oklch(84% 0.1660 259.96)",
+          "oklch(95% 0.1660 259.96)"
+        ]
+      },
+      "primary-foreground": {
+        "role": "neutral",
+        "displayName": "Primary Foreground",
+        "tonalRamp": [
+          "oklch(15% 0.0000 89.88)",
+          "oklch(26% 0.0000 89.88)",
+          "oklch(38% 0.0000 89.88)",
+          "oklch(49% 0.0000 89.88)",
+          "oklch(61% 0.0000 89.88)",
+          "oklch(72% 0.0000 89.88)",
+          "oklch(84% 0.0000 89.88)",
+          "oklch(95% 0.0000 89.88)"
+        ]
+      },
+      "background": {
+        "role": "neutral",
+        "displayName": "Background",
+        "tonalRamp": [
+          "oklch(15% 0.0034 247.86)",
+          "oklch(26% 0.0034 247.86)",
+          "oklch(38% 0.0034 247.86)",
+          "oklch(49% 0.0034 247.86)",
+          "oklch(61% 0.0034 247.86)",
+          "oklch(72% 0.0034 247.86)",
+          "oklch(84% 0.0034 247.86)",
+          "oklch(95% 0.0034 247.86)"
+        ]
+      },
+      "foreground": {
+        "role": "neutral",
+        "displayName": "Foreground",
+        "tonalRamp": [
+          "oklch(15% 0.0411 261.83)",
+          "oklch(26% 0.0411 261.83)",
+          "oklch(38% 0.0411 261.83)",
+          "oklch(49% 0.0411 261.83)",
+          "oklch(61% 0.0411 261.83)",
+          "oklch(72% 0.0411 261.83)",
+          "oklch(84% 0.0411 261.83)",
+          "oklch(95% 0.0411 261.83)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface",
+        "tonalRamp": [
+          "oklch(15% 0.0000 89.88)",
+          "oklch(26% 0.0000 89.88)",
+          "oklch(38% 0.0000 89.88)",
+          "oklch(49% 0.0000 89.88)",
+          "oklch(61% 0.0000 89.88)",
+          "oklch(72% 0.0000 89.88)",
+          "oklch(84% 0.0000 89.88)",
+          "oklch(95% 0.0000 89.88)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted",
+        "tonalRamp": [
+          "oklch(15% 0.0108 256.70)",
+          "oklch(26% 0.0108 256.70)",
+          "oklch(38% 0.0108 256.70)",
+          "oklch(49% 0.0108 256.70)",
+          "oklch(61% 0.0108 256.70)",
+          "oklch(72% 0.0108 256.70)",
+          "oklch(84% 0.0108 256.70)",
+          "oklch(95% 0.0108 256.70)"
+        ]
+      },
+      "muted-foreground": {
+        "role": "neutral",
+        "displayName": "Muted Foreground",
+        "tonalRamp": [
+          "oklch(15% 0.0425 256.06)",
+          "oklch(26% 0.0425 256.06)",
+          "oklch(38% 0.0425 256.06)",
+          "oklch(49% 0.0425 256.06)",
+          "oklch(61% 0.0425 256.06)",
+          "oklch(72% 0.0425 256.06)",
+          "oklch(84% 0.0425 256.06)",
+          "oklch(95% 0.0425 256.06)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Border",
+        "tonalRamp": [
+          "oklch(15% 0.0198 252.89)",
+          "oklch(26% 0.0198 252.89)",
+          "oklch(38% 0.0198 252.89)",
+          "oklch(49% 0.0198 252.89)",
+          "oklch(61% 0.0198 252.89)",
+          "oklch(72% 0.0198 252.89)",
+          "oklch(84% 0.0198 252.89)",
+          "oklch(95% 0.0198 252.89)"
+        ]
+      },
+      "input": {
+        "role": "neutral",
+        "displayName": "Input",
+        "tonalRamp": [
+          "oklch(15% 0.0198 252.89)",
+          "oklch(26% 0.0198 252.89)",
+          "oklch(38% 0.0198 252.89)",
+          "oklch(49% 0.0198 252.89)",
+          "oklch(61% 0.0198 252.89)",
+          "oklch(72% 0.0198 252.89)",
+          "oklch(84% 0.0198 252.89)",
+          "oklch(95% 0.0198 252.89)"
+        ]
+      },
+      "secondary": {
+        "role": "neutral",
+        "displayName": "Secondary",
+        "tonalRamp": [
+          "oklch(15% 0.0108 256.70)",
+          "oklch(26% 0.0108 256.70)",
+          "oklch(38% 0.0108 256.70)",
+          "oklch(49% 0.0108 256.70)",
+          "oklch(61% 0.0108 256.70)",
+          "oklch(72% 0.0108 256.70)",
+          "oklch(84% 0.0108 256.70)",
+          "oklch(95% 0.0108 256.70)"
+        ]
+      },
+      "secondary-foreground": {
+        "role": "neutral",
+        "displayName": "Secondary Foreground",
+        "tonalRamp": [
+          "oklch(15% 0.0411 261.83)",
+          "oklch(26% 0.0411 261.83)",
+          "oklch(38% 0.0411 261.83)",
+          "oklch(49% 0.0411 261.83)",
+          "oklch(61% 0.0411 261.83)",
+          "oklch(72% 0.0411 261.83)",
+          "oklch(84% 0.0411 261.83)",
+          "oklch(95% 0.0411 261.83)"
+        ]
+      },
+      "destructive": {
+        "role": "semantic",
+        "displayName": "Destructive",
+        "tonalRamp": [
+          "oklch(15% 0.1793 21.80)",
+          "oklch(26% 0.1793 21.80)",
+          "oklch(38% 0.1793 21.80)",
+          "oklch(49% 0.1793 21.80)",
+          "oklch(61% 0.1793 21.80)",
+          "oklch(72% 0.1793 21.80)",
+          "oklch(84% 0.1793 21.80)",
+          "oklch(95% 0.1793 21.80)"
+        ]
+      },
+      "positive": {
+        "role": "semantic",
+        "displayName": "Positive",
+        "tonalRamp": [
+          "oklch(15% 0.1119 154.23)",
+          "oklch(26% 0.1119 154.23)",
+          "oklch(38% 0.1119 154.23)",
+          "oklch(49% 0.1119 154.23)",
+          "oklch(61% 0.1119 154.23)",
+          "oklch(72% 0.1119 154.23)",
+          "oklch(84% 0.1119 154.23)",
+          "oklch(95% 0.1119 154.23)"
+        ]
+      },
+      "ring": {
+        "role": "primary",
+        "displayName": "Ring",
+        "tonalRamp": [
+          "oklch(15% 0.1771 259.15)",
+          "oklch(26% 0.1771 259.15)",
+          "oklch(38% 0.1771 259.15)",
+          "oklch(49% 0.1771 259.15)",
+          "oklch(61% 0.1771 259.15)",
+          "oklch(72% 0.1771 259.15)",
+          "oklch(84% 0.1771 259.15)",
+          "oklch(95% 0.1771 259.15)"
+        ]
+      },
+      "primary-dark": {
+        "role": "primary",
+        "displayName": "Primary Dark",
+        "tonalRamp": [
+          "oklch(15% 0.1275 259.86)",
+          "oklch(26% 0.1275 259.86)",
+          "oklch(38% 0.1275 259.86)",
+          "oklch(49% 0.1275 259.86)",
+          "oklch(61% 0.1275 259.86)",
+          "oklch(72% 0.1275 259.86)",
+          "oklch(84% 0.1275 259.86)",
+          "oklch(95% 0.1275 259.86)"
+        ]
+      },
+      "primary-foreground-dark": {
+        "role": "neutral",
+        "displayName": "Primary Foreground Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0445 260.98)",
+          "oklch(26% 0.0445 260.98)",
+          "oklch(38% 0.0445 260.98)",
+          "oklch(49% 0.0445 260.98)",
+          "oklch(61% 0.0445 260.98)",
+          "oklch(72% 0.0445 260.98)",
+          "oklch(84% 0.0445 260.98)",
+          "oklch(95% 0.0445 260.98)"
+        ]
+      },
+      "background-dark": {
+        "role": "neutral",
+        "displayName": "Background Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0246 259.26)",
+          "oklch(26% 0.0246 259.26)",
+          "oklch(38% 0.0246 259.26)",
+          "oklch(49% 0.0246 259.26)",
+          "oklch(61% 0.0246 259.26)",
+          "oklch(72% 0.0246 259.26)",
+          "oklch(84% 0.0246 259.26)",
+          "oklch(95% 0.0246 259.26)"
+        ]
+      },
+      "foreground-dark": {
+        "role": "neutral",
+        "displayName": "Foreground Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0149 260.73)",
+          "oklch(26% 0.0149 260.73)",
+          "oklch(38% 0.0149 260.73)",
+          "oklch(49% 0.0149 260.73)",
+          "oklch(61% 0.0149 260.73)",
+          "oklch(72% 0.0149 260.73)",
+          "oklch(84% 0.0149 260.73)",
+          "oklch(95% 0.0149 260.73)"
+        ]
+      },
+      "surface-dark": {
+        "role": "neutral",
+        "displayName": "Surface Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0325 258.30)",
+          "oklch(26% 0.0325 258.30)",
+          "oklch(38% 0.0325 258.30)",
+          "oklch(49% 0.0325 258.30)",
+          "oklch(61% 0.0325 258.30)",
+          "oklch(72% 0.0325 258.30)",
+          "oklch(84% 0.0325 258.30)",
+          "oklch(95% 0.0325 258.30)"
+        ]
+      },
+      "muted-dark": {
+        "role": "neutral",
+        "displayName": "Muted Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0413 257.30)",
+          "oklch(26% 0.0413 257.30)",
+          "oklch(38% 0.0413 257.30)",
+          "oklch(49% 0.0413 257.30)",
+          "oklch(61% 0.0413 257.30)",
+          "oklch(72% 0.0413 257.30)",
+          "oklch(84% 0.0413 257.30)",
+          "oklch(95% 0.0413 257.30)"
+        ]
+      },
+      "muted-foreground-dark": {
+        "role": "neutral",
+        "displayName": "Muted Foreground Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0358 257.86)",
+          "oklch(26% 0.0358 257.86)",
+          "oklch(38% 0.0358 257.86)",
+          "oklch(49% 0.0358 257.86)",
+          "oklch(61% 0.0358 257.86)",
+          "oklch(72% 0.0358 257.86)",
+          "oklch(84% 0.0358 257.86)",
+          "oklch(95% 0.0358 257.86)"
+        ]
+      },
+      "border-dark": {
+        "role": "neutral",
+        "displayName": "Border Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0446 257.42)",
+          "oklch(26% 0.0446 257.42)",
+          "oklch(38% 0.0446 257.42)",
+          "oklch(49% 0.0446 257.42)",
+          "oklch(61% 0.0446 257.42)",
+          "oklch(72% 0.0446 257.42)",
+          "oklch(84% 0.0446 257.42)",
+          "oklch(95% 0.0446 257.42)"
+        ]
+      },
+      "input-dark": {
+        "role": "neutral",
+        "displayName": "Input Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0446 257.42)",
+          "oklch(26% 0.0446 257.42)",
+          "oklch(38% 0.0446 257.42)",
+          "oklch(49% 0.0446 257.42)",
+          "oklch(61% 0.0446 257.42)",
+          "oklch(72% 0.0446 257.42)",
+          "oklch(84% 0.0446 257.42)",
+          "oklch(95% 0.0446 257.42)"
+        ]
+      },
+      "secondary-dark": {
+        "role": "neutral",
+        "displayName": "Secondary Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0413 257.30)",
+          "oklch(26% 0.0413 257.30)",
+          "oklch(38% 0.0413 257.30)",
+          "oklch(49% 0.0413 257.30)",
+          "oklch(61% 0.0413 257.30)",
+          "oklch(72% 0.0413 257.30)",
+          "oklch(84% 0.0413 257.30)",
+          "oklch(95% 0.0413 257.30)"
+        ]
+      },
+      "secondary-foreground-dark": {
+        "role": "neutral",
+        "displayName": "Secondary Foreground Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0149 260.73)",
+          "oklch(26% 0.0149 260.73)",
+          "oklch(38% 0.0149 260.73)",
+          "oklch(49% 0.0149 260.73)",
+          "oklch(61% 0.0149 260.73)",
+          "oklch(72% 0.0149 260.73)",
+          "oklch(84% 0.0149 260.73)",
+          "oklch(95% 0.0149 260.73)"
+        ]
+      },
+      "destructive-dark": {
+        "role": "semantic",
+        "displayName": "Destructive Dark",
+        "tonalRamp": [
+          "oklch(15% 0.1162 12.01)",
+          "oklch(26% 0.1162 12.01)",
+          "oklch(38% 0.1162 12.01)",
+          "oklch(49% 0.1162 12.01)",
+          "oklch(61% 0.1162 12.01)",
+          "oklch(72% 0.1162 12.01)",
+          "oklch(84% 0.1162 12.01)",
+          "oklch(95% 0.1162 12.01)"
+        ]
+      },
+      "positive-dark": {
+        "role": "semantic",
+        "displayName": "Positive Dark",
+        "tonalRamp": [
+          "oklch(15% 0.1218 157.33)",
+          "oklch(26% 0.1218 157.33)",
+          "oklch(38% 0.1218 157.33)",
+          "oklch(49% 0.1218 157.33)",
+          "oklch(61% 0.1218 157.33)",
+          "oklch(72% 0.1218 157.33)",
+          "oklch(84% 0.1218 157.33)",
+          "oklch(95% 0.1218 157.33)"
+        ]
+      },
+      "ring-dark": {
+        "role": "primary",
+        "displayName": "Ring Dark",
+        "tonalRamp": [
+          "oklch(15% 0.1136 260.41)",
+          "oklch(26% 0.1136 260.41)",
+          "oklch(38% 0.1136 260.41)",
+          "oklch(49% 0.1136 260.41)",
+          "oklch(61% 0.1136 260.41)",
+          "oklch(72% 0.1136 260.41)",
+          "oklch(84% 0.1136 260.41)",
+          "oklch(95% 0.1136 260.41)"
+        ]
+      },
+      "amber": {
+        "role": "semantic",
+        "displayName": "Amber",
+        "tonalRamp": [
+          "oklch(15% 0.1138 60.25)",
+          "oklch(26% 0.1138 60.25)",
+          "oklch(38% 0.1138 60.25)",
+          "oklch(49% 0.1138 60.25)",
+          "oklch(61% 0.1138 60.25)",
+          "oklch(72% 0.1138 60.25)",
+          "oklch(84% 0.1138 60.25)",
+          "oklch(95% 0.1138 60.25)"
+        ]
+      },
+      "violet": {
+        "role": "secondary",
+        "displayName": "Violet",
+        "tonalRamp": [
+          "oklch(15% 0.1665 293.13)",
+          "oklch(26% 0.1665 293.13)",
+          "oklch(38% 0.1665 293.13)",
+          "oklch(49% 0.1665 293.13)",
+          "oklch(61% 0.1665 293.13)",
+          "oklch(72% 0.1665 293.13)",
+          "oklch(84% 0.1665 293.13)",
+          "oklch(95% 0.1665 293.13)"
+        ]
+      },
+      "cyan": {
+        "role": "secondary",
+        "displayName": "Cyan",
+        "tonalRamp": [
+          "oklch(15% 0.0841 212.67)",
+          "oklch(26% 0.0841 212.67)",
+          "oklch(38% 0.0841 212.67)",
+          "oklch(49% 0.0841 212.67)",
+          "oklch(61% 0.0841 212.67)",
+          "oklch(72% 0.0841 212.67)",
+          "oklch(84% 0.0841 212.67)",
+          "oklch(95% 0.0841 212.67)"
+        ]
+      },
+      "amber-dark": {
+        "role": "semantic",
+        "displayName": "Amber Dark",
+        "tonalRamp": [
+          "oklch(15% 0.1154 76.34)",
+          "oklch(26% 0.1154 76.34)",
+          "oklch(38% 0.1154 76.34)",
+          "oklch(49% 0.1154 76.34)",
+          "oklch(61% 0.1154 76.34)",
+          "oklch(72% 0.1154 76.34)",
+          "oklch(84% 0.1154 76.34)",
+          "oklch(95% 0.1154 76.34)"
+        ]
+      },
+      "violet-dark": {
+        "role": "secondary",
+        "displayName": "Violet Dark",
+        "tonalRamp": [
+          "oklch(15% 0.1187 293.32)",
+          "oklch(26% 0.1187 293.32)",
+          "oklch(38% 0.1187 293.32)",
+          "oklch(49% 0.1187 293.32)",
+          "oklch(61% 0.1187 293.32)",
+          "oklch(72% 0.1187 293.32)",
+          "oklch(84% 0.1187 293.32)",
+          "oklch(95% 0.1187 293.32)"
+        ]
+      },
+      "cyan-dark": {
+        "role": "secondary",
+        "displayName": "Cyan Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0854 208.96)",
+          "oklch(26% 0.0854 208.96)",
+          "oklch(38% 0.0854 208.96)",
+          "oklch(49% 0.0854 208.96)",
+          "oklch(61% 0.0854 208.96)",
+          "oklch(72% 0.0854 208.96)",
+          "oklch(84% 0.0854 208.96)",
+          "oklch(95% 0.0854 208.96)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Selected run heading.",
+        "fontSize": "clamp(25px, 2.4vw, 34px)"
+      },
+      "dialog-title": {
+        "displayName": "Dialog Title",
+        "purpose": "Modal titles."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Section headings."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Interface and prose reading."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Supporting metadata."
+      },
+      "technical": {
+        "displayName": "Technical",
+        "purpose": "Structured records and technical values."
+      },
+      "measurement": {
+        "displayName": "Measurement",
+        "purpose": "Check and review counts; 32px at narrow widths.",
+        "fontVariantNumeric": "tabular-nums"
+      },
+      "tokenTotal": {
+        "displayName": "Recorded tokens",
+        "purpose": "Recorded token activity, with missing totals retained; not subscription billing or remaining allowance.",
+        "fontSize": "clamp(30px, 3.6vw, 48px)",
+        "fontVariantNumeric": "tabular-nums"
+      },
+      "sequence": {
+        "displayName": "Sequence number",
+        "purpose": "Plan and round order; never per-step completion.",
+        "fontVariantNumeric": "tabular-nums"
+      }
+    },
+    "shadows": [
+      {
+        "name": "modal",
+        "value": "0 16px 64px #0005",
+        "purpose": "Modal dialogs only."
+      },
+      {
+        "name": "tooltip",
+        "value": "0 8px 24px #0003",
+        "purpose": "Compact explanation overlay only."
+      }
+    ],
+    "motion": [
+      {
+        "name": "button-state",
+        "value": "150ms cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "Tailwind button state transition; disabled by reduced motion."
+      },
+      {
+        "name": "view-focus",
+        "value": "180ms ease-out",
+        "purpose": "Active-view contrast entrance; disabled by reduced motion."
+      },
+      {
+        "name": "disclosure-chevron",
+        "value": "180ms ease-out",
+        "purpose": "Chevron rotation; disabled by reduced motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "view-compact",
+        "value": "1100px"
+      },
+      {
+        "name": "compact-desktop",
+        "value": "1000px"
+      },
+      {
+        "name": "view-stack",
+        "value": "800px"
+      },
+      {
+        "name": "narrow",
+        "value": "700px"
+      }
+    ],
+    "ownership": {
+      "model": "B",
+      "canonical": "sociotechnic/ui/web/src/index.css + sociotechnic/ui/web/src/experience.css",
+      "componentSource": "sociotechnic/ui/web/src/components/ui/button.tsx",
+      "themes": "System prefers-color-scheme; unsuffixed frontmatter is light and -dark is dark.",
+      "tonalRamps": "Synthesized preview strips only; not runtime theme tokens.",
+      "technicalSource": "sociotechnic/ui/web/src/components/technical.tsx",
+      "experienceSource": "sociotechnic/ui/web/src/components/experience.tsx"
+    },
+    "navigation": {
+      "tabs": [
+        "Overview",
+        "Activity",
+        "Analysis",
+        "Agents"
+      ],
+      "initial": "Overview",
+      "behaviorOwner": "Radix Tabs",
+      "scope": "Selected run; current configured profiles remain distinct from historical dispatch models.",
+      "accents": {
+        "Overview": "primary",
+        "Activity": "cyan",
+        "Analysis": "violet",
+        "Agents": "amber"
+      }
+    },
+    "measurementSemantics": {
+      "progress": "Labeled counts, deadline budget used, or cost relative to the highest reported agent cost; values update immediately.",
+      "workflow": "Current stage and recorded milestones, never percentage complete.",
+      "plan": "Pinned scope with no live per-step completion.",
+      "missing": "Unavailable or unreported; never fabricated as zero."
+    }
+  },
+  "components": [
+    {
+      "name": "Primary button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Shared primary action treatment.",
+      "html": "<button class=\"ds-button-primary\">Continue build</button>",
+      "css": ".ds-button-primary{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 10px;border:1px solid transparent;border-radius:8px;font:500 14px/1.4286 \"Geist Variable\",system-ui,sans-serif;cursor:pointer;transition:all .15s;background:var(--primary,#225ec0);color:var(--primary-foreground,#fff);}.ds-button-primary:hover{background:color-mix(in oklab,var(--primary,#225ec0) 80%,transparent);}.ds-button-primary:focus-visible{outline:2px solid var(--ring,#3378e3);outline-offset:3px;border-color:var(--ring,#3378e3);box-shadow:0 0 0 3px color-mix(in oklab,var(--ring,#3378e3) 50%,transparent)}.ds-button-primary:active{transform:translateY(1px)}.ds-button-primary:disabled{opacity:.5;pointer-events:none}@media(max-width:700px){.ds-button-primary{min-height:40px}}@media(prefers-reduced-motion:reduce){.ds-button-primary{transition:none}}"
+    },
+    {
+      "name": "Outline button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Shared outline action treatment.",
+      "html": "<button class=\"ds-button-outline\">Request rework</button>",
+      "css": ".ds-button-outline{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 10px;border:1px solid transparent;border-radius:8px;font:500 14px/1.4286 \"Geist Variable\",system-ui,sans-serif;cursor:pointer;transition:all .15s;background:var(--background,#f8fafc);color:var(--foreground,#182337);border-color:var(--border,#cbd5e1);}.ds-button-outline:hover{background:var(--muted,#e9eef5);}.ds-button-outline:focus-visible{outline:2px solid var(--ring,#3378e3);outline-offset:3px;border-color:var(--ring,#3378e3);box-shadow:0 0 0 3px color-mix(in oklab,var(--ring,#3378e3) 50%,transparent)}.ds-button-outline:active{transform:translateY(1px)}.ds-button-outline:disabled{opacity:.5;pointer-events:none}@media(max-width:700px){.ds-button-outline{min-height:40px}}@media(prefers-reduced-motion:reduce){.ds-button-outline{transition:none}}"
+    },
+    {
+      "name": "Ghost button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Shared ghost action treatment.",
+      "html": "<button class=\"ds-button-ghost\">Refresh runs</button>",
+      "css": ".ds-button-ghost{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 10px;border:1px solid transparent;border-radius:8px;font:500 14px/1.4286 \"Geist Variable\",system-ui,sans-serif;cursor:pointer;transition:all .15s;background:transparent;color:var(--foreground,#182337);}.ds-button-ghost:hover{background:var(--muted,#e9eef5);}.ds-button-ghost:focus-visible{outline:2px solid var(--ring,#3378e3);outline-offset:3px;border-color:var(--ring,#3378e3);box-shadow:0 0 0 3px color-mix(in oklab,var(--ring,#3378e3) 50%,transparent)}.ds-button-ghost:active{transform:translateY(1px)}.ds-button-ghost:disabled{opacity:.5;pointer-events:none}@media(max-width:700px){.ds-button-ghost{min-height:40px}}@media(prefers-reduced-motion:reduce){.ds-button-ghost{transition:none}}"
+    },
+    {
+      "name": "Destructive button",
+      "kind": "button",
+      "refersTo": "button-destructive",
+      "description": "Shared destructive action treatment.",
+      "html": "<button class=\"ds-button-destructive\">Stop run</button>",
+      "css": ".ds-button-destructive{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 10px;border:1px solid transparent;border-radius:8px;font:500 14px/1.4286 \"Geist Variable\",system-ui,sans-serif;cursor:pointer;transition:all .15s;background:color-mix(in oklab,var(--destructive,#b42332) 10%,transparent);color:var(--destructive,#b42332);}.ds-button-destructive:hover{background:color-mix(in oklab,var(--destructive,#b42332) 20%,transparent);}.ds-button-destructive:focus-visible{outline:2px solid var(--ring,#3378e3);outline-offset:3px;border-color:var(--ring,#3378e3);box-shadow:0 0 0 3px color-mix(in oklab,var(--ring,#3378e3) 50%,transparent)}.ds-button-destructive:active{transform:translateY(1px)}.ds-button-destructive:disabled{opacity:.5;pointer-events:none}@media(max-width:700px){.ds-button-destructive{min-height:40px}}@media(prefers-reduced-motion:reduce){.ds-button-destructive{transition:none}}"
+    },
+    {
+      "name": "Native project filter",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Native select intentionally preserves platform keyboard behavior.",
+      "html": "<label class=\"ds-filter\">Project<select aria-label=\"Project\"><option>All projects</option></select></label>",
+      "css": ".ds-filter{display:grid;gap:6px;font:400 12px/1.5 \"Geist Variable\",system-ui,sans-serif;color:var(--foreground,#182337)}.ds-filter select{font:inherit;cursor:pointer;background:var(--background,#f8fafc);color:inherit;border:1px solid var(--border,#cbd5e1);border-radius:6px;padding:8px 10px}.ds-filter select:focus-visible{outline:2px solid var(--ring,#3378e3);outline-offset:3px}"
+    },
+    {
+      "name": "Selected run",
+      "kind": "nav",
+      "refersTo": "run-navigation-selected",
+      "description": "Current run with text status and primary selection edge.",
+      "html": "<nav aria-label=\"Runs\"><button class=\"ds-run\" aria-current=\"true\"><span>Project</span><strong>Selected run</strong><span>Planned</span></button></nav>",
+      "css": ".ds-run{width:100%;padding:17px 22px;text-align:left;border:0;border-bottom:1px solid var(--border,#cbd5e1);border-left:1px solid var(--primary,#225ec0);display:grid;gap:5px;background:color-mix(in srgb,var(--primary,#225ec0) 10%,var(--surface,#fff));color:var(--foreground,#182337);font:400 12px/1.5 \"Geist Variable\",system-ui,sans-serif;cursor:pointer}.ds-run span{color:var(--muted-foreground,#52637a)}.ds-run strong{font-size:14px;font-weight:400;line-height:1.45}.ds-run:hover{background:var(--muted,#e9eef5)}.ds-run:focus-visible{outline:2px solid var(--ring,#3378e3);outline-offset:3px}"
+    },
+    {
+      "name": "Evidence summary",
+      "kind": "custom",
+      "refersTo": "evidence-ledger",
+      "description": "Tonal gate statement and prominent measurements; this specimen shows unavailable evidence.",
+      "html": "<section class=\"ds-evidence\"><h2>What the evidence says</h2><div class=\"ds-evidence-body\"><div class=\"ds-gate\"><h3>Evidence in progress</h3><p>The engine has not computed this round’s gate.</p></div><dl><div><dt>Checks</dt><dd>—</dd><small>Not recorded</small></div><div><dt>Reviews</dt><dd>—</dd><small>Not recorded</small></div></dl></div></section>",
+      "css": ".ds-evidence{font:400 15px/1.5 \"Geist Variable\",system-ui,sans-serif;color:var(--foreground,#182337);padding:24px 0}.ds-evidence h2{margin:0;font-size:18px;font-weight:650}.ds-evidence-body{display:grid;grid-template-columns:1.15fr 1fr;gap:28px;margin-top:18px}.ds-gate{padding:24px;border-radius:12px;background:color-mix(in srgb,var(--muted-foreground,#52637a) 9%,var(--surface,#fff));color:var(--muted-foreground,#52637a)}.ds-gate h3{font-size:28px;line-height:1.2;margin:12px 0;font-weight:650}.ds-gate p{font-size:13px}.ds-evidence dl{display:grid;gap:14px;margin:0}.ds-evidence dl>div{border-bottom:1px solid var(--border,#cbd5e1);padding-bottom:16px}.ds-evidence dt,.ds-evidence small{font-size:12px;color:var(--muted-foreground,#52637a)}.ds-evidence dd{margin:0;font-size:38px;line-height:1.1;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:-1px}@media(max-width:800px){.ds-evidence-body{grid-template-columns:1fr}.ds-evidence dl{grid-template-columns:1fr 1fr}}"
+    },
+    {
+      "name": "Record link button",
+      "kind": "button",
+      "refersTo": "button-link",
+      "description": "Compact access to an original record; disabled when that record is absent.",
+      "html": "<button class=\"ds-record-button\">Read record</button>",
+      "css": ".ds-record-button{display:inline-flex;align-items:center;justify-content:center;min-height:24px;padding:0;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--primary,#225ec0);font:500 14px/1.4286 \"Geist Variable\",system-ui,sans-serif;text-underline-offset:4px;cursor:pointer;transition:all .15s}.ds-record-button:hover{text-decoration:underline}.ds-record-button:focus-visible{outline:2px solid var(--ring,#3378e3);outline-offset:3px;border-color:var(--ring,#3378e3);box-shadow:0 0 0 3px color-mix(in oklab,var(--ring,#3378e3) 50%,transparent)}.ds-record-button:active{transform:translateY(1px)}.ds-record-button:disabled{opacity:.5;pointer-events:none}@media(prefers-reduced-motion:reduce){.ds-record-button{transition:none}}"
+    },
+    {
+      "name": "Run view tabs",
+      "kind": "nav",
+      "refersTo": "view-tab-active",
+      "description": "Visual specimen of Overview, Activity, Analysis and Agents; live keyboard behavior belongs to Radix Tabs.",
+      "html": "<div class=\"ds-view-tabs\" role=\"tablist\" aria-label=\"Run views\"><button class=\"ds-view-tab\" role=\"tab\" aria-selected=\"true\">Overview</button><button class=\"ds-view-tab\" role=\"tab\" aria-selected=\"false\" tabindex=\"-1\">Activity</button><button class=\"ds-view-tab\" role=\"tab\" aria-selected=\"false\" tabindex=\"-1\">Analysis</button><button class=\"ds-view-tab\" role=\"tab\" aria-selected=\"false\" tabindex=\"-1\">Agents</button></div>",
+      "css": ".ds-view-tabs{display:flex;gap:8px;border-bottom:1px solid var(--border,#cbd5e1);padding-bottom:10px;overflow-x:auto}.ds-view-tab{flex:1;padding:12px 16px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--muted-foreground,#52637a);font:400 14px/1.5 \"Geist Variable\",system-ui,sans-serif;cursor:pointer}.ds-view-tab:nth-child(2){--ds-accent:var(--cyan,#006a7a)}.ds-view-tab:nth-child(3){--ds-accent:var(--violet,#6847b5)}.ds-view-tab:nth-child(4){--ds-accent:var(--amber,#905006)}.ds-view-tab[aria-selected=\"true\"]{color:var(--ds-accent,var(--primary,#225ec0));background:var(--surface,#fff);border-color:var(--border,#cbd5e1);font-weight:600}.ds-view-tab:hover{color:var(--foreground,#182337)}.ds-view-tab:focus-visible{outline:2px solid var(--ring,#3378e3);outline-offset:3px}@media(max-width:700px){.ds-view-tabs{gap:2px}.ds-view-tab{padding:12px 6px;font-size:12px}}"
+    },
+    {
+      "name": "Technical measurement table",
+      "kind": "custom",
+      "refersTo": "technical-table-cell",
+      "description": "Dense, horizontally scrollable measurement specimen. Live dispatch headers sort start, agent and elapsed; Analysis uses a sort select.",
+      "html": "<div class=\"ds-table-scroll\" tabindex=\"0\" role=\"region\" aria-label=\"Measurement table, scroll horizontally for all columns\"><table class=\"ds-technical-table\"><caption>Recorded measurements for this run</caption><thead><tr><th scope=\"col\">Agent</th><th scope=\"col\">Median elapsed</th><th scope=\"col\">Cost (USD)</th></tr></thead><tbody><tr><th scope=\"row\">Selected agent</th><td>Unavailable<small>No completed timing recorded</small></td><td>Not reported</td></tr></tbody></table></div>",
+      "css": ".ds-table-scroll{overflow-x:auto;margin-top:16px;border-top:1px solid var(--border,#cbd5e1);color:var(--foreground,#182337)}.ds-technical-table{width:100%;border-collapse:collapse;text-align:left;font:400 12px/1.5 \"Geist Variable\",system-ui,sans-serif}.ds-technical-table caption{text-align:left;color:var(--muted-foreground,#52637a);padding:12px 0}.ds-technical-table th,.ds-technical-table td{border-bottom:1px solid var(--border,#cbd5e1);padding:12px;vertical-align:top}.ds-technical-table th{font-weight:550}.ds-technical-table thead th{color:var(--muted-foreground,#52637a);white-space:nowrap}.ds-technical-table td{min-width:100px}.ds-technical-table small{display:block;color:var(--muted-foreground,#52637a);font-size:11px;margin-top:5px}.ds-technical-table{font-variant-numeric:tabular-nums}.ds-technical-table thead{background:var(--surface,#fff)}.ds-technical-table tbody tr:hover{background:color-mix(in srgb,var(--primary,#225ec0) 4%,var(--background,#f8fafc))}.ds-table-scroll:focus-visible{outline:2px solid var(--ring,#3378e3);outline-offset:3px}"
+    },
+    {
+      "name": "Plan sequence disclosure",
+      "kind": "custom",
+      "refersTo": "plan-step",
+      "description": "Numbered pinned scope with native disclosure; numbering makes no completion claim.",
+      "html": "<details class=\"ds-plan\"><summary><span>01</span><strong>Planned scope</strong><svg aria-hidden=\"true\" width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"m6 9 6 6 6-6\"/></svg></summary><p>Acceptance criteria, files and risks from the pinned plan appear here. No live step completion is recorded.</p></details>",
+      "css": ".ds-plan{font:400 13px/1.5 \"Geist Variable\",system-ui,sans-serif;color:var(--foreground,#182337);border-block:1px solid var(--border,#cbd5e1)}.ds-plan summary{display:grid;grid-template-columns:44px minmax(0,1fr) 20px;gap:12px;align-items:center;padding:18px 12px;border-radius:8px;cursor:pointer;list-style:none}.ds-plan summary::-webkit-details-marker{display:none}.ds-plan summary>span:first-child{font-size:26px;font-weight:650;color:var(--primary,#225ec0);font-variant-numeric:tabular-nums}.ds-plan strong{font-size:14px;font-weight:600}.ds-plan summary:hover{background:var(--muted,#e9eef5)}.ds-plan summary:focus-visible{outline:2px solid var(--ring,#3378e3);outline-offset:3px}.ds-plan p{padding:0 32px 24px 68px;margin:0}@media(max-width:700px){.ds-plan summary{grid-template-columns:32px minmax(0,1fr) 18px;padding-inline:0}.ds-plan p{padding:0 12px 20px 44px}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Run Console",
+    "overview": "Sociotechnic is a product console for the owner supervising coding agents in local repositories. Its slate surfaces, blue actions, compact labels, and readable evidence keep the current run and the next human decision legible. Color-coded views, prominent measurements, and expandable numbered sequences make the console more expressive without replacing its established identity. The existing console and the owner's React scaffold establish this visual language; this document records that implementation.\n\nRuntime CSS remains canonical (Model B). `sociotechnic/ui/web/src/index.css` owns the base theme and local font loading; `sociotechnic/ui/web/src/experience.css` owns the added view accents, measurement hierarchy, and layout refinements; `sociotechnic/ui/web/src/components/ui/button.tsx` owns button variants. The frontmatter mirrors accepted values. `PRODUCT.md` supplies product context, and `sociotechnic/CONTRACTS.md` remains the behavioral authority. Surface-specific composition belongs in `sociotechnic/ui/web/.impeccable/surfaces/sociotechnic-ui-web-src-app-tsx.md`.",
+    "keyCharacteristics": [
+      "Slate surfaces and blue actions, with cyan, violet, and amber view accents in system light and dark themes.",
+      "Compact evidence with direct access to original records.",
+      "Sans text for reading; monospace for paths, commits, logs, and structured records.",
+      "Flat sections, tonal evidence surfaces, clear dividers, and elevated modal dialogs.",
+      "Large tabular numerals and expandable sequences with explicit measurement labels."
+    ],
+    "rules": [
+      {
+        "name": "The Semantic Color Rule",
+        "body": "Use primary for actions and current workflow stages, positive for supported success, amber for attention, and destructive for errors or destructive controls. View accents identify context. Keep every status and measurement meaning in text as well as color.",
+        "section": "colors"
+      },
+      {
+        "name": "The Reading Role Rule",
+        "body": "Use Geist for prose and interface labels. Reserve monospace for technical values and structured records.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat Surface Rule",
+        "body": "Separate ordinary content with spacing, borders, and muted fills. Reserve the large shadow and dimmed backdrop for modal dialogs.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Measured Progress Rule",
+        "body": "A meter represents its labeled count, deadline budget, or relative reported cost. Workflow milestones and plan numbering never establish a percentage complete, acceptance, or publication.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "Do resolve theme colors through the existing CSS variables.",
+      "Do pair status color with explicit status text and expose missing evidence plainly.",
+      "Do preserve keyboard focus outlines and modal focus restoration.",
+      "Do keep technical details and original records accessible through progressive disclosure.",
+      "Do keep fonts and assets local.",
+      "Do label counts, deadline budgets, and relative-cost bars with their actual meaning."
+    ],
+    "donts": [
+      "Don't substitute a new brand palette or display font for the existing console language.",
+      "Don't turn a passed check or gate into a claim that the human has accepted or published the branch.",
+      "Don't apply the modal shadow to every evidence section.",
+      "Don't invent completion for numbered plan steps or treat missing usage as zero.",
+      "Don't replace the intentional native project and status selects with custom listboxes without a concrete requirement."
+    ]
+  }
+}

@@ -1,0 +1,121 @@
+# go-task (https://taskfile.dev). Entry point for the sociotechnic fork.
+version: '3'
+
+vars:
+  SOCIOTECHNIC: sociotechnic/bin/sociotechnic
+
+tasks:
+  default:
+    cmds: [task --list]
+    silent: true
+
+  install:
+    desc: "Install sociotechnic dependencies with the frozen pnpm lockfile (supply chain policy in sociotechnic/pnpm-workspace.yaml)"
+    dir: sociotechnic
+    cmds:
+      - pnpm install --frozen-lockfile
+
+  install:global:
+    desc: "Symlink ~/.claude/skills/sociotechnic to sociotechnic/global so /sociotechnic works in every Claude Code session on this machine"
+    cmds:
+      - mkdir -p ~/.claude/skills
+      - ln -sfn "{{.ROOT_DIR}}/sociotechnic/global" ~/.claude/skills/sociotechnic
+      - ls -la ~/.claude/skills/sociotechnic
+
+  checks:
+    desc: "Type check, build the console, validate agents, test, and audit production dependencies"
+    cmds:
+      - task: typecheck
+      - task: build
+      - task: agents
+      - task: test
+      - task: audit
+
+  typecheck:
+    desc: "tsc --noEmit (erasable syntax only; Node 24 strips types but never checks them)"
+    dir: sociotechnic
+    cmds:
+      - pnpm exec tsc --noEmit
+      - pnpm --filter @sociotechnic/web typecheck
+
+  build:
+    desc: "Build the React console served by sociotechnic ui"
+    dir: sociotechnic
+    cmds:
+      - pnpm --filter @sociotechnic/web build
+
+  agents:
+    desc: "Validate bundled agent initialization seeds against the role table"
+    cmds:
+      - "{{.SOCIOTECHNIC}} agents"
+
+  test:
+    desc: "Run the test suite (no network, no LLM, no database)"
+    cmds:
+      - node --test sociotechnic/tests/*.test.ts
+
+  test:pg:
+    desc: "Run the suite including the PostgreSQL test against the local homebrew postgresql@17 (creates and drops sociotechnic_test_<pid>)"
+    env:
+      SOCIOTECHNIC_TEST_DATABASE_URL: postgres://localhost:5433/postgres
+    cmds:
+      - node --test sociotechnic/tests/*.test.ts
+
+  audit:
+    desc: "pnpm audit of production dependencies, fails on high or critical"
+    dir: sociotechnic
+    cmds:
+      - pnpm audit --prod --audit-level high
+
+  dev:
+    desc: "Free dev ports, start the API on 4748 and Vite on 5173, and open the page (Ctrl-C to stop)"
+    env:
+      NODE_ENV: development
+    cmds:
+      - node sociotechnic/ui/dev.ts
+
+  ui:
+    desc: "Ensure the console is running in the background and open it"
+    deps: [build]
+    cmds:
+      - "{{.SOCIOTECHNIC}} ui --ensure"
+
+  ui:stop:
+    desc: "Stop the background console"
+    cmds:
+      - "{{.SOCIOTECHNIC}} ui --stop"
+
+  db:init:
+    desc: "Create the sociotechnic database on postgresql@17 (localhost:5433) and apply the schema"
+    cmds:
+      - "{{.SOCIOTECHNIC}} db init"
+
+  db:status:
+    desc: "Report the state store connection and row counts"
+    cmds:
+      - "{{.SOCIOTECHNIC}} db status"
+
+  db:catalog:export:
+    desc: "Export every immutable agent release to a new migration bundle (usage: task db:catalog:export -- --out <new-file>)"
+    cmds:
+      - "{{.SOCIOTECHNIC}} db catalog-export {{.CLI_ARGS}}"
+
+  db:catalog:check:
+    desc: "Verify all database agent versions are preserved in committed migration bundles"
+    cmds:
+      - "{{.SOCIOTECHNIC}} db catalog-check"
+
+  db:history:clean:
+    desc: "Preview or apply explicitly reviewed development cancellation/retry exclusions"
+    cmds:
+      - "{{.SOCIOTECHNIC}} db clean-development-history {{.CLI_ARGS}}"
+
+  db:import-jobs:
+    desc: "Explicit legacy job import (dry-run --out manifest, then apply --manifest manifest)"
+    cmds:
+      - "{{.SOCIOTECHNIC}} db import-jobs {{.CLI_ARGS}}"
+
+  jobs:
+    desc: "List jobs across all projects (usage: task jobs -- --project <name>)"
+    cmds:
+      - "{{.SOCIOTECHNIC}} jobs {{.CLI_ARGS}}"

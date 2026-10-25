@@ -1,0 +1,4 @@
+Source: sociotechnic-banner-v4.png
+Tool: built-in image_gen, transparent_background=true
+
+Use case: background-extraction. Edit target: the supplied Sociotechnic README banner. Remove ONLY the dark near-black background, making it genuinely transparent with an alpha channel, including all spaces between the fine diagram lines and within letter counters. Preserve the existing artwork, exact typography, layout, wide 3:1 aspect ratio, all colored blue/cyan/gray lines and symbols, white sociotechnic wordmark and light-gray tagline. Exact text unchanged: "sociotechnic" and "one request. a team of specialists." No reinterpretation, no new text, no cropping, no checkerboard baked in, no dark rectangular matte or shadow. Clean antialiased edges. Output a transparent PNG suited to overlay on a dark slate web console.

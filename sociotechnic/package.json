@@ -1,0 +1,24 @@
+{
+  "name": "sociotechnic",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.15.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "audit": "pnpm audit --prod --audit-level high"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "0.3.310",
+    "@babel/parser": "8.0.8",
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.5",
+    "@types/pg": "8.23.1",
+    "typescript": "7.0.2"
+  }
+}

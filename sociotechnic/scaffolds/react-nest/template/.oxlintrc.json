@@ -1,0 +1,54 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "import", "unicorn", "oxc"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn"
+  },
+  "ignorePatterns": [
+    "**/dist/**",
+    "**/node_modules/**",
+    "apps/web/src/components/ui/**",
+    "docs/ui-standards/upstream/**"
+  ],
+  "overrides": [
+    {
+      "files": ["apps/web/**"],
+      "plugins": ["react", "jsx-a11y"],
+      "env": {
+        "browser": true
+      },
+      "rules": {
+        "react/rules-of-hooks": "error",
+        "react/only-export-components": [
+          "warn",
+          {
+            "allowConstantExport": true
+          }
+        ],
+        "react/react-in-jsx-scope": "off",
+        "import/no-unassigned-import": [
+          "warn",
+          {
+            "allow": ["**/*.css"]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["apps/api/**"],
+      "plugins": ["vitest"],
+      "env": {
+        "node": true
+      },
+      "rules": {
+        "typescript/no-extraneous-class": [
+          "warn",
+          {
+            "allowWithDecorator": true
+          }
+        ]
+      }
+    }
+  ]
+}

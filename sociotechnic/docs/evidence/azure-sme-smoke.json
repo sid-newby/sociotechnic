@@ -1,0 +1,55 @@
+{
+  "at": "2026-10-24T23:51:01.597Z",
+  "agent": "sociotechnic-azure-builder-lite",
+  "version": "1.0.0",
+  "model": "gpt-6.1-sol",
+  "effort": "high",
+  "releaseDigest": "b52d5794aac950705d2686e06d9c29d8a8bb12f3be55e942354d6ff5b802809e",
+  "upstream": "f3b512517ed86feceebfee480a46c971f6c6aff4",
+  "outcome": "ok",
+  "usage": {
+    "provider": "codex",
+    "duration_ms": 44107,
+    "tool_uses": 17,
+    "usage": {
+      "input_tokens": 28066,
+      "cache_read_input_tokens": 142464,
+      "output_tokens": 2161,
+      "total_tokens": 172691
+    }
+  },
+  "warnings": [
+    "context7 not configured; Codex agent has live web search only"
+  ],
+  "activity": [
+    "azure-local-smoke -> command_execution",
+    "azure-local-smoke -> glob",
+    "azure-local-smoke -> read_file",
+    "azure-local-smoke -> read_file",
+    "azure-local-smoke -> glob",
+    "azure-local-smoke -> glob",
+    "azure-local-smoke -> read_file",
+    "azure-local-smoke -> read_file",
+    "azure-local-smoke -> read_file",
+    "azure-local-smoke -> read_file",
+    "azure-local-smoke -> read_file",
+    "azure-local-smoke -> read_file",
+    "azure-local-smoke -> read_file",
+    "azure-local-smoke -> grep",
+    "azure-local-smoke -> command_execution",
+    "azure-local-smoke -> commit_changes",
+    "azure-local-smoke -> command_execution"
+  ],
+  "head": "b3aa88371847b577bb73703ddd68af409b59863e",
+  "changedFiles": [
+    "storage.json"
+  ],
+  "hostVerification": {
+    "onlyRequestedPropertyChanged": true,
+    "baseBranchUnchanged": true,
+    "worktreeClean": true,
+    "diffCheckPassed": true
+  },
+  "limits": "Local template remediation only. No Azure tenant calls, login, infrastructure apply or deployment. Outside canonical job history.",
+  "record": "STATUS: READY\nCOMMIT: b3aa88371847b577bb73703ddd68af409b59863e\n\n## Summary\nChanged storage.json:15 to set allowBlobPublicAccess to false.\nPreserved every other JSON value and all formatting.\nCommitted only storage.json on sociotechnic/azure-local-smoke.\n\n## Acceptance\n- [x] Read storage.json and pinned Azure compliance guidance — bounded MCP reads covered SKILL.md and references/azure-quick-review.md before editing.\n- [x] Set allowBlobPublicAccess to false — Node assertions verified the committed property at HEAD.\n- [x] Preserve every other JSON value — Node deep equality and exact text comparison against HEAD’s parent passed.\n- [x] Verify JSON and diff — Node JSON parsing passed before and after commit; `git diff HEAD^ HEAD --check` passed. Inspected diff contains one property change.\n- [x] Commit only storage.json — scoped `commit_changes` succeeded; Node verified the commit’s file list and clean working tree.\n\n## Deviations\n- none\n\n## Notes for reviewers\nThis disposable smoke contained no canonical plan.json or .sociotechnic.json; verification followed the explicit approved brief.\nNo repository tools, dependencies, or test files were added.\nApplied the attached azure-sme skill and its pinned Microsoft compliance guidance.\nNo Azure CLI, authentication, cloud scans, downloads, credential changes, deployments, or remote mutations were performed. Local verification establishes template contents only.\nThe scoped commit bridge did not execute hooks or signing helpers; engine checks remain the runner’s responsibility."
+}

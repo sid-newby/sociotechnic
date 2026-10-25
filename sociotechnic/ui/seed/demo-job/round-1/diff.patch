@@ -1,0 +1,48 @@
+diff --git a/README.md b/README.md
+index 31523ed..c1da9cf 100644
+--- a/README.md
++++ b/README.md
+@@ -1,2 +1,20 @@
+ # demo-target
+ Tiny Node 24 project used as the sociotechnic dry-run target.
++
++## API
++
++### `greet(name)`
++
++Returns a greeting for `name`.
++
++```ts
++greet("sociotechnic"); // "Hello, sociotechnic"
++```
++
++### `farewell(name)`
++
++Returns a farewell for `name`.
++
++```ts
++farewell("sociotechnic"); // "Goodbye, sociotechnic"
++```
+diff --git a/src/greet.ts b/src/greet.ts
+index ae9dfa6..d247d75 100644
+--- a/src/greet.ts
++++ b/src/greet.ts
+@@ -1,3 +1,7 @@
+ export function greet(name: string): string {
+   return `Hello, ${name}`;
+ }
++
++export function farewell(name: string): string {
++  return `Goodbye, ${name}`;
++}
+diff --git a/test/greet.test.ts b/test/greet.test.ts
+index feaecfa..62430f5 100644
+--- a/test/greet.test.ts
++++ b/test/greet.test.ts
+@@ -1,4 +1,5 @@
+ import { test } from "node:test";
+ import assert from "node:assert/strict";
+-import { greet } from "../src/greet.ts";
++import { greet, farewell } from "../src/greet.ts";
+ test("greet", () => { assert.equal(greet("sociotechnic"), "Hello, sociotechnic"); });
++test("farewell", () => { assert.equal(farewell("sociotechnic"), "Goodbye, sociotechnic"); });

@@ -1,0 +1,26 @@
+packages:
+  - apps/*
+  - packages/*
+
+catalog:
+  typescript: ^7.0.2
+  '@types/node': ^24.19.2
+
+catalogs:
+  nest:
+    typescript: ^6.0.3
+
+# NestJS 12.2.0 pins vulnerable Multer 2.4.0. Remove after Nest adopts the fix.
+# https://github.com/advisories/GHSA-q7qp-rjg7-q26m
+overrides:
+  '@nestjs/platform-express@12.2.0>multer': 2.5.0
+
+minimumReleaseAge: 1440
+strictDepBuilds: true
+engineStrict: true
+trustPolicy: no-downgrade
+trustPolicyExclude:
+  - semver@6.3.1
+blockExoticSubdeps: true
+
+allowBuilds: {}

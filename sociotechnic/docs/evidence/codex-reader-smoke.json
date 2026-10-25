@@ -1,0 +1,56 @@
+{
+  "verifiedOn": "2026-10-24",
+  "codexCliVersion": "0.159.3",
+  "authentication": "saved ChatGPT login; forced_login_method=chatgpt",
+  "fixture": {
+    "head": "dcbb8ad93c3f91232a8ca190291bb43cadab9279",
+    "file": "double.js",
+    "before": "export const double = (n) => n * 2;",
+    "after": "export const double = (n) => n * 3;",
+    "acceptance": "double(2) must equal 4"
+  },
+  "roles": [
+    {
+      "role": "sociotechnic-reviewer-code",
+      "model": "gpt-6.1-sol",
+      "effort": "high",
+      "outcome": "ok",
+      "tools": {
+        "read_file": 7,
+        "glob": 1
+      },
+      "normalizedUsage": {
+        "input_tokens": 17849,
+        "cache_read_input_tokens": 50048,
+        "output_tokens": 470,
+        "total_tokens": 68367
+      },
+      "record": "VERDICT: CHANGES\nCOMMIT: dcbb8ad93c3f91232a8ca190291bb43cadab9279\n\n## Findings\n- [high] double.js:1 \u2014 Multiplying by `3` breaks the required doubling behavior: `double(2)` returns `6` instead of `4`. Restore `n * 2` and add a regression test for the planned assertion `double(2) === 4`.\n\n## Notes\nRead the full diff, plan, build record, changed-file list, diffstat, checks, and current `double.js`. The checkout contains no tests. `checks.json` reports success with no checks configured or executed."
+    },
+    {
+      "role": "sociotechnic-researcher",
+      "model": "gpt-6-luna",
+      "effort": "high",
+      "outcome": "ok",
+      "tools": {
+        "glob": 1,
+        "web_search": 1,
+        "read_file": 1
+      },
+      "normalizedUsage": {
+        "input_tokens": 39689,
+        "cache_read_input_tokens": 38400,
+        "output_tokens": 499,
+        "total_tokens": 78588
+      },
+      "record": "STATUS: DONE\n\n## Answer\n`double(2)` produces `6`; the function multiplies its argument by 3. Node.js documents that `readFileSync`\u2019s `encoding` option controls how the file contents are returned: with an encoding, it returns a string; without one, a Buffer.\n\n## Evidence\n- `{{REPO}}/double.js:1` \u2014 `double` returns `n * 3`.\n- https://nodejs.org/api/fs.html \u2014 Official Node.js documentation for `fs.readFileSync`; it says specifying `encoding` returns a string, otherwise it returns a Buffer."
+    }
+  ],
+  "forbiddenToolEvents": 0,
+  "notes": [
+    "Records passed the existing Sociotechnic parser.",
+    "Only fixture paths were normalized; model output was retained.",
+    "Context7 forwarding was not exercised in this live probe.",
+    "Token counts are observed CLI measurements, not subscription charges."
+  ]
+}

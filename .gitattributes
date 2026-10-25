@@ -1,0 +1,4 @@
+# Preserve pinned upstream imports, including Markdown and license whitespace.
+sociotechnic/skills/azure-sme/upstream/** -whitespace
+sociotechnic/skills/terraform-skill/** -whitespace
+sociotechnic/scaffolds/react-nest/template/docs/ui-standards/upstream/** -whitespace

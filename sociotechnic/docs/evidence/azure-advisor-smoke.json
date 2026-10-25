@@ -1,0 +1,32 @@
+{
+  "at": "2026-10-24T23:55:15.616Z",
+  "agent": "sociotechnic-azure-advisor",
+  "version": "1.0.1",
+  "model": "gpt-6.1-sol",
+  "effort": "high",
+  "releaseDigest": "604b613caa14958b3736764e2b7f3125feceded2c02c39a1ef5294d084d19959",
+  "outcome": "ok",
+  "usage": {
+    "provider": "codex",
+    "duration_ms": 29952,
+    "tool_uses": 5,
+    "usage": {
+      "input_tokens": 28596,
+      "cache_read_input_tokens": 82304,
+      "output_tokens": 1280,
+      "total_tokens": 112180
+    }
+  },
+  "activity": [
+    "azure-advisor-smoke -> read_file",
+    "azure-advisor-smoke -> read_file",
+    "azure-advisor-smoke -> read_file",
+    "azure-advisor-smoke -> read_file",
+    "azure-advisor-smoke -> read_file"
+  ],
+  "warnings": [
+    "context7 not configured; Codex agent has live web search only"
+  ],
+  "record": "STATUS: DONE\n\n## Answer\nA React SPA needs no client secret: use MSAL Browser with authorization code + PKCE, appropriate redirect URIs and account audience. Keep secrets and private keys out of browser code; do not enable implicit grant.\nAPI consent authorizes API access: delegated permissions act for a signed-in user; application permissions act without one. Consent requirements depend on the permission and tenant policy. Azure RBAC governs resource access through scoped roles; it does not replace API consent or grant directory administration.\nLater, identify the target cloud, tenant, subscription, environment, hosting platform, API operations and approving owners. These choices do not block this explanation.\nFor CI, discuss workload identity federation, or managed identity where the host supports it; use certificate authentication when appropriate if federation is unavailable. Treat client secrets as a deliberate fallback.\nFor certificates, register the public certificate with Entra and securely retain the private signing key. Plan expiry, storage, rotation overlap and retirement; TLS certificates serve a different purpose.\nFor a future explicitly authorized human session, discuss browser sign-in, MFA, subscription selection and a minimal scoped access check. Azure CLI and azd sessions are separate; login alone proves neither permissions nor deployment success.\nThis is informational only: no login, tenant connection, credential creation, permission grant or deployment was performed.\n\n## Evidence\n- /private/tmp/azure-advisor-smoke-Pc0N3r/question.md:1 — Requests informational guidance only, excludes present access or changes, and leaves tenant, subscription and hosting undecided.\n- skills/azure-sme/references/identity-and-session.md:58-71 — Requires appropriate OAuth flows, excludes SPA secrets and implicit grant, distinguishes permission types and separates API consent from RBAC and directory administration.\n- skills/azure-sme/upstream/entra-app-registration/SKILL.md:146-153 — Recommends MSAL and identifies `@azure/msal-browser`.\n- skills/azure-sme/references/identity-and-session.md:17-23 — Separates authentication, authorization, tenant, audience, operation and scope; management access does not automatically grant data-plane or Graph access.\n- skills/azure-sme/references/identity-and-session.md:27-32 — Future preparation identifies execution context, identity, least access, approver and verification; advice need not wait for access.\n- skills/azure-sme/references/identity-and-session.md:43-49 — Prefers supported managed identity or workload federation, describes certificate and secret fallbacks, and distinguishes CLI from azd sessions.\n- skills/azure-sme/references/identity-and-session.md:73-80 — Distinguishes public certificates, private signing keys and TLS certificates; specifies credential lifecycle and handling.\n- skills/azure-sme/references/identity-and-session.md:34-41 — Describes future human sign-in, MFA and explicit subscription selection without requesting secrets.\n- skills/azure-sme/references/identity-and-session.md:51-54 — Requires scoped verification after authorized sign-in; login does not establish permissions or deployment success.",
+  "limits": "Informational identity guidance only; reader adapter has no shell or Azure tools. No Azure authentication, tenant access or mutations. Outside canonical job history."
+}

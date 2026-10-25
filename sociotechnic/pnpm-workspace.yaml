@@ -1,0 +1,13 @@
+packages:
+  - .
+  - ui/web
+minimumReleaseAge: 1440
+minimumReleaseAgeStrict: true
+minimumReleaseAgeExclude:
+  - '@anthropic-ai/*'
+trustPolicy: no-downgrade
+blockExoticSubdeps: true
+allowBuilds: {}
+saveExact: true
+engineStrict: true
+verifyDepsBeforeRun: error

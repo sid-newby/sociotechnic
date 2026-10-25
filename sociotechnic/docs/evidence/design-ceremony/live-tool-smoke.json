@@ -1,0 +1,12 @@
+{
+  "date": "2026-10-24",
+  "outcome": "ok",
+  "receipt": true,
+  "packetValid": true,
+  "models": [
+    "claude-haiku-5-5",
+    "claude-fable-5-1"
+  ],
+  "scope": "Canonical Fable 5.1 connection, one real Impeccable context call and scoped packet write. Not a full creative ceremony or image generation.",
+  "permissionDenials": []
+}

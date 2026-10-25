@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "sociotechnic-ui",
+      "runtimeExecutable": "sociotechnic/bin/sociotechnic",
+      "runtimeArgs": ["ui", "--port", "4747", "--no-open"],
+      "port": 4747,
+      "url": "http://127.0.0.1:4747"
+    }
+  ]
+}
