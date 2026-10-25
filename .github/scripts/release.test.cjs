@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { releaseBump, nextTag, prepare, publish } = require('./release.cjs');
+const { releaseBump, nextTag, prepare, preparePush, publish } = require('./release.cjs');
 
 const repo = { owner: 'sid-newby', repo: 'sociotechnic' };
 const sha = 'a'.repeat(40);
@@ -14,12 +14,13 @@ function fixture() {
       labels: [{ name: 'release:patch' }],
     },
     releases: [{ tag_name: 'v0.1.0', draft: false, prerelease: false, body: '' }],
-    comparisons: [], writes: [], tagExists: false, tagError: null,
+    associated: [], comparisons: [], writes: [], tagExists: false, tagError: null,
     mainStatus: 'ahead', releaseStatus: 'ahead', tagSha: sha,
     failAfterCreate: false,
   };
   const github = {
-    paginate: async () => state.releases,
+    paginate: async method => method === github.rest.repos.listPullRequestsAssociatedWithCommit
+      ? state.associated : state.releases,
     rest: {
       pulls: { get: async () => ({ data: state.pr }) },
       git: {
@@ -31,6 +32,7 @@ function fixture() {
       },
       repos: {
         listReleases() {},
+        listPullRequestsAssociatedWithCommit() {},
         getCommit: async () => ({ data: { sha: state.tagSha } }),
         compareCommits: async args => {
           state.comparisons.push(args);
@@ -60,6 +62,34 @@ test('release decisions require one recognized label, ignoring unrelated labels'
   for (const labels of [[], ['release:major'], ['release:patch', 'release:minor'], ['release:none', 'release:typo']]) {
     assert.throws(() => releaseBump(labels.map(name => ({ name }))), /Choose exactly one/);
   }
+});
+
+test('main pushes resolve only the exact PR merge commit and preserve its release label', async () => {
+  const { github, state } = fixture();
+  state.associated = [
+    { ...state.pr, number: 10, merged_at: null },
+    { ...state.pr, number: 11, merged_at: '2026-10-25T00:00:00Z', merge_commit_sha: 'b'.repeat(40) },
+    { ...state.pr, number: 12, merged_at: '2026-10-25T00:00:00Z', base: { ref: 'other', repo: { full_name: 'sid-newby/sociotechnic' } } },
+    { ...state.pr, number: 13, merged_at: '2026-10-25T00:00:00Z', base: { ref: 'main', repo: { full_name: 'someone/fork' } } },
+    { ...state.pr, merged_at: '2026-10-25T00:00:00Z' },
+  ];
+  assert.deepEqual(await preparePush(github, repo, sha), tested);
+  state.pr.labels = [{ name: 'release:none' }];
+  assert.deepEqual(await preparePush(github, repo, sha), { ...tested, bump: 'none' });
+  assert.equal(state.writes.length, 0);
+});
+
+test('unassociated pushes skip; ambiguous associations and changed merge commits stop', async () => {
+  const { github, state } = fixture();
+  assert.equal(await preparePush(github, repo, sha), null);
+  await assert.rejects(preparePush(github, repo, 'main'), /Missing pushed commit/);
+  const associated = { ...state.pr, merged_at: '2026-10-25T00:00:00Z' };
+  state.associated = [associated, { ...associated, number: 4 }];
+  await assert.rejects(preparePush(github, repo, sha), /Multiple merged PRs/);
+  state.associated = [associated];
+  state.pr.merge_commit_sha = 'b'.repeat(40);
+  await assert.rejects(preparePush(github, repo, sha), /no longer matches/);
+  assert.equal(state.writes.length, 0);
 });
 
 test('patch and minor bumps preserve semantic version ordering', () => {
