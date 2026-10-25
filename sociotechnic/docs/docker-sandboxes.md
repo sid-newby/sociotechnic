@@ -83,6 +83,56 @@ Host credentials, PostgreSQL URLs, user configuration, SSH sockets, host workspa
 and the host Docker socket are not mounted or copied. The shared host skill store
 is disabled; approved project skills are included in the control runtime snapshot.
 
+### Context7 and the MCP gateway
+
+Register Context7 once with Docker Sandboxes before starting a run. The SDK loads
+only project settings, so Docker's agent startup configuration alone does not
+connect Sociotechnic's dispatches. Host `~/.claude.json` is not copied into a VM.
+
+```bash
+sbx mcp add context7 --url https://mcp.context7.com/mcp \
+  --header 'Authorization: Bearer ${api-key}' --skip-auth
+sbx secret set mcp:context7:api-key
+sbx mcp inspect context7
+```
+
+Enter your Context7 API key at the secret prompt. The placeholder remains in the
+registration and the real credential stays in Docker's host credential store.
+Review an existing registration before replacing it; Sociotechnic never copies
+host Claude settings, registers a server or changes global credentials itself.
+See [Docker's MCP gateway](https://docs.docker.com/ai/sandboxes/mcp-gateway/) and
+[Context7 client setup](https://context7.com/docs/resources/all-clients).
+
+Provisioning loads that registration with `sbx mcp load context7 --sandbox <name>`
+for both new and retained VMs. A dispatch needing Context7 verifies both tools
+before starting its provider. A VM-local stdio adapter connects to
+`MCP_GATEWAY_URL` with Docker's `proxy-managed` sentinel and exposes only
+`resolve-library-id` and `query-docs`. Claude and Codex keep their existing tool
+names and role allowlists. Gateway discovery, server loading/configuration,
+code execution, credential revocation and other
+servers' tools are not exposed through this adapter. Offline roles do not connect.
+Connection, authorization or missing-tool failures stop the dispatch with setup
+guidance; sandbox runs no longer silently run without Context7. Local execution
+keeps its existing user-config setup and missing-config warning.
+
+Existing VMs retain their control runtime snapshot. Loading Context7 alone cannot
+upgrade an old runner: stop its driver and preserve its repository and old runtime
+before an explicit control-runtime/dependency upgrade, or use a new run after
+preserving any unfinished work. Do not replace the VM or its pinned agent releases
+to silence the warning. After changing header secrets, Docker requires a sandbox
+stop/start before an existing gateway picks up the value.
+
+Verify a prepared VM without a model call:
+
+```bash
+sbx exec <sandbox-name> node \
+  /home/agent/sociotechnic/control/sociotechnic/ui/sandbox-context7.ts --check
+```
+
+It must print exactly the two Context7 tool names. This proves discovery and
+authentication, not a successful documentation query. The real-VM smoke script
+also checks discovery.
+
 ## Start a run
 
 In **New run**, select **Docker Sandbox — experimental**, then choose CPUs,
@@ -217,9 +267,13 @@ failed attempts remain in history; review the resulting plan before continuing.
 
 `tests/sandbox.test.ts` drives the real worker protocol and Git bundles through a
 fake sbx executable. It does not prove virtualization or provider authentication.
+`tests/sandbox-context7.test.ts` exercises the actual MCP client over fixture HTTP,
+tool filtering, both provider configurations, roles without Context7 and failure
+paths without real credentials or model calls.
 
 ```bash
 node --test sociotechnic/tests/sandbox.test.ts
+node --test sociotechnic/tests/sandbox-context7.test.ts
 node sociotechnic/scripts/sandbox-smoke.ts
 ```
 

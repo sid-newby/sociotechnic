@@ -144,6 +144,14 @@ test("worker transport preserves and validates pinned infrastructure skill resou
   assert.equal(readFileSync(join(materialized.roots[0], "references/sandboxes-v3.md"), "utf8"), skills[0].files["references/sandboxes-v3.md"]);
   assert.throws(() => parseSandboxEntry({ ...request, configuration: { ...configuration, skillResources: [{ name: "unsafe", files: { "SKILL.md": "x", "../escape.md": "x" } }] } }), /Invalid packaged/);
 });
+test("missing Context7 registration blocks setup and preserves the VM for retry", async () => {
+  config({ failMcp: true });
+  await assert.rejects(ensureSandbox(job), /sbx mcp add context7/);
+  const cfg = JSON.parse(readFileSync(configPath, "utf8"));
+  assert.deepEqual(cfg.names, [sandboxName(id)]);
+  assert.equal(existsSync(join(vmRoot, "repo")), false);
+  writeFileSync(configPath, JSON.stringify({ ...cfg, failMcp: false }));
+});
 test("provisions one mountless VM and retains a private Git clone", async () => {
   await ensureSandbox(job);
   assert.equal((await sandboxHead(id)).head, git.headCommit(review));
@@ -154,6 +162,10 @@ test("provisions one mountless VM and retains a private Git clone", async () => 
   assert.equal(create.args.includes("cpus=4"), true);
   assert.match(readFileSync(join(home, "sociotechnic/sandbox-kit/sbxenv.yaml"), "utf8"), /skills: off/);
   assert.equal(create.database, undefined); assert.equal(create.ssh, undefined);
+  const before = calls.split("\n").filter(Boolean).length;
+  await ensureSandbox(job);
+  const resumed = readFileSync(log, "utf8").split("\n").filter(Boolean).slice(before).map((line) => JSON.parse(line).args);
+  assert.deepEqual(resumed, [["ls", "--quiet"], ["mcp", "load", "context7", "--sandbox", sandboxName(id)]]);
   await assert.rejects(ensureSandbox({ ...job, id: "20261024-second" }), /capacity reached/);
 });
 test("worker commits return through a bundle while the source checkout stays unchanged", async () => {

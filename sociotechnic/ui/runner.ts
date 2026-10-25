@@ -15,6 +15,7 @@ import { isClaudeEffort, isCodexModel, isModelEffort } from "../src/agent-models
 import type { Execution } from "../src/execution.ts";
 
 import { materializeSkills } from "../src/agent-skills.ts";
+import { connectContext7Gateway, CONTEXT7_SETUP, sandboxContext7Server } from "./sandbox-context7.ts";
 
 export type RunResult = { outcome: Outcome; usage: unknown; note: string | null };
 
@@ -151,6 +152,13 @@ export function loadContext7(path: string): McpServerConfig | null {
   }
 }
 
+export async function context7ForExecution(ctx: RunContext): Promise<McpServerConfig | null> {
+  if (!ctx.sandboxed) return loadContext7(claudeConfigPath());
+  const gateway = await connectContext7Gateway(ctx.signal);
+  await gateway.close();
+  return sandboxContext7Server(ctx.sociotechnicHome);
+}
+
 export function sdkOptions(
   entry: DispatchOut,
   role: Role,
@@ -241,7 +249,8 @@ export function sdkRunner(queryOverride?: SdkQuery): Runner {
       const started = Date.now();
       let context7: McpServerConfig | null = null;
       if (needsContext7(role)) {
-        context7 = loadContext7(claudeConfigPath());
+        try { context7 = await context7ForExecution(ctx); }
+        catch { return { outcome: "failed", usage: null, note: CONTEXT7_SETUP }; }
         if (context7 === null) {
           const where = process.env.SOCIOTECHNIC_CLAUDE_CONFIG ? process.env.SOCIOTECHNIC_CLAUDE_CONFIG : "~/.claude.json";
           ctx.onWarn(`context7 not configured in ${where}; ${role.name} runs without it`);
@@ -370,9 +379,14 @@ function localRunnerFromEnv(): Runner {
   const claude = sdkRunner();
   return {
     name: "mixed",
-    run(entry, role, ctx) {
+    async run(entry, role, ctx) {
       if (isCodexModel(entry.model)) {
-        return codexRunner(needsContext7(role) ? loadContext7(claudeConfigPath()) : null).run(entry, role, ctx);
+        let context7: McpServerConfig | null = null;
+        if (needsContext7(role)) {
+          try { context7 = await context7ForExecution(ctx); }
+          catch { return { outcome: "failed", usage: null, note: CONTEXT7_SETUP }; }
+        }
+        return codexRunner(context7).run(entry, role, ctx);
       }
       if (!["claude-fable-5-1", "fable", "opus", "sonnet", "haiku"].includes(entry.model)) throw new Error(`Unsupported dispatch model: ${entry.model}`);
       return claude.run(entry, role, ctx);

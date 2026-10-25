@@ -56,6 +56,19 @@ ordinary Codex builders keep the scoped worktree/commit adapter inside the VM.
 The private VM repository owns a linked worktree there, keeping its Git metadata
 outside the agent's shell-writable worktree without exposing host Git metadata.
 
+Sandbox Context7 uses Docker's host-managed MCP gateway, never the host's
+Claude configuration. Operators register `context7` and its credentials with
+`sbx mcp`/`sbx secret`; provisioning attaches that registration to each owned VM,
+including retained VMs on resume. A VM-local adapter exposes only
+`resolve-library-id` and `query-docs` under the existing `context7` server name
+for either provider. It does not expose gateway discovery, configuration,
+authorization, execution or other servers' tools. Roles without Context7 retain
+no documentation connection. Missing gateway setup or either required tool fails
+a Context7 dispatch before provider execution, with actionable setup guidance;
+it never silently falls back to host configuration or runs without the tools.
+Existing initialized VMs retain their runtime snapshot and require an explicit
+runtime upgrade to receive adapter changes.
+
 The host engine retains its job worktree as a review mirror. Only Git bundles
 and assigned dispatch outputs return from the sandbox. Imported commits must
 descend from the mirror HEAD, stay on the assigned branch and leave the VM clean.
@@ -1603,13 +1616,15 @@ check are unchanged: fetching is reading.
 - `WebSearch` and `WebFetch` are Claude Code's built-in tools and need no
   configuration on either driver.
 - Context7 (`mcp__context7__resolve-library-id`, `mcp__context7__query-docs`)
-  is the user-scoped MCP server in `~/.claude.json`. The console's SDK driver loads
+  uses the user-scoped MCP server in `~/.claude.json` for local execution. The
+  console's SDK driver loads
   only project settings, so `runner.ts` reads `mcpServers.context7` from
   `~/.claude.json` (`SOCIOTECHNIC_CLAUDE_CONFIG` overrides the path) at dispatch time
   and passes it through the SDK's `mcpServers` option, only for roles whose
   tools name a Context7 tool; the key never enters the repository. When the
   entry is missing the dispatch still runs, with a `warn` line in the driver
-  log, and the agent simply lacks those tools.
+  log, and the agent simply lacks those tools. Docker Sandbox execution instead
+  uses the required, filtered host gateway connection described above.
 - Role prompts tell the planner and builders to resolve package versions with
   `pnpm view <pkg> version` (builders) or a search (planner) and to cite the
   source of any fact taken from the network; a plan may say "latest at build

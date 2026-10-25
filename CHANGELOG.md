@@ -3,6 +3,11 @@
 Release notes are committed before publication. [GitHub Releases](https://github.com/sid-newby/sociotechnic/releases) confirms which versions shipped.
 Dates on backfilled entries use America/Chicago. See the [release guide](sociotechnic/docs/releasing.md).
 
+## v0.3.1
+
+- Connect Docker Sandbox agents to Context7 through Docker's host-managed MCP gateway while keeping credentials on the host and preserving the two-tool role allowlist.
+- Stop sandbox dispatches with setup guidance when Context7 is unavailable, and verify gateway discovery in the real-VM smoke check.
+
 ## v0.3.0
 
 - Add retained-sandbox management and configurable installation sandbox slots, separate from workers per run.

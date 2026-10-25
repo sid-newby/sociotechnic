@@ -16,6 +16,7 @@ else if (args[0] === "env" && args[1] === "create") {
   if (cfg.failCreate) process.exit(4);
   cfg.names.push(args.find((arg) => arg.startsWith("name=")).slice(5)); save();
 } else if (args[0] === "env" && args[1] === "rm") { cfg.names = cfg.names.filter((name) => name !== args.find((arg) => arg.startsWith("name=")).slice(5)); save(); }
+else if (args[0] === "mcp" && args[1] === "load") { if (cfg.failMcp) process.exit(4); }
 else if (args[0] === "stop") {
   if (cfg.remotePid) { try { process.kill(-cfg.remotePid, "SIGKILL"); } catch {} }
 } else if (args[0] === "cp") {

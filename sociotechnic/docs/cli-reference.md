@@ -10,8 +10,9 @@ Command examples assume this repository root unless a different directory is nam
 `--memory-gib <1..64>` and `--parallel-agents <1..4>`. Omitted execution stays
 local; resource flags require Docker execution. The selected setting is pinned
 for the run. New run exposes the same choice. See [setup, the v3 recipe, storage
-and recovery](docker-sandboxes.md). Drivers must not execute these jobs' agents
-or target checks directly on the host. Ordinary local merges and publishing
+and recovery](docker-sandboxes.md), including the required host Context7 gateway
+registration. Drivers must not execute these jobs' agents or target checks
+directly on the host. Ordinary local merges and publishing
 still follow the existing human decisions.
 
 ## Getting started

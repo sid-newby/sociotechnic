@@ -153,7 +153,7 @@ export async function ensureSandbox(job: SandboxJob, signal?: AbortSignal): Prom
     const name = sandboxName(job.id);
     const state = manifest(job.id);
     if (names.includes(name) && !existsSync(statePath(job.id))) error("A sandbox with this name exists without an ownership manifest; inspect it before retrying");
-    if (names.includes(name) && state.initialized) return;
+    if (names.includes(name) && state.initialized) { await loadSandboxContext7(name, signal); return; }
     if (!names.includes(name) && state.initialized) error("The run's sandbox is missing. It may contain unexported work; explicit recovery is required.");
     checkSandboxDisk();
     if (!names.includes(name)) {
@@ -163,6 +163,7 @@ export async function ensureSandbox(job: SandboxJob, signal?: AbortSignal): Prom
       const args = ["env", "create", ...environmentArgs(job), "--force"];
       await sbx(args, { signal, timeoutMs: 15 * 60_000 });
     }
+    await loadSandboxContext7(name, signal);
     const temporary = mkdtempSync(join(tmpdir(), "sociotechnic-sandbox-"));
     try {
       if (git.porcelain(job.worktree, true) !== "") error("The host review worktree must be clean before sandbox provisioning");
@@ -192,6 +193,14 @@ export async function ensureSandbox(job: SandboxJob, signal?: AbortSignal): Prom
       writeManifest(job.id, true);
     } finally { rmSync(temporary, { recursive: true, force: true }); }
   } finally { await lock.release(); }
+}
+
+async function loadSandboxContext7(name: string, signal?: AbortSignal): Promise<void> {
+  try { await sbx(["mcp", "load", "context7", "--sandbox", name], { signal }); }
+  catch {
+    if (signal?.aborted) error("Sandbox operation cancelled");
+    error("Sandbox Context7 could not be loaded. Register it with sbx mcp add context7 --url https://mcp.context7.com/mcp and configure its host credentials. See sociotechnic/docs/docker-sandboxes.md#context7-and-the-mcp-gateway.");
+  }
 }
 
 export function sandboxJob(job: Job): SandboxJob | null {
