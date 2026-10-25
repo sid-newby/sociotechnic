@@ -283,7 +283,7 @@ export function momentFor(detail: Detail): Moment {
     const round = evidence(detail).round;
     return { kind: "approval", label: "Approval", value: approver?.verdict === "APPROVED" || job.status !== "ready" ? "Approved" : "Ready", badge: round?.gate ? shortSha(round.gate.head) : null, line: approver ? `Approver ${approver.verdict.toLowerCase()} at ${shortSha(approver.head)}` : `Status: ${statusLabels[job.status]}`, muted: round?.gate ? `Gate ${round.gate.pass ? "passed" : "blocked"} · ${plural(round.gate.changedFiles, "changed file")}` : "Gate not computed", failing: false, open: hasRecord("decision.md") ? "decision.md" : null };
   }
-  const { checksPath, checkLabel, verificationLabel, round } = evidence(detail);
+  const { checksPath, checkLabel, checkGood, verificationLabel, round } = evidence(detail);
   const checks = detail.checks;
   const results = checks?.results ?? [];
   const failing = results.filter((result) => !result.pass);
@@ -292,10 +292,10 @@ export function momentFor(detail: Detail): Moment {
     kind: "checks",
     label: "Checks",
     value: checks?.configured && results.length ? `${passed} / ${results.length}` : "—",
-    badge: !checks ? null : !checks.configured ? "Not configured" : failing.length ? `${failing[0].name} FAIL` : "PASS",
-    line: detail.checksError ? "Checks unavailable" : !checks ? round?.checks ? "Checks are loading" : "Not recorded yet" : !checks.configured ? "No checks configured" : failing.length ? `${plural(failing.length, "check")} failing` : "All checks passing",
+    badge: detail.checksError ? "Unavailable" : !checks ? null : !checks.configured ? "Not configured" : failing.length ? `${failing[0].name} FAIL` : checkGood ? "PASS" : checkLabel,
+    line: detail.checksError ? "Checks unavailable" : !checks ? round?.checks ? "Checks are loading" : "Not recorded yet" : !checks.configured ? "No checks configured" : failing.length ? `${plural(failing.length, "check")} failing` : checkGood ? "All checks passing" : checkLabel,
     muted: detail.checksError ?? (checks && !checks.configured ? verificationLabel : checks ? `${checkLabel} at ${shortSha(checks.commit)}` : `Round ${job.round}`),
-    failing: failing.length > 0,
+    failing: failing.length > 0 || checkLabel === "Commit mismatch" || checkLabel === "Failed",
     open: hasRecord(checksPath) ? checksPath : null,
   };
 }
