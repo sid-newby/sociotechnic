@@ -1,0 +1,46 @@
+{
+  "baseline": "1eb0a89d3c32319c3be5e530caf5605f1e0cecf3",
+  "ui_worktree": "/Users/sidnewby/Documents/Codex/2026-10-25/task-2/sociotechnic-console-finish",
+  "ui_branch": "codex/console-finish-plan",
+  "scope": "Read-only integration compatibility snapshot; no UI files copied/applied",
+  "files": [
+    {
+      "path": "sociotechnic/CONTRACTS.md",
+      "sha256": "f1dea092308ebdf539a8e3e059ee6ba639dae94d998ce8f273af06997e151956",
+      "ui_diff_sha256": "b665436d3186e059bf66464d86b0259f58f430631b91b5aa6f4477f2dc0d7202",
+      "ui_changed": true
+    },
+    {
+      "path": "sociotechnic/docs/development.md",
+      "sha256": "24911ffb8c3ece2f3e2a88aa4a7e63bb5a6821664d2ed1b50026f1a5ae92982e",
+      "ui_diff_sha256": "b87b43e6996ee42c7a509961b692b19787c9ada059a92e1a5da29cb1318953fa",
+      "ui_changed": true
+    },
+    {
+      "path": "sociotechnic/docs/engine-reference.md",
+      "sha256": "49ecca06d2a8a2316e26795b99d040a74ebc36aabc37a13f0f9bbe8608eea94b",
+      "ui_diff_sha256": "3e8d90a1400feacd65fff67af614cddf8bf4274d45dd2be88aaa42d12201e101",
+      "ui_changed": true
+    },
+    {
+      "path": "sociotechnic/docs/cli-reference.md",
+      "sha256": "0bff01bf42ae8e12f37b44fb230a68e9da865c948f67b95ff89a44334c764d08",
+      "ui_diff_sha256": "56e5e80f31ea1164c58343a95d1ce4526698f9f4d07a670b71042cba12177ded",
+      "ui_changed": true
+    },
+    {
+      "path": "sociotechnic/ui/runner.ts",
+      "sha256": "4e2d5b185a7921a00a1ad8b1989fa1973cb753676f0ee1c1e9ddf5414dcf9b90",
+      "ui_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "ui_changed": false
+    },
+    {
+      "path": "sociotechnic/ui/codex-runner.ts",
+      "sha256": "feec24aee47da597b03c1411c38d5e8bd453bf091291621b67d8e6d72828d01f",
+      "ui_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "ui_changed": false
+    }
+  ],
+  "rechecked": "2026-10-25",
+  "review": "Exact six source/diff hashes unchanged; UI shared-document hunks reviewed read-only; no UI patch copied."
+}

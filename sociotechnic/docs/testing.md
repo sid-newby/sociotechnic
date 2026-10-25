@@ -21,7 +21,11 @@ reasons outside the checkout so recording results does not change the tested HEA
 | Dependency audit | `task audit` | Read-only `pnpm audit --prod --audit-level high`; no installation or upgrades |
 
 `task checks` runs these six stages in order. An equivalent sequence must name
-all six results, including a failed stage that prevented later stages. New
+all six results, including a failed stage that prevented later stages. The
+[combined checkpoint inventory](evidence/workflow-integration/test-files.json)
+records 67 application files and two release-tool files at `0821a4d`, including
+the sibling agent-policy tests. `task test` expands the files present in the
+current checkout. New
 application tests stay under `tests/`; fixtures stay under `tests/fixtures/`.
 Historical release-tool and scaffold test placement is retained. No coverage
 percentage is claimed.
@@ -80,6 +84,8 @@ graceful/forced cleanup or unrelated-listener preservation checks.
 | A2 lifecycle | [check-repair-lifecycle.test.ts](../tests/check-repair-lifecycle.test.ts): checked/reviewed holds, stop during checks/repair, retained edits, reopen/reload, interruption, malformed/timeout retry bounds, BLOCKED/round exhaustion, override, old review waves, owner/input/replay protection and all-started-sibling waiting |
 | B1 briefs | [brief-policy.test.ts](../tests/brief-policy.test.ts): real plan/record parsers, strict JSON example, unchanged required docs/testing fields, rubric, research/design escapes, assignment locks and cumulative legacy/custom obligations |
 | B2 immutable releases | [release-policy.test.ts](../tests/release-policy.test.ts): exact metadata preservation, new/default/explicit legacy/custom/existing pins, offline publication helpers, additive/repeated/conflicting imports and definition/row/bundle/skill digests; [dbpg.test.ts](../tests/dbpg.test.ts) and [backup-restore-pg.test.ts](../tests/backup-restore-pg.test.ts) add real PostgreSQL catalog constraints and restore |
+| C1 timing | [runner-evidence.test.ts](../tests/runner-evidence.test.ts): fake SDK result boundary with real runner/persistence, finite supported fields, missing/old/invalid fields, result replacement, error, partial stream and timeout; raw wall/origin clocks stay raw |
+| C2 envelope | [runner-envelope.test.ts](../tests/runner-envelope.test.ts): two staged IDs preserve profile bodies while task paths differ; baseline/legacy/custom builder and reader tools/guards, malformed output and ingestion refusal; comment coordinator with/without Agent retains nested adapter; packaged-skill path residual |
 | Comment cleanup regression | [comment-inventory.test.ts](../tests/comment-inventory.test.ts) distinguishes the red-proof repair builder from reviewers with exact agent/record/empty-review assertions |
 | Catalog consumers | Agent discovery, Azure and library tests expect the newly imported latest releases while preserving explicit old-version pins and skill bytes |
 
@@ -106,6 +112,13 @@ is separately opt-in via `SOCIOTECHNIC_TEST_IMPECCABLE_SKILL`; an unrun opt-in i
 reported explicitly and does not establish live model or skill availability.
 Browser fixture journeys and UI screenshots belong to the independent console
 workstream and are not claimed as part of these workflow source changes.
+
+[UI compatibility evidence](evidence/workflow-integration/ui-compatibility.json)
+binds the exact read-only UI source/diff snapshot at base `1eb0a89`. Shared docs
+were reconciled against its owned token/history/UI hunks without copying or
+editing its uncommitted patch. A read-only apply check is recorded separately.
+Runner and Codex adapter were unchanged in that UI snapshot. This establishes
+shared-hunk compatibility, not integration or verification of the UI feature.
 
 No changelog version is reserved: repository release preparation is a separate
 operator action. No push, pull request, merge, release or deployment is included.

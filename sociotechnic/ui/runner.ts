@@ -2,7 +2,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { accessSync, constants, existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { basename, delimiter, dirname, join, resolve, sep } from "node:path";
-import type { McpServerConfig, Options, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import type { McpServerConfig, Options, SDKMessage, SDKResultSuccess } from "@anthropic-ai/claude-agent-sdk";
 import type { DispatchOut } from "../src/engine.ts";
 import type { Outcome } from "../src/job.ts";
 import { STOPPED_NOTE } from "../src/job.ts";
@@ -89,6 +89,24 @@ export function activityLines(message: unknown, dispatchId: string, agent: strin
   return out;
 }
 
+// Preserve reported SDK values; wall/origin clocks are not elapsed durations.
+const SDK_TIMING_FIELDS = [
+  "duration_api_ms", "ttft_ms", "ttft_stream_ms", "time_to_request_ms",
+  "request_sent_wall_ms", "first_content_frame_ms", "first_stream_post_ms",
+  "first_stream_post_ack_ms", "first_stream_post_queue_wait_ms", "first_stream_post_wall_ms",
+  "first_text_post_ms", "first_text_post_queue_wait_ms", "first_text_post_wall_ms",
+  "time_to_request_from_spawn_ms", "time_origin_ms",
+] as const satisfies readonly (keyof SDKResultSuccess)[];
+
+function sdkTimings(message: Obj): Obj {
+  const timings: Obj = {};
+  for (const field of SDK_TIMING_FIELDS) {
+    const value = message[field];
+    if (typeof value === "number" && Number.isFinite(value) && value >= 0) timings[field] = value;
+  }
+  return timings;
+}
+
 export function usageFromResult(message: Obj): { outcome: Outcome; usage: Obj } {
   const usage: Obj = {
     total_cost_usd: message.total_cost_usd,
@@ -99,6 +117,7 @@ export function usageFromResult(message: Obj): { outcome: Outcome; usage: Obj } 
     usage: message.usage,
     modelUsage: message.modelUsage,
     permission_denials: message.permission_denials,
+    ...sdkTimings(message),
   };
   return { outcome: message.subtype === "success" && message.is_error === false ? "ok" : "failed", usage };
 }
@@ -263,6 +282,8 @@ export function sdkRunner(queryOverride?: SdkQuery): Runner {
         const onStop = (): void => abort.abort();
         ctx.signal.addEventListener("abort", onStop, { once: true });
         let seen = 0;
+        let reportedTimings: Obj = {};
+        const elapsedUsage = (): Obj => ({ duration_ms: Date.now() - started, ...reportedTimings });
         const skillDirectory = mkdtempSync(join(tmpdir(), "sociotechnic-skills-"));
         try {
           let result: RunResult | null = null;
@@ -271,27 +292,28 @@ export function sdkRunner(queryOverride?: SdkQuery): Runner {
           const skills = materializeSkills(entry.configuration?.skillResources, skillDirectory);
           for (const agent of Object.values(options.agents ?? {})) agent.prompt += skills.prompt;
           options.env = { ...options.env, SOCIOTECHNIC_OUTPUT_ROOT: ctx.outputRoot, SOCIOTECHNIC_INPUT_ROOT: ctx.inputRoot };
-          if(ctx.inputRoot && ctx.outputRoot) for(const agent of Object.values(options.agents ?? {})) {
+          if(ctx.inputRoot && ctx.outputRoot && (role.tools.includes("Agent") || (entry.configuration?.baseRole ?? role.name) === "sociotechnic-comment-cleaner")) for(const agent of Object.values(options.agents ?? {})) {
             agent.prompt += `\n\nExecution storage adapter: PostgreSQL owns committed job state. Read job evidence from ${ctx.inputRoot}; write assigned reports only under ${ctx.outputRoot}. References in the preserved instructions to the job folder or .sociotechnic/jobs mean this dispatch staging scope. Target repository edits and other tools remain limited by your original role. Never edit staged inputs.\n`;
           }
           for await (const message of sdk.query({ prompt: entry.prompt, options }) as AsyncIterable<SDKMessage>) {
             seen += 1;
             for (const line of activityLines(message, entry.id, entry.agent)) ctx.onActivity(line);
             if (message.type === "result") {
+              reportedTimings = sdkTimings(message as unknown as Obj);
               const mapped = usageFromResult(message as unknown as Obj);
               result = { outcome: mapped.outcome, usage: mapped.usage, note: mapped.outcome === "ok" ? null : `sdk result ${String(message.subtype)}` };
             }
           }
-          if (timedOut) return { outcome: "timeout", usage: { duration_ms: Date.now() - started }, note: "deadline reached" };
-          return result ?? { outcome: "failed", usage: { duration_ms: Date.now() - started }, note: "sdk stream ended without a result message" };
+          if (timedOut) return { outcome: "timeout", usage: elapsedUsage(), note: "deadline reached" };
+          return result ?? { outcome: "failed", usage: elapsedUsage(), note: "sdk stream ended without a result message" };
         } catch (err) {
-          if (timedOut) return { outcome: "timeout", usage: { duration_ms: Date.now() - started }, note: "deadline reached" };
-          if (ctx.signal.aborted) return { outcome: "failed", usage: { duration_ms: Date.now() - started }, note: STOPPED_NOTE };
+          if (timedOut) return { outcome: "timeout", usage: elapsedUsage(), note: "deadline reached" };
+          if (ctx.signal.aborted) return { outcome: "failed", usage: elapsedUsage(), note: STOPPED_NOTE };
           if (seen === 0 && executable === null && process.env.SOCIOTECHNIC_CLAUDE === undefined && looksLikeMissingExecutable(err)) {
             const fallback = claudeOnPath();
             if (fallback !== null) return attempt(fallback);
           }
-          return { outcome: "failed", usage: { duration_ms: Date.now() - started }, note: oneLine(err instanceof Error ? err.message : String(err), 300) };
+          return { outcome: "failed", usage: elapsedUsage(), note: oneLine(err instanceof Error ? err.message : String(err), 300) };
         } finally {
           rmSync(skillDirectory, { recursive: true, force: true });
           clearTimeout(timer);

@@ -833,6 +833,20 @@ Reader tools can read those exact reference roots even when the target is anothe
 repository. Skill snapshots do not grant shell, network, MCP servers or privileges.
 Catalog export/import includes the snapshots and preserves existing run pins.
 
+### Raw SDK timing evidence
+
+The Claude runner retains finite nonnegative result fields `duration_api_ms`,
+`ttft_ms`, `ttft_stream_ms`, `time_to_request_ms`, `request_sent_wall_ms`,
+`first_content_frame_ms`, `first_stream_post_ms`, `first_stream_post_ack_ms`,
+`first_stream_post_queue_wait_ms`, `first_stream_post_wall_ms`, `first_text_post_ms`,
+`first_text_post_queue_wait_ms`, `first_text_post_wall_ms`,
+`time_to_request_from_spawn_ms` and `time_origin_ms` in existing dispatch usage.
+Wall/origin fields are raw clocks, not elapsed latency; do not sum them or subtract
+API duration to invent startup/model time. Existing `duration_ms`, issue-to-finish
+measurements and token meanings remain. Missing values stay unknown and the
+latest result replaces prior result evidence. On timeout or stream failure,
+reported timing evidence already received is retained with observed elapsed time.
+No UI projection or Codex collector changes are included.
 
 ### Verification-policy release compatibility
 

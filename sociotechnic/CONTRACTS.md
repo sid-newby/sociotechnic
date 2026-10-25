@@ -670,6 +670,17 @@ migrations. Candidate imports must first reconcile versions with the target
 catalog; conflicting identities remain errors. No live catalog mutation is part
 of development.
 
+Runner evidence may add finite reported SDK API/request/first-token timings.
+Keep existing end-to-end durations and counter semantics; missing fields remain
+unknown and API duration is not relabelled model/thinking time. Wall/origin fields
+are raw clocks, never durations to sum or subtract into invented phases. A later
+result replaces prior timing evidence; failure/timeout preserves received fields. Ordinary
+non-Agent dispatches use the staged task's storage adapter without duplicating
+path-bearing instructions in the pinned profile. Preserve all role guards and
+legacy-path interpretation; comment coordinator/workers and interactive design
+retain their existing scope propagation. This specifies envelope simplification,
+not measured cache or latency improvement. Reader-recovery concurrency is
+deferred; its current reconciliation and admission behavior is unchanged.
 
 ### 7.3 Approver hard rules
 
