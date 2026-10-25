@@ -47,6 +47,7 @@ import {
   pendingDispatches,
   pinPlan,
   recordChecks,
+  recordFailedChecksGate,
   recordGate,
   retryAllowed,
   roundDispatchCount,
@@ -380,8 +381,9 @@ function changesFrom(job: Job, round: Round): LensChanges[] {
 
 function failingChecksFrom(job: Job, round: Round): FailingCheck[] {
   if (round.checks === null || round.checks.pass) return [];
-  const report = readJson(abs(job, round.checks.path)) as ChecksReport;
-  return report.results.filter((r) => !r.pass).map((r) => ({ name: r.name, run: r.run, exitCode: r.exitCode, timedOut: r.timedOut, tail: r.tail }));
+  const reportPath = abs(job, round.checks.path);
+  const report = readJson(reportPath) as ChecksReport;
+  return report.results.filter((r) => !r.pass).map((r) => ({ reportPath, commit: report.commit, name: r.name, run: r.run, exitCode: r.exitCode, signal: r.signal, timedOut: r.timedOut, tail: r.tail }));
 }
 
 function keptAfterStop(job: Job, latest: Dispatch): string[] {
@@ -501,6 +503,12 @@ function stepChecked(job: Job, now: string): StepResult | null {
   writeTextAtomic(abs(job, roundRel(job.round, "diff.patch")), git.diffPatch(job.worktree, base));
   writeTextAtomic(abs(job, roundRel(job.round, "changed-files.txt")), changed.map((f) => `${f}\n`).join(""));
   writeTextAtomic(abs(job, roundRel(job.round, "diffstat.txt")), git.diffStat(job.worktree, base));
+  const round = currentRound(job);
+  if (round === null) throw new SociotechnicError("corrupt-job", "checked without a round");
+  if (round.checks?.pass === false) {
+    recordFailedChecksGate(job, gateFor(job, round, {}, head, now), now);
+    return null;
+  }
   const lenses = evaluateLenses(changed, config.lenses);
   const running = LENSES.filter((l) => lenses[l] === "run");
   if (overDispatchCap(job, job.round, running.length)) return parkWith(job, dispatchCapReason(job), now);

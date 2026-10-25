@@ -124,6 +124,14 @@ SOCIOTECHNIC_TEST_IMPECCABLE_SKILL=/absolute/path/to/impeccable node sociotechni
 [recorded verification](evidence/interactive-design.md), including the limits
 of fixture screenshots. Run `task test:pg` for database persistence coverage.
 
+## Combined workflow verification
+
+[Testing inventory and workflow acceptance](testing.md) names the complete required
+check set, isolated PostgreSQL requirements, focused failure cases and rollout
+limits. One independent integration owner owns this inventory and final evidence.
+New application tests belong under `tests/`; existing release-script tests under
+`.github/scripts/` and scaffold tests retain their established placement.
+
 ## Development
 
 For contribution scope, issue reports and PR expectations, read
@@ -259,6 +267,7 @@ browser interaction was exercised.
 
 | Capability | Implementation entry points | Existing verification |
 | --- | --- | --- |
+| Failed-check repair and brief policy | [engine.ts](../src/engine.ts), [job.ts](../src/job.ts), [brief.ts](../src/brief.ts) | [check-repair.test.ts](../tests/check-repair.test.ts), [check-repair-lifecycle.test.ts](../tests/check-repair-lifecycle.test.ts); real temporary Git, canonical commands, storage and parsers |
 | Contributor CI and PR-driven repository releases | [CI workflow](../../.github/workflows/ci.yml), [shared checks](../../.github/workflows/checks.yml), [release workflow](../../.github/workflows/release.yml), [release script](../../.github/scripts/release.cjs), [changelog preparation](../../.github/scripts/changelog.cjs), [setup and recovery](releasing.md) | `task checks` includes `task test:release` ([safety tests](../../.github/scripts/release.test.cjs) and [changelog tests](../../.github/scripts/changelog.test.cjs)) for exact push-to-PR resolution, version reservations, backfills, pre-merge changelog validation and safe retries; hosted CI and repository settings require GitHub verification; PostgreSQL/live-model checks remain separate |
 | Capability roster, team awareness and bounded advisor consultation | [agent-roster.ts](../src/agent-roster.ts), [agent-versions.ts](../src/agent-versions.ts), [engine.ts](../src/engine.ts), [plan.ts](../src/plan.ts), [driver guidance](agent-discovery.md) | [agent-discovery.test.ts](../tests/agent-discovery.test.ts): actual prompts, future-agent discovery, locks, advisor retries, blocked builder, nested-worker awareness and PostgreSQL auxiliary bindings |
 | CLI commands and console bridge | [cli.ts](../src/cli.ts), [console-client.ts](../src/console-client.ts) | [run.test.ts](../tests/run.test.ts), [ensure.test.ts](../tests/ensure.test.ts), [e2e.test.ts](../tests/e2e.test.ts) |

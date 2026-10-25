@@ -1,3 +1,4 @@
+import { configuredTestDatabaseUrl } from "./fixtures/postgres-environment.ts";
 import { after } from "node:test";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -6,7 +7,7 @@ import { schemaSql } from "../src/db/init.ts";
 import { initializeAgentVersions } from "../src/agent-versions.ts";
 
 export async function testDatabase(suffix: string): Promise<string | null> {
-  const raw=process.env.SOCIOTECHNIC_TEST_DATABASE_URL;
+  const raw=configuredTestDatabaseUrl(process.env.SOCIOTECHNIC_TEST_DATABASE_URL);
   if(!raw)return null;
   const server=new URL(raw);server.pathname="/postgres";
   const name=`sociotechnic_test_${process.pid}_${suffix}`;

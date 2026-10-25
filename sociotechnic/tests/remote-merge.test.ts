@@ -1,3 +1,4 @@
+import { configuredTestDatabaseUrl } from "./fixtures/postgres-environment.ts";
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -158,10 +159,10 @@ test("CLI remote merge rejects absent or false confirmation and invalid methods 
   assert.equal(f.calls().length, 0);
 });
 
-const serverUrl = process.env.SOCIOTECHNIC_TEST_DATABASE_URL?.trim();
+const serverUrl = configuredTestDatabaseUrl(process.env.SOCIOTECHNIC_TEST_DATABASE_URL);
 test("CLI remote merge commits the selected method to PostgreSQL without a job folder", { skip: !serverUrl ? "SOCIOTECHNIC_TEST_DATABASE_URL is not set" : false }, async () => {
   assert.ok(serverUrl);
-  const database = `sociotechnic_remote_test_${process.pid}`, adminUrl = new URL(serverUrl);
+  const database = `sociotechnic_test_${process.pid}_remote`, adminUrl = new URL(serverUrl);
   adminUrl.pathname = "/postgres";
   const url = new URL(serverUrl); url.pathname = `/${database}`;
   const pg = createPgStore(url.toString());

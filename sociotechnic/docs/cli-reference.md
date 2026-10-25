@@ -159,6 +159,17 @@ base separately. Plain `merge <job>` continues to perform the local merge.
 
 In the React console, the `ready` panel offers Merge locally first (behind a confirm that names your checkout), then Accept, Request rework and Stop run. The `merged-local` panel says the change is merged into your checkout to test there and offers Accept, Request rework and Stop run. The `accepted` panel offers Push and open PR (behind a confirm that names the branch and base), Finish locally (or Merge locally when no local merge is recorded, behind a confirm) and Stop run, then Merge PR on GitHub and the pull request link once `pr` is recorded. Choose Prepare PR text in the React command palette (also beside Push and open PR after acceptance). Generate `pr.md` without pushing with `pr <job>`, `POST /api/jobs/:id/pr` with `{ "push": false }`, or Generate PR text in `/legacy`, which offers it in the `ready`, `merged-local`, `accepted` and `merged` panels. The skill pushes only when you typed `--push`, never on the suggestion of an agent or a record.
 
+## Checks-first repair and dispatch evidence
+
+After a READY build, `step` runs every configured canonical check at the committed
+HEAD. Red checks move through `checked` to `reviewed` with a failed gate and no
+reviewer/approver dispatch. The normal next round receives the report path,
+checked commit, command, exit/signal/timeout and retained output tail; existing
+bounds and human gates apply. Holds at `checked` and `reviewed` remain effective.
+A repaired passing HEAD receives all applicable reviews. Agent pins preserve
+instructions, not the engine binary; issued review waves finish normally after
+an operator-controlled upgrade. See [gate behavior](engine-reference.md#gate).
+
 ## Run console
 
 A local web page that shows what a run is doing and lets you start, hold, resume and gate runs. The project and global `/sociotechnic` skills also hand runs to this shared driver. It routes each pinned dispatch to Claude Agent SDK or the subscription-authenticated Codex CLI and obeys the same engine.

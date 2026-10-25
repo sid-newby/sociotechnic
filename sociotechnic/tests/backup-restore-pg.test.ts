@@ -13,21 +13,11 @@ import { fakeRunner } from "../ui/runner.ts";
 import { startServer } from "../ui/server.ts";
 import type { ServerHandle } from "../ui/server.ts";
 import { testDatabase } from "./pg-fixture.ts";
+import { postgresEnvironment } from "./fixtures/postgres-environment.ts";
 
 const sourceDatabase = await testDatabase("backup_source");
 const restoredDatabase = await testDatabase("backup_restored");
 
-function postgresEnvironment(url: string): NodeJS.ProcessEnv {
-  const parsed = new URL(url);
-  return {
-    ...process.env,
-    PGHOST: parsed.hostname,
-    PGPORT: parsed.port || "5432",
-    PGDATABASE: decodeURIComponent(parsed.pathname.slice(1)),
-    ...(parsed.username ? { PGUSER: decodeURIComponent(parsed.username) } : {}),
-    ...(parsed.password ? { PGPASSWORD: decodeURIComponent(parsed.password) } : {}),
-  };
-}
 function catalog(rows: readonly AgentVersionRow[]): string {
   return canonicalJson([...rows].sort((a, b) => a.agent.localeCompare(b.agent) || a.version.localeCompare(b.version)));
 }

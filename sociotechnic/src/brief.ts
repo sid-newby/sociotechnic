@@ -178,7 +178,7 @@ export function researchBrief(i: ResearchBriefInput): string {
 }
 
 export type LensChanges = { lens: string; record: string; reason: string | null; findings: readonly Finding[] };
-export type FailingCheck = { name: string; run: string; exitCode: number | null; timedOut: boolean; tail: string };
+export type FailingCheck = { name: string; run: string; exitCode: number | null; timedOut: boolean; tail: string; reportPath?: string; commit?: string; signal?: string | null };
 
 export type BuildBriefInput = {
   agent: string;
@@ -238,7 +238,10 @@ export function buildBrief(i: BuildBriefInput): string {
   if (i.failingChecks.length > 0) {
     lines.push("", "## Failing checks", "");
     for (const c of i.failingChecks) {
-      lines.push(`### ${c.name}: \`${c.run}\` (${c.timedOut ? "timed out" : `exit ${String(c.exitCode)}`})`, "", "```", c.tail, "```", "");
+      lines.push(`### ${c.name}: \`${c.run}\``);
+      if (c.reportPath !== undefined) lines.push(`- Report: ${c.reportPath}`);
+      if (c.commit !== undefined) lines.push(`- Checked commit: ${c.commit}`);
+      lines.push(`- Result: exit ${String(c.exitCode)}${c.signal === undefined ? "" : `; signal ${c.signal ?? "none"}`}; ${c.timedOut ? "timed out" : "not timed out"}`, "", "```", c.tail, "```", "");
     }
   }
   lines.push(

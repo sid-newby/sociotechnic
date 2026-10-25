@@ -39,3 +39,6 @@ notes/
 .impeccable/review/
 .impeccable/hook.cache.json
 .impeccable/questions/
+
+dox/
+PRODUCT.md

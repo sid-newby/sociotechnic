@@ -162,10 +162,30 @@ test("comment proof reaches the actual gate: code edits block; unsupported-langu
       writeTextAtomic(join(jobDir(out.job), build.dispatches[0].record), `STATUS: READY\nCOMMIT: ${head}\n\n## Summary\nComments cleaned.\n## Acceptance\nVerified scoped changes.\n## Deviations\nNone.\n## Notes for reviewers\nFixture.\n`);
       finish(job, build.dispatches[0].id, "ok", null, null);
     });
+    if (mode === "code") {
+      const held = await mutateJob(out.job, (job) => step(job, { hold: ["reviewed"] }));
+      assert.equal(held.status, "reviewed");
+      const failed = await readJob(out.job, (job) => structuredClone(job));
+      assert.equal(failed.rounds[0].gate?.pass, false);
+      assert.ok(failed.rounds[0].gate?.blockers.includes("comment-code-changed:src/a.ts"));
+      assert.deepEqual(failed.rounds[0].lenses, {});
+      assert.deepEqual(failed.rounds[0].reviews, {});
+      assert.deepEqual(failed.dispatches.map((d) => d.step), ["build"]);
+      const repair = await mutateJob(out.job, (job) => step(job));
+      assert.equal(repair.action, "dispatch");
+      if (repair.action !== "dispatch") throw new Error("repair builder missing");
+      assert.equal(repair.dispatches.length, 1);
+      assert.equal(repair.dispatches[0].agent, "sociotechnic-comment-cleaner");
+      assert.equal(repair.dispatches[0].record, "round-2/build.md");
+      continue;
+    }
     const review = await mutateJob(out.job, (job) => step(job)); assert.equal(review.action, "dispatch");
     if (review.action !== "dispatch") throw new Error("reviews missing");
     const plan = await readJob(out.job, () => readJson(join(jobDir(out.job), "plan.json"))) as { stages: { id: string }[] };
     for (const d of review.dispatches) {
+      assert.ok(d.agent.startsWith("sociotechnic-reviewer-") || d.agent === "sociotechnic-conformance");
+      assert.ok(d.record.startsWith("round-1/"));
+      assert.notEqual(d.record, "round-1/build.md");
       const conformance = d.agent === "sociotechnic-conformance" ? `\n## Plan steps\n| stage | status | justification |\n| --- | --- | --- |\n${plan.stages.map((s) => `| ${s.id} | implemented | verified |`).join("\n")}\n` : "";
       await mutateJob(out.job, (job) => {
         writeTextAtomic(join(jobDir(out.job), d.record), `VERDICT: PASS\nCOMMIT: ${head}\n\n## Findings\nNone.\n${conformance}\n## Notes\nInspected scoped diff.\n`);
@@ -175,8 +195,7 @@ test("comment proof reaches the actual gate: code edits block; unsupported-langu
     await mutateJob(out.job, (job) => step(job, { hold: ["reviewed"] }));
     const job = await readJob(out.job, (job) => job);
     const gate = job.rounds[0].gate; assert(gate);
-    if (mode === "code") { assert.equal(gate.pass, false); assert(gate.blockers.includes("comment-code-changed:src/a.ts")); }
-    else if (mode === "manual") { assert.equal(gate.pass, true); assert(gate.flags.includes("comment-proof-unavailable:src/style.css")); assert.equal((await mutateJob(job.id, (job) => step(job))).action, "human"); }
+    if (mode === "manual") { assert.equal(gate.pass, true); assert(gate.flags.includes("comment-proof-unavailable:src/style.css")); assert.equal((await mutateJob(job.id, (job) => step(job))).action, "human"); }
     else { assert.equal(gate.pass, true); assert.equal(gate.flags.length, 0); }
   }
 });

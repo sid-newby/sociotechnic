@@ -95,8 +95,10 @@ changed plan blocks the gate.
 
 ## The workflow
 
-Each round is: build, deterministic checks, review lenses in parallel,
-conformance, gate. The builder commits on the job branch in the worktree and
+Each round starts with build and deterministic checks. Failing checks close a
+failed gate without review dispatches; the next bounded round gets a fresh repair
+builder with the retained check report and commit evidence. Passing checks lead
+to review lenses in parallel, conformance and the gate. The builder commits on the job branch in the worktree and
 writes `round-N/build.md`. The engine runs the repository's own checks from
 `.sociotechnic.json` and writes `checks.json`. It writes the diff files, skips lenses
 whose path guards do not match, and dispatches the rest. The gate is computed
@@ -105,6 +107,12 @@ checks passing at that HEAD, worktree clean, plan digest unchanged, diff
 non-empty. A failing gate opens the next round with a fresh builder that gets
 the findings; a passing gate with policy flags parks for a human; a clean pass
 dispatches the approver (Opus), whose APPROVE makes the job `ready`.
+
+READY describes actual builder evidence. The engine independently runs the full
+configured suite at the committed build HEAD. Holds at checked/reviewed still
+stop before the next transition. Agent pins freeze instructions and settings,
+not the installed engine: eligible unreviewed checked rounds use the installed
+routing after an operator upgrade; issued reviews and saved envelopes remain.
 
 Bounds: rounds, dispatches per round, retries per step, and a deadline per
 dispatch. Past any bound the job parks as `needs-human` with the bound named.
