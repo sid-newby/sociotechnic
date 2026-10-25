@@ -3,12 +3,13 @@
 Release notes are committed before publication. [GitHub Releases](https://github.com/sid-newby/sociotechnic/releases) confirms which versions shipped.
 Dates on backfilled entries use America/Chicago. See the [release guide](sociotechnic/docs/releasing.md).
 
-## Unreleased
+## v0.5.0
 
 - Replace design packets with a normal turn-based Claude Code chat whose Markdown agent definition runs the installed /impeccable command with native tools and windows.
 - Support image input and output, persistent SDK history, Markdown work-product handoffs and follow-up assignments in the same conversation. Apply committed catalog additions at console startup and recover unused retired designer bindings in place.
 - Interrupt one in-flight dispatch from the CLI or API while the rest of its step keeps running; the interrupt is recorded with the human's note, and the step retries under the existing retry bound with that note as the reason.
 - Add an optional installation limit on concurrent local dispatches, stream driver log lines as SSE events with a paged catch-up route, and download any record as a file. Correct the references where they described console controls that only the legacy console offers.
+- Move the product record to `PRODUCT.md` at the repository root and record the console redesign brief and plan under `dox/`; the console itself is unchanged in this release.
 
 ## v0.4.2
 
