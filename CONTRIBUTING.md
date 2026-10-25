@@ -53,6 +53,14 @@ Explain the problem, the resulting behavior and how you verified it. Link the
 issue when there is one. Include screenshots for visible changes, using demo
 data. Call out behavior changes, migrations, limitations and documentation impact.
 
+Apply exactly one label: `release:patch` for fixes/refinements, `release:minor`
+for capabilities or workflow changes, or `release:none` when no release is
+needed. Maintainers can apply labels to outside contributions. CI validates the
+choice. When automation is enabled, merging a patch/minor PR authorizes a GitHub
+release after the merged commit passes checks. Use a clear PR title for generated
+release notes and link upgrade instructions from the PR and affected docs. See the
+[release guide](sociotechnic/docs/releasing.md) for setup and recovery.
+
 Agent-assisted contributions follow the same rules. Review the diff yourself and
 verify the result. A model's completion message is not test evidence. Changes to
 provider authentication, execution permissions or human gates need explicit scope

@@ -1,0 +1,35 @@
+name: Checks
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Exact commit to verify
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Repository checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          package_json_file: sociotechnic/package.json
+      - uses: go-task/setup-task@a00fbb05ce67b35648be3c78cbc9fd85354c757e # v2
+        with:
+          version: '3.53.1'
+      - run: task install
+      - run: task checks

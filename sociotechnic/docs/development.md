@@ -183,6 +183,7 @@ browser interaction was exercised.
 
 | Capability | Implementation entry points | Existing verification |
 | --- | --- | --- |
+| Contributor CI and PR-driven repository releases | [CI workflow](../../.github/workflows/ci.yml), [shared checks](../../.github/workflows/checks.yml), [release workflow](../../.github/workflows/release.yml), [release script](../../.github/scripts/release.cjs), [setup and recovery](releasing.md) | `task checks` includes `task test:release` ([safety tests](../../.github/scripts/release.test.cjs)); hosted CI and repository settings require GitHub verification; PostgreSQL/live-model checks remain separate |
 | Capability roster, team awareness and bounded advisor consultation | [agent-roster.ts](../src/agent-roster.ts), [agent-versions.ts](../src/agent-versions.ts), [engine.ts](../src/engine.ts), [plan.ts](../src/plan.ts), [driver guidance](agent-discovery.md) | [agent-discovery.test.ts](../tests/agent-discovery.test.ts): actual prompts, future-agent discovery, locks, advisor retries, blocked builder, nested-worker awareness and PostgreSQL auxiliary bindings |
 | CLI commands and console bridge | [cli.ts](../src/cli.ts), [console-client.ts](../src/console-client.ts) | [run.test.ts](../tests/run.test.ts), [ensure.test.ts](../tests/ensure.test.ts), [e2e.test.ts](../tests/e2e.test.ts) |
 | Workflow and legal transitions | [engine.ts](../src/engine.ts), [job.ts](../src/job.ts) | [job.test.ts](../tests/job.test.ts), [e2e.test.ts](../tests/e2e.test.ts) |

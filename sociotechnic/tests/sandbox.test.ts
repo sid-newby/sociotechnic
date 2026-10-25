@@ -26,6 +26,7 @@ import { commitScope } from "../ui/codex-build-tools.ts";
 const source = fileURLToPath(new URL("..", import.meta.url));
 const root = mkdtempSync(join(tmpdir(), "sociotechnic-sandbox-test-"));
 const oldHome = process.env.SOCIOTECHNIC_HOME, oldSbx = process.env.SOCIOTECHNIC_SBX;
+const oldMinFree = process.env.SOCIOTECHNIC_SANDBOX_MIN_FREE_GIB;
 const home = join(root, "home"), repo = join(root, "source"), review = join(root, "review"), vmRoot = join(root, "vm");
 const executable = join(root, "sbx");
 mkdirSync(home); mkdirSync(repo);
@@ -42,13 +43,15 @@ const configPath = executable + ".json", log = join(root, "calls.jsonl");
 function config(extra: Record<string, unknown> = {}): void { writeFileSync(configPath, JSON.stringify({ source, home, vmRoot, log, names: [], ...extra })); }
 config();
 process.env.SOCIOTECHNIC_HOME = home; process.env.SOCIOTECHNIC_SBX = executable;
+// The fake transport creates small files, so it does not need a real VM's disk reserve.
+process.env.SOCIOTECHNIC_SANDBOX_MIN_FREE_GIB = "1";
 setStore(createMemoryStore());
 const id = "20261024-sandbox-test", branch = `sociotechnic/${id}`;
 git.addWorktree(repo, branch, review, git.headCommit(repo));
 const execution = { kind: "docker-sandbox", cpus: 4, memoryGiB: 8, parallelAgents: 2 } as const;
 const job = { ...createJob({ id, repo, worktree: review, branch, feature: "Sandbox", base: { branch: "main", commit: git.headCommit(repo) }, caps: defaultConfig().caps, now: new Date().toISOString() }), execution };
 const deadline = () => new Date(Date.now() + 30_000).toISOString();
-after(() => { setStore(undefined); if (oldHome === undefined) delete process.env.SOCIOTECHNIC_HOME; else process.env.SOCIOTECHNIC_HOME = oldHome; if (oldSbx === undefined) delete process.env.SOCIOTECHNIC_SBX; else process.env.SOCIOTECHNIC_SBX = oldSbx; rmSync(root, { recursive: true, force: true }); });
+after(() => { setStore(undefined); if (oldHome === undefined) delete process.env.SOCIOTECHNIC_HOME; else process.env.SOCIOTECHNIC_HOME = oldHome; if (oldSbx === undefined) delete process.env.SOCIOTECHNIC_SBX; else process.env.SOCIOTECHNIC_SBX = oldSbx; if (oldMinFree === undefined) delete process.env.SOCIOTECHNIC_SANDBOX_MIN_FREE_GIB; else process.env.SOCIOTECHNIC_SANDBOX_MIN_FREE_GIB = oldMinFree; rmSync(root, { recursive: true, force: true }); });
 
 test("execution is opt-in, bounded and rejects hidden settings", () => {
   assert.deepEqual(parseExecution(undefined), { kind: "local" });
@@ -81,8 +84,9 @@ test("subscription proxy is explicit and cannot fall back to an API key", () => 
   } finally { if (oldMode === undefined) delete process.env.SBX_CRED_OPENAI_MODE; else process.env.SBX_CRED_OPENAI_MODE = oldMode; if (oldCodex === undefined) delete process.env.CODEX_HOME; else process.env.CODEX_HOME = oldCodex; }
 });
 test("free-space floor is admission control rather than an unbounded allocation", () => {
+  const before = process.env.SOCIOTECHNIC_SANDBOX_MIN_FREE_GIB;
   process.env.SOCIOTECHNIC_SANDBOX_MIN_FREE_GIB = "999999999";
-  try { assert.throws(checkSandboxDisk, /GiB free/); } finally { delete process.env.SOCIOTECHNIC_SANDBOX_MIN_FREE_GIB; }
+  try { assert.throws(checkSandboxDisk, /GiB free/); } finally { if (before === undefined) delete process.env.SOCIOTECHNIC_SANDBOX_MIN_FREE_GIB; else process.env.SOCIOTECHNIC_SANDBOX_MIN_FREE_GIB = before; }
 });
 test("path mapping is longest-first without remapping inserted paths", () => {
   assert.deepEqual(mapSandboxPaths({ prompt: "/host/dispatch/out /host/repo /host" }, [["/host/dispatch", "/host/virtual"], ["/host/repo", "/repo"], ["/host", "/control"]]), { prompt: "/host/virtual/out /repo /control" });

@@ -1,5 +1,9 @@
 # Changelog
 
+For versions after 0.1.0, see the versioned notes in
+[GitHub Releases](https://github.com/sid-newby/sociotechnic/releases).
+The [release guide](sociotechnic/docs/releasing.md) describes automated publication.
+
 ## 0.1.0 - 2026-10-24
 
 First release of Sociotechnic.
