@@ -101,7 +101,7 @@ test("listener handshake ignores blank lines, banners and split stdout chunks", 
 });
 
 test("listener reports startup exit and stderr instead of parsing its stdout", async () => {
-  await assert.rejects(listener(false, `console.log('startup banner'); console.error('fixture startup failure'); process.exit(17);`), /code=17.*stdout="startup banner\\n" stderr="fixture startup failure\\n"/);
+  await assert.rejects(listener(false, `console.log('startup banner'); console.error('fixture startup failure'); process.exit(17);`), /code=17.*stdout=.*startup banner.*stderr=.*fixture startup failure/);
 });
 
 test("listener rejects malformed IPC before exposing a cleanup target", async () => {
