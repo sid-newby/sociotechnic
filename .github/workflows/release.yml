@@ -1,0 +1,89 @@
+name: Release
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Merged PR number to release or retry
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: read
+
+# Queue waiting runs instead of replacing them when several PRs merge together.
+concurrency:
+  group: sociotechnic-releases
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  prepare:
+    name: Read release decision
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      pr: ${{ steps.prepare.outputs.pr }}
+      sha: ${{ steps.prepare.outputs.sha }}
+      bump: ${{ steps.prepare.outputs.bump }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+      - uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        id: prepare
+        env:
+          PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}
+          AUTOMATED_RELEASES: ${{ vars.AUTOMATED_RELEASES }}
+        with:
+          script: |
+            const { prepare } = require('./.github/scripts/release.cjs');
+            const decision = await prepare(github, context.repo, process.env.PR_NUMBER);
+            for (const [name, value] of Object.entries(decision)) core.setOutput(name, value);
+            core.notice(`PR #${decision.pr}: ${decision.bump}, commit ${decision.sha}.`);
+            if (decision.bump !== 'none' && process.env.AUTOMATED_RELEASES !== 'true') {
+              core.notice('Publication is disabled. Set the AUTOMATED_RELEASES repository variable to true when ready.');
+            }
+
+  checks:
+    name: Verify merged commit
+    needs: prepare
+    if: needs.prepare.outputs.bump != 'none'
+    uses: ./.github/workflows/checks.yml
+    with:
+      ref: ${{ needs.prepare.outputs.sha }}
+
+  publish:
+    name: Publish GitHub release
+    needs: [prepare, checks]
+    if: vars.AUTOMATED_RELEASES == 'true' && github.ref == 'refs/heads/main' && needs.prepare.outputs.bump != 'none'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+      - uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          PR_NUMBER: ${{ needs.prepare.outputs.pr }}
+          TESTED_SHA: ${{ needs.prepare.outputs.sha }}
+          RELEASE_BUMP: ${{ needs.prepare.outputs.bump }}
+        with:
+          script: |
+            const { publish } = require('./.github/scripts/release.cjs');
+            const result = await publish(github, context.repo, {
+              pr: process.env.PR_NUMBER,
+              sha: process.env.TESTED_SHA,
+              bump: process.env.RELEASE_BUMP,
+            });
+            core.notice(`${result.created ? 'Published' : 'Already published'}: ${result.url}`);

@@ -28,6 +28,7 @@ tasks:
       - task: typecheck
       - task: build
       - task: agents
+      - task: test:release
       - task: test
       - task: audit
 
@@ -53,6 +54,11 @@ tasks:
     desc: "Run the test suite (no network, no LLM, no database)"
     cmds:
       - node --test sociotechnic/tests/*.test.ts
+
+  test:release:
+    desc: "Test GitHub release versioning, commit binding and safe retries without publishing"
+    cmds:
+      - node --test .github/scripts/*.test.cjs
 
   test:pg:
     desc: "Run the suite including the PostgreSQL test against the local homebrew postgresql@17 (creates and drops sociotechnic_test_<pid>)"
