@@ -11,7 +11,7 @@ This is a handoff snapshot, not a claim that the branch has merged.
 
 | Item | State |
 | --- | --- |
-| Pull request | [#28](https://github.com/sid-newby/sociotechnic/pull/28), draft, base `main`, label `release:none` |
+| Pull request | [#28](https://github.com/sid-newby/sociotechnic/pull/28), ready for review and not merged, base `main`, label `release:none` |
 | Working branch | `codex/run-page` |
 | Main at this snapshot | `0a6b660`; fetch and verify before choosing the next base |
 | Run page | Implemented and checked at desktop and 390px |
@@ -19,9 +19,10 @@ This is a handoff snapshot, not a claim that the branch has merged.
 | Final browser closure | Verified: run page 99/99 plus 6/6 post-provider smoke checks; New run 18 scenario groups; ownership 8 groups; native design journey passed twice |
 | Whole-console completion | History and the remaining Agents/Settings work are still to build; finish documentation/screenshots and release follow afterward |
 
-All implementation and verifier work is pushed through `b166a1c`; final handoff
-commits and CI/ready status remain with the coordinator. The coordinator owns
-the final PR status, merge decision and verification update.
+Implementation and verifier work is pushed through `b166a1c`, whose required
+Release label and Repository checks passed. The PR is ready for review; the
+subsequent handoff commits change documentation only. Check the latest PR head
+and its CI before merging. Merge only with the owner's authorization.
 Inspect the PR and current Git state rather than treating these snapshot values
 as permanent instructions.
 
