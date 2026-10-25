@@ -124,6 +124,19 @@ SOCIOTECHNIC_TEST_IMPECCABLE_SKILL=/absolute/path/to/impeccable node sociotechni
 [recorded verification](evidence/interactive-design.md), including the limits
 of fixture screenshots. Run `task test:pg` for database persistence coverage.
 
+### Background refresh browser verification
+
+After `task build`, run `node sociotechnic/scripts/verify-console-refresh.mjs`
+with `SOCIOTECHNIC_PLAYWRIGHT_MODULE` pointing at an available Playwright module
+as described above. It uses a disposable memory store, two temporary Git runs,
+fixture dispatch history and real SSE notifications. Irregular notifications,
+slow responses and injected failures must preserve the selected agent, roster,
+focus, open disclosures, version draft and loaded History table. It also checks
+that retries retain data, immutable assignments are not fetched per event, the
+run list is shared, and run/filter changes load their own results. No model calls
+or production database writes occur. `SOCIOTECHNIC_BROWSER_PROOF` selects the
+report and screenshot directory.
+
 ## Combined workflow verification
 
 [Testing inventory and workflow acceptance](testing.md) names the complete required
@@ -302,6 +315,7 @@ browser interaction was exercised.
 | New run folder browsing, creation, saved start point, initial Git commit and base publication | [repositories.ts](../ui/repositories.ts), [server.ts](../ui/server.ts), [new-run.tsx](../ui/web/src/components/new-run.tsx), [repository-browser.tsx](../ui/web/src/components/repository-browser.tsx) | [repositories.test.ts](../tests/repositories.test.ts): preservation, origin checks, real Git setup and publication to local bare remotes through [fake GitHub transport](../tests/fixtures/github.ts), push retry and PR after local merge; [verify-run-wizard.mjs](../scripts/verify-run-wizard.mjs): browser persistence, creation/selection, GitHub setup errors, keyboard and narrow layout |
 | Run archive preferences and rail scrolling | [server.ts](../ui/server.ts) (archive route and database job state), [App.tsx](../ui/web/src/App.tsx), [use-console.ts](../ui/web/src/use-console.ts), [index.css](../ui/web/src/index.css) | [ui.test.ts](../tests/ui.test.ts), [console.test.ts](../tests/console.test.ts); browser archive/restore and independent scrolling |
 | Formatted Run records and source view | [records.tsx](../ui/web/src/components/records.tsx) (formatter error boundary and independent raw source), [record-content.tsx](../ui/web/src/components/record-content.tsx), [record-format.ts](../ui/web/src/record-format.ts), [records.css](../ui/web/src/records.css), [vite.config.ts](../ui/web/vite.config.ts) (formatter dependency optimization) | [record-content.test.ts](../tests/record-content.test.ts) (real React rendering via Vite SSR with a disposable cache); browser-check formatter-load failure, source fallback, reload recovery, Markdown, JSON, diffs, keyboard and responsive themes |
+| Stable background refresh in Agent library and History | [agent-library.tsx](../ui/web/src/components/agent-library.tsx), [history.tsx](../ui/web/src/components/history.tsx), [App.tsx](../ui/web/src/App.tsx) | [verify-console-refresh.mjs](../scripts/verify-console-refresh.mjs): irregular real SSE updates, slow/failed responses, mounted profiles/tables, preserved drafts/focus, shared run list and new-scope loading |
 | Run dashboard, actions, sheets and server updates | [App.tsx](../ui/web/src/App.tsx), [run/](../ui/web/src/components/run/), [shell/](../ui/web/src/components/shell/), [run-model.ts](../ui/web/src/run-model.ts), [use-console.ts](../ui/web/src/use-console.ts), [api.ts](../ui/web/src/api.ts), [model.ts](../ui/web/src/model.ts) | [console.test.ts](../tests/console.test.ts), [run-controls.test.ts](../tests/run-controls.test.ts), [run-moment.test.ts](../tests/run-moment.test.ts), [run-log.test.ts](../tests/run-log.test.ts), [run-table.test.ts](../tests/run-table.test.ts); [verify-run-page.mjs](../scripts/verify-run-page.mjs) exercises the built fixture console |
 | Console tokens, theme presets and shadcn components | [index.css](../ui/web/src/index.css), [theme/](../ui/web/src/theme/), [components/ui/](../ui/web/src/components/ui/), [components.json](../ui/web/components.json), [main.tsx](../ui/web/src/main.tsx) (provider), [App.tsx](../ui/web/src/App.tsx) (header switcher) | `task build` bundles the neutral preset and splits the others into chunks; browser-check preset switching, light/dark, reload persistence and the narrow header ([workspace notes](#web-console-workspace)) |
 | Welcome state and README banner | [App.tsx](../ui/web/src/App.tsx), [index.css](../ui/web/src/index.css), [transparent banner](../../assets/sociotechnic-banner-v4-transparent.png), [original banner](../../assets/sociotechnic-banner-v4.png) | Build verifies both theme assets are bundled; browser-check the banner, header New run action and narrow layout |

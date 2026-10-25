@@ -26,7 +26,8 @@ export function HistoryPage({ params, update, revision, jobs, openRun }: Props) 
   for (const key of filterKeys) { const value = params.get(hashKey(key)); if (value) query.set(key, value); }
   query.set("page", params.get("historyPage") ?? "1");
   const queryString = query.toString();
-  const [state, setState] = useState<{ kind: "loading" } | { kind: "error"; message: string } | { kind: "ready"; data: HistoryResponse }>({ kind: "loading" });
+  const [state, setState] = useState<{ kind: "loading" } | { kind: "error"; message: string } | { kind: "ready"; data: HistoryResponse; error: string | null }>({ kind: "loading" });
+  const historyKey = useRef("");
   const [retry, setRetry] = useState(0);
   const evidence = useRef<HTMLElement>(null);
   const focusEvidence = useRef(false);
@@ -37,8 +38,10 @@ export function HistoryPage({ params, update, revision, jobs, openRun }: Props) 
     evidence.current?.scrollIntoView({ block: "start", behavior: "instant" });
   }, [state]);
   useEffect(() => {
-    const abort = new AbortController(); setState({ kind: "loading" });
-    request(`/api/history?${queryString}`, abort.signal).then(parseHistoryResponse).then((data) => { if (!abort.signal.aborted) setState({ kind: "ready", data }); }).catch((error: unknown) => { if (!abort.signal.aborted) setState({ kind: "error", message: errorMessage(error) }); });
+    const abort = new AbortController();
+    if (historyKey.current !== queryString) setState({ kind: "loading" });
+    historyKey.current = queryString;
+    request(`/api/history?${queryString}`, abort.signal).then(parseHistoryResponse).then((data) => { if (!abort.signal.aborted) setState({ kind: "ready", data, error: null }); }).catch((error: unknown) => { if (!abort.signal.aborted) setState((previous) => previous.kind === "ready" ? { ...previous, error: errorMessage(error) } : { kind: "error", message: errorMessage(error) }); });
     return () => abort.abort();
   }, [queryString, revision, retry]);
   const filter = (values: Record<string, string | null>, focus = false) => {
@@ -60,6 +63,7 @@ export function HistoryPage({ params, update, revision, jobs, openRun }: Props) 
     {active.length ? <div className="flex flex-wrap gap-2" aria-label="History filters">{active.map((key) => <Button key={key} variant="outline" size="sm" onClick={() => filter({ [key]: null })}>{key}: {key === "job" ? jobs.find((job) => job.id === query.get(key))?.feature.slice(0, 45) ?? query.get(key) : query.get(key)}<X className="size-3" /><span className="sr-only">Remove {key} filter</span></Button>)}<Button variant="ghost" size="sm" onClick={() => filter(Object.fromEntries(filterKeys.map((key) => [key, null])))}>Clear filters</Button></div> : null}
     {state.kind === "loading" ? <div aria-busy="true" className="space-y-6"><span className="sr-only">Loading history…</span><Skeleton className="h-32 w-full" /><Skeleton className="h-80 w-full" /></div> : state.kind === "error" ? <div role="alert" className="space-y-3 rounded-lg border p-6"><p>{state.message}</p><Button variant="outline" onClick={() => setRetry((value) => value + 1)}>Retry history</Button></div> : null}
     {data ? <>
+      {state.kind === "ready" && state.error ? <p role="alert" className="text-sm text-destructive">Showing the last loaded history. {state.error} <Button variant="outline" onClick={() => setRetry((value) => value + 1)}>Retry history</Button></p> : null}
       <p className="text-sm text-muted-foreground">{data.scan.incomplete ? "Partial cohort" : "Matching cohort"} · {data.scan.jobs} runs · {data.total} dispatches{data.scan.incomplete ? ` · limited to the ${data.scan.limit} most recently updated runs` : ""}</p>
       {data.warnings.length ? <p role="status" className="text-sm text-muted-foreground">{data.warnings.join(" ")}</p> : null}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
