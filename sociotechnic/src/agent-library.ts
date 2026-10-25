@@ -29,6 +29,14 @@ export type Feat = { job: string; feature: string; commit: string; round: number
 export type AgentHistory = { name: string; page: number; pages: number; total: number; rows: Deployment[]; feats: Feat[] };
 export type HistorySort = "recent" | "longest" | "issues";
 
+export function activeAgentCatalog(catalog: readonly AgentCatalogEntry[]): AgentCatalogEntry[] {
+  const retired = new Set(catalog.flatMap((entry) => entry.supersedes ?? []).filter((name) => {
+    const target = catalog.find((entry) => entry.name === name);
+    return target?.configuration.baseRole === "sociotechnic-builder" || target?.configuration.baseRole === "sociotechnic-builder-lite";
+  }));
+  return catalog.filter((entry) => !retired.has(entry.name));
+}
+
 function duration(d: Dispatch): number | null {
   if (!d.finishedAt) return null;
   const start = Date.parse(d.startedAt), finish = Date.parse(d.finishedAt);
@@ -88,7 +96,7 @@ export function deploymentMetrics(rows: readonly Deployment[]): AgentMetrics {
   };
 }
 export function agentSummaries(jobs: readonly Job[], catalog: readonly AgentCatalogEntry[]): AgentSummary[] {
-  const names = new Set([...catalog.map((p) => p.name), ...jobs.flatMap((j) => j.dispatches.map((d) => d.agent))]);
+  const names = new Set([...activeAgentCatalog(catalog).map((p) => p.name), ...jobs.flatMap((j) => j.dispatches.map((d) => d.agent))]);
   return [...names].map((name) => {
     const rows = deployments(jobs, name);
     const cohorts = new Map<string, Omit<AgentCohort, "metrics"> & { rows: Deployment[] }>();

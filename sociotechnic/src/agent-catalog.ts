@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { bundledAgentDefinition, parseFrontmatter } from "./agents.ts";
-import { BASE_AGENT_VERSION, releaseContentDigest, versionRole } from "./agent-version-data.ts";
+import { BASE_AGENT_VERSION, releaseContentDigest, supportsAgentSlot, versionRole } from "./agent-version-data.ts";
 import type { AgentVersion } from "./agent-version-data.ts";
 import type { Role } from "./roles.ts";
 
@@ -29,6 +29,8 @@ export type AgentCatalogEntry = {
   description: string;
   record: Role["record"];
   configuration: AgentConfiguration;
+  supersedes?: string[];
+  compatibleRoles?: string[];
 };
 
 export function agentCatalogEntry(base: Role, dir?: string, configuration?: AgentConfiguration): AgentCatalogEntry {
@@ -45,7 +47,11 @@ export function agentCatalogEntry(base: Role, dir?: string, configuration?: Agen
   return { name: role.name, description: typeof fields.description === "string" ? fields.description : "Definition unavailable. Restore the agent definition to inspect its purpose.", record: role.record, configuration: { version, ...(definition === null ? {} : { definition }), revision, ...settings } };
 }
 
-export function catalogEntry(release: AgentVersion): AgentCatalogEntry {
+export function catalogEntry(release: AgentVersion, slot = release.template ?? release.role.name): AgentCatalogEntry {
+  if (!supportsAgentSlot(release, slot)) throw new Error(`Agent ${release.role.name} cannot fill role ${slot}`);
   const entry = agentCatalogEntry(release.role, undefined, { ...release.role, version: release.version, revision: release.digest, definition: release.definition, skills: [] });
-  return { ...entry, configuration: { ...entry.configuration, ...(release.template ? { agentName: release.role.name, baseRole: release.template } : {}), ...(release.skillResources === undefined ? {} : { skillResources: release.skillResources }), revision: release.digest, releaseDigest: releaseContentDigest(release) } };
+  if (release.builderProfiles) entry.compatibleRoles = ["sociotechnic-builder", "sociotechnic-builder-lite"];
+  const profile = slot === "sociotechnic-builder" ? release.builderProfiles?.COMPLEX : slot === "sociotechnic-builder-lite" ? release.builderProfiles?.EASY : undefined;
+  const budget = profile ? { maxTurns: Math.min(profile.maxTurns, release.role.maxTurns), timeoutMinutes: Math.min(profile.timeoutMinutes, release.role.timeoutMinutes) } : undefined;
+  return { ...entry, ...(release.supersedes ? { supersedes: release.supersedes } : {}), configuration: { ...entry.configuration, ...(release.template || slot !== release.role.name ? { agentName: release.role.name, baseRole: slot } : {}), ...budget, ...(release.skillResources === undefined ? {} : { skillResources: release.skillResources }), revision: release.digest, releaseDigest: releaseContentDigest(release) } };
 }

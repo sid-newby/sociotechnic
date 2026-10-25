@@ -133,7 +133,8 @@ test("library API uses canonical database history, ignores local poison and repo
   const get = async (path: string) => { const response = await fetch(new URL(path, server.url)); return { status: response.status, value: await response.json() }; };
   try {
     const library = parseLibrary((await get("/api/agents")).value);
-    assert.equal(library.agents.length, new Set((await store.agentVersions()).map((row) => row.agent)).size);
+    assert.equal(library.agents.length, new Set((await store.agentVersions()).map((row) => row.agent)).size - 1);
+    assert.equal(library.agents.some((agent) => agent.name === "sociotechnic-azure-builder-lite"), false);
     for (const name of ["sociotechnic-infrastructure-planner", "sociotechnic-infrastructure-builder"]) {
       const expert = library.agents.find((agent) => agent.name === name); assert.ok(expert?.profile);
       assert.equal(expert.profile.configuration.version, "1.0.0");

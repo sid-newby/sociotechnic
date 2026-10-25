@@ -311,6 +311,9 @@ separate from that semantic version attribution.
 The version editor uses the canonical Radix modal, native selects and owned inline
 validation, with publication review and unsaved-draft confirmation. New run's
 optional overrides retain its normal dialog scrolling and focus behavior.
+An explicitly compatible builder appears in both EASY and COMPLEX assignment
+selects under one identity. Each slot offers only compatible release versions;
+superseded identities remain in deployment history instead of fresh choices.
 
 `components/agent-identity.tsx` owns each role's Lucide icon and display name,
 shared by library, run profiles, activity and analysis. Role icons identify agents;

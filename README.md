@@ -111,11 +111,13 @@ selected model. Creation makes
 the agent available; it does not change any run. In **New run → Agents and
 versions**, assign it to its matching role and choose latest or a legacy release.
 
-The optional [Azure SME](sociotechnic/docs/azure-sme.md) starts at **v1.0.0** (latest **v1.0.1**)
-with **GPT 6.1 Sol / high** and pinned Microsoft Azure skills. Search `azure` in
+The optional [Azure SME](sociotechnic/docs/azure-sme.md) uses **GPT 6.1 Sol / high**
+and pinned Microsoft Azure skills. Search `azure` in
 the library. Choose its planner for a plan another builder can execute, its
-advisor for research and escalations, or its builder profiles for implementation
-and small fixes. Assignments retain the workflow's plan, check and human gates.
+advisor for research and escalations, or **Azure Builder v1.1.0** for implementation
+and small fixes. Select the same builder in both EASY and COMPLEX slots; each
+tier retains its scope rules and execution budget. Assignments retain the
+workflow's plan, check and human gates.
 
 ![Add agent form with a demonstration release-planning purpose, role template and adapted instructions.](assets/console/agent-creation.png)
 

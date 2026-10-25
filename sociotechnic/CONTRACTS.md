@@ -1025,6 +1025,19 @@ PostgreSQL stores the release catalog; `.sociotechnic/agent-versions/<agent>/<ve
 is a disposable verified cache. See the authority, creation and assignment rules below.
 
 Versions preserve the role record contract, skills and permission ceilings.
+An ordinary builder release may explicitly declare `builderProfiles` for both
+EASY and COMPLEX, each with its own turn and deadline budget. Effective limits
+are the lower of that profile and the release's overall settings, so ordinary
+version-editor limit changes still cap both tiers without losing their profiles. Only the existing
+builder and builder-lite slots are compatible; workers, sweepers, readers and
+other roles remain separate. The release's instructions must cover both tiers.
+Pins retain the selected slot and its derived budget, verified against the
+immutable release. The generated build brief states the actual pinned plan tier
+and EASY scope restrictions. Legacy releases without profiles remain single-slot.
+An optional `supersedes` list retires redundant custom identities from new-run
+choices and new rosters; existing pins and explicit legacy selection still work.
+Retired identities with deployments remain visible in library history. Neither
+metadata field changes an existing release or grants additional tools.
 Planning, research, review, conformance and approval templates may switch between
 Claude and the OpenAI models listed in `src/agent-models.ts`. Ordinary build
 templates also support Codex; design and Agent-worker templates remain Claude-only. Both editor flows group choices by provider and
@@ -1124,9 +1137,10 @@ the same validation and pinning as the existing API. An orchestrator can select 
 specialist planner or builder at creation after consulting the roster. Read-only
 awareness and recommendations do not authorize authentication or cloud changes.
 
-The optional Azure SME uses the same specialist family pattern as the
-infrastructure expert: planner, researcher/advisor, COMPLEX builder and EASY
-builder identities with unchanged template contracts. All begin at v1.0.0 on
+The optional Azure SME has planner, researcher/advisor and one builder for both
+COMPLEX and EASY work. Azure Builder v1.1.0 declares both budget profiles and
+supersedes the separate Azure Builder Lite identity for new runs; old Lite
+releases and pins remain unchanged. The original four identities begin at v1.0.0 on
 gpt-6.1-sol/high. Release v1.0.1 adds optional identity/session guidance without
 authenticating, creating credentials or granting access. Informational use needs
 no Azure connection. Selection remains explicit; planning cannot expand a reader's

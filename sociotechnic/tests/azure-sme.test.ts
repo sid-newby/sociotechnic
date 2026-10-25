@@ -47,13 +47,13 @@ test("Azure family preserves its initial release and optional identity guidance 
       ["sociotechnic-builder", "sociotechnic-azure-builder", "build"],
       ["sociotechnic-builder-lite", "sociotechnic-azure-builder-lite", "build"],
     ];
-    const pins = await pinAgentVersions({}, undefined, Object.fromEntries(family.map(([role, identity]) => [role, identity])));
+    const pins = await pinAgentVersions(Object.fromEntries(family.map(([role]) => [role, "1.0.1"])), undefined, Object.fromEntries(family.map(([role, identity]) => [role, identity])));
     for (const [role, identity, record] of family) {
       const entry = catalog.find((agent) => agent.name === identity); assert.ok(entry);
       assert.equal(entry.record, record);
       assert.equal(entry.configuration.model, "gpt-6.1-sol");
       assert.equal(entry.configuration.effort, "high");
-      assert.equal(entry.configuration.version, "1.0.1");
+      assert.equal(entry.configuration.version, identity === "sociotechnic-azure-builder" ? "1.1.0" : "1.0.1");
       assert.deepEqual(entry.configuration.skills, ["azure-sme"]);
       assert.equal(entry.configuration.tools.includes("Bash"), record === "build");
       assert.equal(pins.configurations[role].agentName, identity);
@@ -73,6 +73,12 @@ test("Azure family preserves its initial release and optional identity guidance 
       assert.equal(resources[0].files["references/identity-and-session.md"], undefined);
     }
     await assert.rejects(pinAgentVersions({}, undefined, { "sociotechnic-builder": "sociotechnic-azure-advisor" }), /cannot fill/);
+    const combined = await pinAgentVersions({}, undefined, { "sociotechnic-builder": "sociotechnic-azure-builder", "sociotechnic-builder-lite": "sociotechnic-azure-builder" });
+    assert.equal(combined.configurations["sociotechnic-builder"].maxTurns, 250);
+    assert.equal(combined.configurations["sociotechnic-builder-lite"].maxTurns, 160);
+    assert.equal(combined.configurations["sociotechnic-builder-lite"].timeoutMinutes, 40);
+    assert.equal(combined.configurations["sociotechnic-builder-lite"].version, "1.1.0");
+    assert.deepEqual(combined.configurations["sociotechnic-builder"].skillResources, pins.configurations["sociotechnic-builder"].skillResources);
     const unchanged = await pinAgentVersions();
     assert.equal(unchanged.configurations["sociotechnic-builder"].agentName, undefined);
     const bundle = await exportCatalogBundle(store), restored = createMemoryStore();

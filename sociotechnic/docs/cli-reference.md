@@ -598,7 +598,16 @@ reference reads without installing plugins or granting tools. See the
 `POST /api/jobs` accepts optional role-keyed maps:
 `agentVersions: { "sociotechnic-planner": "1.0.0" }` and
 `agentAssignments: { "sociotechnic-planner": "sociotechnic-migration-planner" }`.
-Assignments must match their template. Both validate before Git initialization or
+Assignments must match their template, except an ordinary builder release with
+explicit `builderProfiles` can fill both builder slots. Each EASY/COMPLEX profile
+specifies `maxTurns` and `timeoutMinutes`; effective limits are capped by the
+release's overall settings, including changes through the version editor. Tools and
+the build record contract do not change. Publication preserves profiles and
+optional `supersedes` identity names unless explicitly supplied. Superseded
+custom builders leave fresh choices/rosters but retain immutable versions and
+explicit legacy selection. `/api/agent-versions` includes `roleVersions`, mapping
+each compatible slot to its available versions; the console uses those lists.
+Both maps validate before Git initialization or
 worktree creation. New jobs pin latest for each selected identity unless overridden;
 old jobs without a map retain baseline on their next dispatch.
 `GET /api/meta?job=<id>` describes that run's pinned settings and snapshots;

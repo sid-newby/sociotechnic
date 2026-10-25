@@ -136,3 +136,58 @@ The synchronized gate passed engine/web type checks, build, baseline agents,
 244 non-PostgreSQL tests (30 optional cases skipped) and the dependency audit.
 The full PostgreSQL run passed all 274 tests with zero skipped. The added Azure
 transport assertions also passed independently, and type checks passed again.
+
+## Consolidate Azure Builder across tiers
+
+The separate Azure Builder Lite uses the same model, effort, skills, tools and
+output contract. Keep EASY's scope and smaller execution budget as a tier
+profile of Azure Builder instead of maintaining a second specialist identity.
+Default Claude builders, BULK/COMMENTS, human gates and historical pins retain
+their existing behavior.
+
+Stages and allowed file scope:
+
+1. Extend immutable releases with explicit ordinary-builder budget profiles and
+   superseded custom identities. Derive and verify configurations by assigned
+   slot, and include the actual tier in build briefs. Scope: `src/agent-version-data.ts`,
+   `src/agent-catalog.ts`, `src/agent-versions.ts`, `src/agent-roster.ts`,
+   `src/agent-library.ts`, `src/brief.ts`, `src/engine.ts`.
+2. Publish Azure Builder 1.1.0 with both tiers and the unchanged Azure skill
+   snapshot. Preserve every prior release in a complete catalog export at
+   `seeds/agent-releases/20261024-azure-builder-tiers.json`. Reuse the existing
+   New run selectors and Add agent peer review, offering only compatible
+   versions and active identities. Scope: `ui/web/src/components/version-overrides.tsx`
+   and `ui/web/src/components/add-agent.tsx`; no new UI primitives or visual tokens.
+3. Verify EASY/COMPLEX dispatches, budget and tier tampering, publication,
+   restoration, legacy selection and HTTP choices, using disposable Git repos
+   and PostgreSQL databases. Scope: `tests/builder-profiles.test.ts`,
+   `tests/azure-sme.test.ts`, `tests/agent-discovery.test.ts`,
+   `tests/agent-library.test.ts` and the documentation below.
+
+`docsImpact.required: true`. Allowed documentation scope is root `README.md`,
+`DESIGN.md`, `sociotechnic/CONTRACTS.md`, and `docs/azure-sme.md`,
+`docs/azure-sme-plan.md`, `docs/cli-reference.md`, `docs/engine-reference.md`,
+`docs/development.md`. Update the behavior contract, profile selection examples,
+release versions, selector behavior and feature-to-code map together. Product
+scope is unchanged; the existing controls and native select ownership remain.
+
+Acceptance: one Azure Builder appears for both ordinary build slots; EASY uses
+160 calls / 40 minutes and COMPLEX uses 250 / 60. Only 1.1.0 and later compatible
+releases appear in the EASY selector. Old Azure/Lite releases, frozen rosters,
+dispatches and explicit legacy assignments remain valid. Retired identities
+with deployments remain available in library history. No tenant access, model
+execution or cloud changes are needed to verify this consolidation.
+
+Verification: `task checks` passed (257 tests, 31 optional database skips), then
+`task test:pg` passed all 288 tests with zero skips. The dependency audit found
+no known vulnerabilities. Catalog coverage matched all 27 releases; all 26
+previous release rows and the Azure skill snapshot were independently compared
+unchanged. An isolated Chrome session verified both selectors, incompatible
+legacy-version exclusion, independent overrides, native popup/keyboard behavior,
+390px layout, library search, Add agent peer review, and loading/error recovery.
+The strict UI static audit reported four existing wrapper-driven controls as
+actionless; their handlers belong to Radix Dialog/Tooltip primitives, not literal
+button `onClick` props. No unrelated control changes were made for those heuristic
+findings. The live console was gracefully reloaded after verifying zero active
+drivers; its API then confirmed three Azure identities, the combined 1.1.0
+builder, both preserved Lite versions and all nine existing runs.

@@ -5,6 +5,7 @@ export type AgentCard = {
   name: string;
   version: string;
   template: string;
+  compatibleRoles?: string[];
   purpose: string;
   mode: "plan" | "advise" | "execute" | "design" | "review" | "conformance" | "approve";
   access: "read-only" | "worktree" | "scoped-design";
@@ -19,6 +20,7 @@ export function agentCard(entry: AgentCatalogEntry): AgentCard {
   if (!config.releaseDigest) throw new Error("Agent roster requires immutable database releases");
   const mode = entry.record === "research" ? "advise" : entry.record === "build" ? "execute" : entry.record === "decision" ? "approve" : entry.record;
   return { name: entry.name, version: config.version, template: config.baseRole ?? entry.name, purpose: entry.description, mode,
+    ...(entry.compatibleRoles ? { compatibleRoles: entry.compatibleRoles } : {}),
     access: config.tools.includes("Bash") ? "worktree" : entry.record === "design" ? "scoped-design" : "read-only",
     skills: [...config.skills], model: config.model, effort: config.effort, releaseDigest: config.releaseDigest };
 }
