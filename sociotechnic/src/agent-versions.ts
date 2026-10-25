@@ -1,8 +1,9 @@
 
 import { join } from "node:path";
 import { catalogEntry } from "./agent-catalog.ts";
+import { activeAgentCatalog } from "./agent-library.ts";
 import type { AgentConfiguration } from "./agent-catalog.ts";
-import { BASE_AGENT_VERSION, canonicalJson, compareAgentVersions, isAgentVersion, modelChoices, parseAgentVersion, releaseContentDigest, releaseDigest, sameRelease, versionRole } from "./agent-version-data.ts";
+import { BASE_AGENT_VERSION, canonicalJson, compareAgentVersions, isAgentVersion, modelChoices, parseAgentVersion, releaseContentDigest, releaseDigest, sameRelease, supportsAgentSlot, versionRole } from "./agent-version-data.ts";
 import type { AgentVersion } from "./agent-version-data.ts";
 import { agentDefinition, bundledAgentDefinition, parseFrontmatter, validateAgentText } from "./agents.ts";
 import { bundledSkills } from "./agent-skills.ts";
@@ -17,7 +18,7 @@ import type { Job } from "./job.ts";
 
 import { readJson, writeJsonAtomic } from "./jsonio.ts";
 import { stateDir } from "./paths.ts";
-import { ROLES } from "./roles.ts";
+import { BUILDER_BY_TIER, ROLES } from "./roles.ts";
 import type { Role } from "./roles.ts";
 export { BASE_AGENT_VERSION, compareAgentVersions, isAgentVersion, modelChoices, versionRole } from "./agent-version-data.ts";
 export type { AgentVersion } from "./agent-version-data.ts";
@@ -102,13 +103,13 @@ export async function publishAgentVersion(base: Role, body: Record<string, unkno
     const skillResources = body.skills === undefined ? current.skillResources : bundledSkills(body.skills);
     const skills = body.skills === undefined ? catalogEntry(current).configuration.skills.filter((s) => s !== 'Impeccable (scoped design tool)') : skillResources?.map((s) => s.name);
     const definition = agentDefinition(role, purpose.trim(), instructions, skills);
-    const release: AgentVersion = { ...current, version, digest: releaseDigest(role, definition), label, createdAt: new Date().toISOString(), role, definition, ...(skillResources === undefined ? {} : { skillResources }) };
+    const release = parseAgentVersion(base, { ...current, version, digest: releaseDigest(role, definition), label, createdAt: new Date().toISOString(), role, definition, ...(skillResources === undefined ? {} : { skillResources }), ...(body.builderProfiles === undefined ? {} : { builderProfiles: body.builderProfiles }), ...(body.supersedes === undefined ? {} : { supersedes: body.supersedes }) });
     await tx.insertAgentVersion(rowFor(release)); return release;
   });
   cache(base, result); return result;
 }
-function matchingConfiguration(base: Role, config: AgentConfiguration, release: AgentVersion): void {
-  const expected = catalogEntry(release).configuration;
+function matchingConfiguration(base: Role, config: AgentConfiguration, release: AgentVersion, slot = release.template ?? release.role.name): void {
+  const expected = catalogEntry(release, slot).configuration;
   const { releaseDigest: _old, ...observed } = config;
   const { releaseDigest: _new, ...wanted } = expected;
   if (canonicalJson(observed) !== canonicalJson(wanted)) conflict(`Run configuration differs from database release ${base.name} v${release.version}`);
@@ -142,16 +143,18 @@ export async function validateJobAgentVersions(tx: StoreTx, job: Job, prior?: Jo
   }
   for (const [slot, version] of Object.entries(job.agentVersions ?? {})) {
     const release = await need(job.agentAssignments?.[slot] ?? slot, version);
-    if ((release.template ?? release.role.name) !== slot) conflict(`Agent cannot fill role ${slot}`);
+    if (!supportsAgentSlot(release, slot)) conflict(`Agent cannot fill role ${slot}`);
   }
   for (const [name, config] of Object.entries(job.agentConfigurations ?? {})) {
     if (job.agentVersions?.[name] !== config.version) conflict(`Run ${job.id} has inconsistent pinned configuration for ${name}`);
-    const release = await need(job.agentAssignments?.[name] ?? name, config.version); matchingConfiguration(release.role, config, release);
+    const release = await need(job.agentAssignments?.[name] ?? name, config.version); matchingConfiguration(release.role, config, release, name);
   }
   for (const dispatch of job.dispatches) if (dispatch.configuration?.definition && dispatch.configuration.version) {
     const release = await need(dispatch.agent, dispatch.configuration.version);
-    matchingConfiguration(release.role, dispatch.configuration, release);
-    const slot = release.template ?? dispatch.agent;
+    const slot = dispatch.configuration.baseRole ?? release.template ?? dispatch.agent;
+    if (!supportsAgentSlot(release, slot)) conflict(`Dispatch ${dispatch.id} has an incompatible role`);
+    if (release.builderProfiles && dispatch.step === "build" && (!job.plan || BUILDER_BY_TIER[job.plan.tier] !== slot)) conflict(`Dispatch ${dispatch.id} disagrees with its plan tier`);
+    matchingConfiguration(release.role, dispatch.configuration, release, slot);
     const advisor = dispatch.step === "research" && slot === "sociotechnic-researcher" && !job.agentLocks?.includes(slot) && job.agentRoster?.some((card) => card.name === dispatch.agent && card.version === release.version && card.releaseDigest === releaseContentDigest(release));
     if (dispatch.model !== release.role.model || dispatch.effort !== release.role.effort || (!advisor && job.agentVersions?.[slot] && (job.agentVersions[slot] !== release.version || (job.agentAssignments?.[slot] ?? slot) !== dispatch.agent))) conflict(`Dispatch ${dispatch.id} disagrees with its database release`);
   }
@@ -168,15 +171,15 @@ export async function pinAgentVersions(overrides: Readonly<Record<string, string
   const picked = await store.transaction(async (tx) => {
     await tx.lockAgentVersions('catalog');
     if (job) await validateJobAgentVersions(tx, job, await tx.storedJob(job.id));
-    const out: AgentVersion[] = [];
+    const out: { slot: string; release: AgentVersion }[] = [];
     for (const base of ROLES) {
       const name = assignments[base.name] ?? base.name;
       const rows = await tx.agentVersions(name);
       const all = rows.map((row) => decoded(policy(row), row)).sort((a,b) => compareAgentVersions(b.version,a.version));
       const selected = overrides[base.name] ? all.find((v) => v.version === overrides[base.name]) : all[0];
       if (!selected) throw new SociotechnicError("not-found", `Database release ${base.name} v${overrides[base.name]} not found`);
-      if ((selected.template ?? selected.role.name) !== base.name) conflict(`Agent ${name} cannot fill role ${base.name}`);
-      out.push(selected);
+      if (!supportsAgentSlot(selected, base.name)) conflict(`Agent ${name} cannot fill role ${base.name}`);
+      out.push({ slot: base.name, release: selected });
     }
     let roster = job?.agentRoster;
     if (!job) {
@@ -185,13 +188,15 @@ export async function pinAgentVersions(overrides: Readonly<Record<string, string
         const release = decoded(policy(row), row), previous = latest.get(row.agent);
         if (!previous || compareAgentVersions(release.version, previous.version) > 0) latest.set(row.agent, release);
       }
-      roster = [...latest.values()].filter((release) => release.role.name !== 'sociotechnic-comment-sicko')
-        .map((release) => agentCard(catalogEntry(release))).sort((a, b) => a.name.localeCompare(b.name));
+      const catalog = [...latest.values()].filter((release) => release.role.name !== 'sociotechnic-comment-sicko').map((release) => catalogEntry(release));
+      const selectedNames = new Set(out.map(({ release }) => release.role.name));
+      const activeNames = new Set(activeAgentCatalog(catalog).map((entry) => entry.name));
+      roster = catalog.filter((entry) => activeNames.has(entry.name) || selectedNames.has(entry.name)).map(agentCard).sort((a, b) => a.name.localeCompare(b.name));
     }
     return { out, roster };
   });
-  for (const release of picked.out) cache(release.role, release);
-  return { versions: Object.fromEntries(picked.out.map((v) => [v.template ?? v.role.name, v.version])), configurations: Object.fromEntries(picked.out.map((v) => [v.template ?? v.role.name, catalogEntry(v).configuration])), roster: job ? job.agentRoster : picked.roster, locks: job ? job.agentLocks : [...new Set([...Object.keys(overrides), ...Object.keys(assignments)])].sort(), ...(Object.keys(assignments).length ? { assignments: { ...assignments } } : {}) };
+  for (const { release } of picked.out) cache(release.role, release);
+  return { versions: Object.fromEntries(picked.out.map(({ slot, release }) => [slot, release.version])), configurations: Object.fromEntries(picked.out.map(({ slot, release }) => [slot, catalogEntry(release, slot).configuration])), roster: job ? job.agentRoster : picked.roster, locks: job ? job.agentLocks : [...new Set([...Object.keys(overrides), ...Object.keys(assignments)])].sort(), ...(Object.keys(assignments).length ? { assignments: { ...assignments } } : {}) };
 }
 
 export async function advisorConfiguration(job: Job, name: string | null | undefined): Promise<AgentConfiguration | undefined> {
@@ -206,7 +211,7 @@ export async function advisorConfiguration(job: Job, name: string | null | undef
 }
 
 export async function agentRoster() {
-  return { source: "db", agents: (await loadAgentCatalog()).filter((entry) => entry.name !== 'sociotechnic-comment-sicko').map(agentCard).sort((a, b) => a.name.localeCompare(b.name)) };
+  return { source: "db", agents: activeAgentCatalog(await loadAgentCatalog()).filter((entry) => entry.name !== 'sociotechnic-comment-sicko').map(agentCard).sort((a, b) => a.name.localeCompare(b.name)) };
 }
 export async function loadAgentCatalog() {
   const store = requireStore();
@@ -217,12 +222,19 @@ export async function loadAgentCatalog() {
   }
   for (const base of ROLES) if (!latest.has(base.name)) throw new SociotechnicError('agent-catalog-missing', 'Initialize the agent catalog with sociotechnic db init');
   for (const release of latest.values()) cache(release.role, release);
-  return [...latest.values()].map(catalogEntry);
+  return [...latest.values()].map((release) => catalogEntry(release));
 }
 
 export async function agentVersionChoices() {
-  const catalog = await loadAgentCatalog();
-  return { agents: await Promise.all(catalog.filter((e) => e.name !== 'sociotechnic-comment-sicko').map(async (e) => ({ name: e.name, template: e.configuration.baseRole ?? e.name, purpose: e.description, latest: e.configuration.version, versions: (await listAgentVersions(await agentBase(e.name))).versions.map((r) => r.version) }))) };
+  const catalog = activeAgentCatalog(await loadAgentCatalog());
+  return { agents: await Promise.all(catalog.filter((e) => e.name !== 'sociotechnic-comment-sicko').map(async (e) => {
+    const releases = (await listAgentVersions(await agentBase(e.name))).versions;
+    const roleVersions = Object.fromEntries(ROLES.flatMap((role) => {
+      const versions = releases.filter((release) => supportsAgentSlot(release, role.name)).map((release) => release.version);
+      return versions.length ? [[role.name, versions]] : [];
+    }));
+    return { name: e.name, template: e.configuration.baseRole ?? e.name, purpose: e.description, latest: e.configuration.version, versions: releases.map((r) => r.version), roleVersions };
+  })) };
 }
 
 export async function createAgent(body: Record<string, unknown>): Promise<AgentVersion> {
@@ -244,9 +256,11 @@ export async function createAgent(body: Record<string, unknown>): Promise<AgentV
     if (rows.some((r) => r.agent === name)) conflict('That agent name already exists; manage its versions instead');
     const latest = new Map<string, AgentVersion>();
     for (const row of rows) { const r = decoded(policy(row), row), old = latest.get(row.agent); if (!old || compareAgentVersions(r.version, old.version) > 0) latest.set(row.agent, r); }
-    const peers = [...latest.values()].filter((r) => (r.template ?? r.role.name) === base.name);
+    const activeNames = new Set(activeAgentCatalog([...latest.values()].map((release) => catalogEntry(release))).map((entry) => entry.name));
+    const peers = [...latest.values()].filter((release) => supportsAgentSlot(release, base.name));
+    const reviewedPeers = peers.filter((release) => activeNames.has(release.role.name));
     const reviewed = body.reviewedAgents;
-    if (!Array.isArray(reviewed) || canonicalJson([...peers.map((r) => `${r.role.name}@${r.version}`)].sort()) !== canonicalJson([...reviewed].sort())) throw new SociotechnicError('stale-agent-version', 'Review the current agents for this role before creating another');
+    if (!Array.isArray(reviewed) || canonicalJson([...reviewedPeers.map((r) => `${r.role.name}@${r.version}`)].sort()) !== canonicalJson([...reviewed].sort())) throw new SociotechnicError('stale-agent-version', 'Review the current agents for this role before creating another');
     const normalize = (text: string) => (parseFrontmatter(text)?.body ?? text).replace(/\s+/g, ' ').trim().toLowerCase();
     if (peers.some((r) => normalize(r.definition) === normalize(instructions))) conflict('These instructions already exist. Publish a version of that agent instead.');
     await tx.insertAgentVersion(rowFor(release));

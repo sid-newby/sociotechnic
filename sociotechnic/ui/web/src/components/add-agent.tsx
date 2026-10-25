@@ -47,7 +47,7 @@ function CreateAgentForm({ nameRef, onCreated, onDirty, onBusy }: { nameRef: Ref
     return () => abort.abort();
   }, [template, retry]);
   const fail = (message: string) => { setError(message); setConfirming(false); requestAnimationFrame(() => errorRef.current?.focus()); };
-  const peers = choices.kind === "ready" ? choices.value.filter((a) => a.template === template) : [];
+  const peers = choices.kind === "ready" ? choices.value.filter((a) => a.roleVersions[template]?.length) : [];
   const create = async () => {
     if (inFlight.current || !draft || choices.kind !== "ready" || !reviewed) return;
     inFlight.current = true; setBusy(true); onBusy(true); setError("");

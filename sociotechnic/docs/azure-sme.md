@@ -1,22 +1,24 @@
 # Azure SME
 
-The resident Azure specialist has four optional library profiles, each starting
-at **1.0.0** on **gpt-6.1-sol / high**, with the same `azure-sme` skill snapshot.
-The latest **1.0.1** release adds optional identity and session guidance; initial
-1.0.0 releases remain available unchanged. This follows the [infrastructure expert](infrastructure-agent.md) pattern: each
-identity retains one role's permissions and output record.
+The resident Azure specialist has three optional library identities on
+**gpt-6.1-sol / high**, with the same `azure-sme` skill snapshot. Planner and advisor
+are **1.0.1**; **Azure Builder 1.1.0** handles both EASY and COMPLEX plans. The
+original releases and separate Builder Lite identity remain available for
+historical runs and explicit legacy selection. Version 1.0.1 added optional
+identity and session guidance; 1.1.0 preserves that skill snapshot unchanged.
 
 | Identity | Role slot | Use | Limit |
 | --- | --- | --- | --- |
 | `sociotechnic-azure-planner` | planner | Architecture, investigation and an executable plan for any builder | 120 calls / 35 minutes |
 | `sociotechnic-azure-advisor` | researcher | Bounded research, escalation analysis and recommendations | 80 calls / 25 minutes |
-| `sociotechnic-azure-builder` | builder | Execute an approved COMPLEX plan, investigate or remediate | 250 calls / 60 minutes |
-| `sociotechnic-azure-builder-lite` | builder-lite | Handle a scoped EASY investigation or fix directly | 160 calls / 40 minutes |
+| `sociotechnic-azure-builder` | builder (COMPLEX) | Execute an approved plan, investigate or remediate | 250 calls / 60 minutes |
+| `sociotechnic-azure-builder` | builder-lite (EASY) | Handle a scoped investigation or fix within EASY rules | 160 calls / 40 minutes |
 
 Open **Agent library**, search `azure`, and inspect each profile's instructions,
 model, tools, skills and versions. In **New run → Agents and versions**, select
-the profile for its matching role. Select both builder profiles when the SME
-should execute either COMPLEX or EASY work. Keep the tier honest; BULK and
+the identity for its role. Select **Azure Builder** in both builder slots when the
+SME should execute either COMPLEX or EASY work; this uses one release, not two
+agents. The plan tier determines scope rules and execution budget. Keep the tier honest; BULK and
 COMMENTS retain their separate builders. Other builders can execute plans from
 the Azure planner without using the Azure executor.
 
@@ -35,18 +37,22 @@ The corresponding API maps, alongside the ordinary New run request fields, are:
     "sociotechnic-planner": "sociotechnic-azure-planner",
     "sociotechnic-researcher": "sociotechnic-azure-advisor",
     "sociotechnic-builder": "sociotechnic-azure-builder",
-    "sociotechnic-builder-lite": "sociotechnic-azure-builder-lite"
+    "sociotechnic-builder-lite": "sociotechnic-azure-builder"
   },
   "agentVersions": {
     "sociotechnic-planner": "1.0.1",
     "sociotechnic-researcher": "1.0.1",
-    "sociotechnic-builder": "1.0.1",
-    "sociotechnic-builder-lite": "1.0.1"
+    "sociotechnic-builder": "1.1.0",
+    "sociotechnic-builder-lite": "1.1.0"
   }
 }
 ```
 
 Profiles are available without changing default assignments or existing runs.
+Builder Lite is omitted from fresh run choices and rosters; its versions remain
+readable, and existing runs retain their frozen settings. Explicit CLI/API
+selection of an old Lite release still works. Azure Builder versions before
+1.1.0 remain COMPLEX-only; the EASY selector offers compatible versions only.
 `db init` imports the committed catalog on another installation. Publish a higher
 semantic version to revise instructions, model, budgets or skill contents; old
 releases and run snapshots remain immutable. Export/check the catalog afterward.

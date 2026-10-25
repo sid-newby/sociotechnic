@@ -102,6 +102,18 @@ provider bindings are separate from their Claude prompt definitions.
 
 `maxTurns` per agent: planner 80, researchers 40, builders 250, comment-cleaner 120, comment-sicko 60, reviewers 60, conformance 60, approver 40.
 
+These are default role slots, not a requirement to maintain separate specialist
+identities per tier. An ordinary builder release may declare `builderProfiles`
+for EASY and COMPLEX, each containing `maxTurns` and `timeoutMinutes` bounded by
+that release at dispatch time (the lower of the profile and overall limit).
+Changing overall limits in the version editor preserves the tier profiles.
+The same identity can then be selected in both slots. Run and
+dispatch snapshots bind the actual slot, budget, instructions and release;
+validation rejects a budget or tier mismatch. The build brief supplies the
+approved tier and EASY file limit and escalation rules. Other role contracts,
+tools and human gates remain separate. Releases without profiles retain their
+original single-slot behavior. [Azure Builder](azure-sme.md) uses this capability.
+
 "Context7" in the Tools column means the two MCP tools `mcp__context7__resolve-library-id` and `mcp__context7__query-docs`. See [Network and docs access](#network-and-docs-access).
 
 Code review and research use the local Codex CLI with saved ChatGPT

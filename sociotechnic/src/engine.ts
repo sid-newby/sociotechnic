@@ -436,6 +436,8 @@ function buildPrompt(job: Job, agent: string, retryReason: string | null, keptCh
   const prev = job.rounds.find((r) => r.n === job.round - 1) ?? null;
   return buildBrief({
     agent,
+    tier: plan.tier,
+    easyTierMaxFiles: jobConfig(job).easyTierMaxFiles,
     worktree: job.worktree,
     branch: job.branch,
     baseBranch: job.base.branch,

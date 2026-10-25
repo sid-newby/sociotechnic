@@ -51,11 +51,11 @@ function plan() {
 
 test("compact roster and API expose actual Azure capabilities without definitions or skill payloads", async () => {
   const roster = await agentRoster(), azure = roster.agents.filter((card) => card.name.startsWith("sociotechnic-azure-"));
-  assert.equal(azure.length, 4);
+  assert.equal(azure.length, 3);
   assert.deepEqual(new Set(azure.map((card) => card.mode)), new Set(["plan", "advise", "execute"]));
-  assert.ok(azure.every((card) => card.version === "1.0.1" && card.skills.includes("azure-sme")));
+  assert.ok(azure.every((card) => card.version === (card.name === "sociotechnic-azure-builder" ? "1.1.0" : "1.0.1") && card.skills.includes("azure-sme")));
   assert.equal(azure.find((card) => card.mode === "advise")?.access, "read-only");
-  assert.equal(azure.find((card) => card.name.endsWith("builder-lite"))?.template, "sociotechnic-builder-lite");
+  assert.deepEqual(azure.find((card) => card.name === "sociotechnic-azure-builder")?.compatibleRoles, ["sociotechnic-builder", "sociotechnic-builder-lite"]);
   assert.ok(roster.agents.every((card) => !("definition" in card) && !("skillResources" in card)));
   assert.ok(JSON.stringify(roster).length < 20_000);
   assert.deepEqual(await run(["roster"]), roster);
@@ -81,7 +81,7 @@ test("new agents are discovered automatically; old rosters and explicit locks re
 test("planner consults the exact frozen advisor, retries that release, and regains ownership without another research loop", async () => {
   const id = await create(), planner = dispatch(await mutateJob(id, (job) => step(job)));
   assert.match(planner.prompt, /sociotechnic-azure-advisor/);
-  assert.match(planner.prompt, /sociotechnic-azure-builder-lite/);
+  assert.match(planner.prompt, /"name":"sociotechnic-azure-builder"/);
   await respond(id, planner, { status: "needs-research", questions: ["Explain Azure permissions without logging in."], advisors: ["sociotechnic-azure-advisor"] });
   const advice = dispatch(await mutateJob(id, (job) => step(job)));
   assert.equal(advice.agent, "sociotechnic-azure-advisor");
@@ -98,7 +98,7 @@ test("planner consults the exact frozen advisor, retries that release, and regai
   const returned = dispatch(await mutateJob(id, (job) => step(job)));
   assert.equal(returned.configuration?.baseRole ?? returned.agent, "sociotechnic-planner");
   assert.match(returned.prompt, /research escape has been used/);
-  await respond(id, returned, { ...plan(), agentRecommendations: [{ agent: "sociotechnic-azure-builder-lite", reason: "Handle a small scoped documentation correction if needed." }] });
+  await respond(id, returned, { ...plan(), agentRecommendations: [{ agent: "sociotechnic-azure-builder", reason: "Handle a small scoped documentation correction if needed." }] });
   const held = await mutateJob(id, (job) => step(job, { hold: ["planned"] })); assert.equal(held.action, "hold");
   const builder = dispatch(await mutateJob(id, (job) => step(job)));
   assert.equal(builder.agent, "sociotechnic-builder-lite");

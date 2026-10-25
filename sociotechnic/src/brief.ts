@@ -1,5 +1,6 @@
 import type { Gate } from "./gate.ts";
 import type { Lens } from "./roles.ts";
+import type { Tier } from "./roles.ts";
 import { lensShort } from "./roles.ts";
 import type { Finding } from "./verdict.ts";
 
@@ -177,6 +178,8 @@ export type FailingCheck = { name: string; run: string; exitCode: number | null;
 
 export type BuildBriefInput = {
   agent: string;
+  tier?: Tier;
+  easyTierMaxFiles?: number;
   worktree: string;
   branch: string;
   baseBranch: string;
@@ -204,6 +207,8 @@ export function buildBrief(i: BuildBriefInput): string {
     `- Branch: ${i.branch} (base: ${i.baseBranch})`,
     `- Plan: ${i.planPath}`,
   ];
+  if (i.tier) lines.push("", "## Assigned plan tier (binding)", `This run's approved plan is ${i.tier}. Follow its scope; the agent's identity or model does not change the tier.`);
+  if (i.tier === "EASY") lines.push(`Follow the existing sibling pattern, within ${i.easyTierMaxFiles ?? 8} files. No new abstractions, dependencies or refactoring beyond the plan. If cross-module design, new abstractions or more files are required, return STATUS: BLOCKED with a ## Blocker starting with Tier mismatch:. Do not promote the tier or change assignments.`);
   if (i.design) lines.push("", "## Approved design (binding)", i.design, "Match the selected composition and direction; do not replace them with your own. Initialize PRODUCT.md from confirmed product truth when absent. At finish, document the implemented system using Impeccable, including DESIGN.md and its sidecar for an approved new world. Run browser verification against the approved preview as well as the plan. A selected bundled scaffold must pass its documented validation before copying; a needed source update is BLOCKED for renewed approval rather than a silent substitution.");
   if (i.commentInventoryPath) lines.push(
     `- Pinned comment inventory: ${i.commentInventoryPath}`,
