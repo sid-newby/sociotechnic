@@ -1,3 +1,4 @@
+import { parseConsoleHolds } from "../../../src/console-preferences.ts";
 import type { DesignQuestion, DesignMessage } from "../../../src/design-session.ts";
 import { parseDesignPacket } from "../../../src/design-packet.ts";
 import type { DesignPacket } from "../../../src/design-packet.ts";
@@ -20,7 +21,7 @@ export const statusLabels: Record<Status, string> = {
 
 export type JobItem = Pick<Job, "id" | "feature" | "repo" | "status" | "updatedAt"> & { worktreePresent: boolean; running: boolean; archived: boolean };
 export type Review = { name: string; verdict: string; commit: string | null; blocking: number; reason: string | null; findings: { severity: string; location: string; text: string }[] };
-export type Dispatch = { version: string | null; id: string; round: number; step: string; lens: string | null; attempt: number; agent: string; model: string; effort: string; record: string; startedAt: string; deadlineAt: string; finishedAt: string | null; outcome: string | null; result: string | null; reason: string | null; note: string | null; usage: { cost: number | null; tokens: number | null; durationMs: number | null; breakdown?: TokenUsage }; };
+export type Dispatch = { commit?: string | null; configuration?: { revision: string | null; version: string | null; tools: string[]; maxTurns: number | null; timeoutMinutes: number | null }; version: string | null; id: string; round: number; step: string; lens: string | null; attempt: number; agent: string; model: string; effort: string; record: string; startedAt: string; deadlineAt: string; finishedAt: string | null; outcome: string | null; result: string | null; reason: string | null; note: string | null; usage: { cost: number | null; tokens: number | null; durationMs: number | null; breakdown?: TokenUsage }; };
 export type AgentProfile = { version: string; provider: "claude" | "codex"; name: string; model: string; effort: string; tools: string[]; timeoutMinutes: number; maxTurns: number; record: string };
 export type Round = {
   n: number;
@@ -36,7 +37,7 @@ export type Detail = {
   interactive: InteractiveDesignView | null;
   design: DesignView | null;
   worktreePresent: boolean;
-  job: Pick<Job, "id" | "feature" | "repo" | "worktree" | "branch" | "status" | "statusReason" | "round" | "base" | "updatedAt" | "caps" | "execution">;
+  job: Pick<Job, "id" | "feature" | "repo" | "worktree" | "branch" | "status" | "statusReason" | "round" | "base" | "updatedAt" | "caps" | "execution" | "consoleHolds">;
   rounds: Round[];
   records: { path: string; bytes: number; mtime: string }[];
   plan: { title: string; summary: string; tier: string | null; tierReason: string; acceptance: string[]; stages?: Stage[] } | null;
@@ -121,7 +122,7 @@ export function parseDetail(value: unknown): Detail {
   const merge = pr?.merge == null ? null : object(pr.merge);
   const local = j.localMerge == null ? null : object(j.localMerge);
   return {
-    job: { id: text(j.id), feature: text(j.feature), repo: text(j.repo), worktree: text(j.worktree), branch: text(j.branch), status: status(j.status), statusReason: text(j.statusReason), round: count(j.round), updatedAt: text(j.updatedAt), base: { branch: text(base.branch), commit: text(base.commit) }, caps: { rounds: count(caps.rounds), dispatchesPerRound: count(caps.dispatchesPerRound), retriesPerStep: count(caps.retriesPerStep) }, execution: parseExecution(j.execution) },
+    job: { id: text(j.id), feature: text(j.feature), repo: text(j.repo), worktree: text(j.worktree), branch: text(j.branch), status: status(j.status), statusReason: text(j.statusReason), round: count(j.round), updatedAt: text(j.updatedAt), base: { branch: text(base.branch), commit: text(base.commit) }, caps: { rounds: count(caps.rounds), dispatchesPerRound: count(caps.dispatchesPerRound), retriesPerStep: count(caps.retriesPerStep) }, execution: parseExecution(j.execution), ...(j.consoleHolds === undefined ? {} : { consoleHolds: parseConsoleHolds(j.consoleHolds) }) },
     rounds: list(j.rounds).map(parseRound),
     records: list(d.records).map((value) => { const r = object(value); return { path: text(r.path), bytes: count(r.bytes), mtime: text(r.mtime) }; }),
     plan: plan && typeof plan.title === "string" ? { title: plan.title, summary: text(plan.summary), tier: optionalText(plan.tier), tierReason: text(plan.tierReason), acceptance: strings(plan.acceptance), stages: list(plan.stages ?? []).map((value) => { const stage = object(value); return { id: text(stage.id), title: text(stage.title), description: text(stage.description), files: strings(stage.files), acceptance: strings(stage.acceptance), risks: strings(stage.risks) }; }) } : null,
@@ -170,8 +171,9 @@ function parseDispatch(value: unknown): Dispatch {
   const usage = d.usage && typeof d.usage === "object" && !Array.isArray(d.usage) ? object(d.usage) : {};
   const breakdown = tokenUsage(usage);
   const version = d.configuration == null ? null : optionalText(object(d.configuration).version);
+  const configuration = d.configuration == null ? null : object(d.configuration);
   const backfill = d.versionBackfill == null ? null : object(d.versionBackfill);
-  return { version: version ?? (backfill?.source === "operator-confirmed" && backfill.version === "1.0.0" ? backfill.version : null), id: text(d.id), round: count(d.round), step: text(d.step), lens: optionalText(d.lens), attempt: count(d.attempt), agent: text(d.agent), model: text(d.model), effort: text(d.effort), record: text(d.record), startedAt: text(d.startedAt), deadlineAt: text(d.deadlineAt), finishedAt: optionalText(d.finishedAt), outcome: optionalText(d.outcome), result: optionalText(parsed?.effective), reason: optionalText(parsed?.reason), note: optionalText(d.note), usage: { cost: measurement(usage.total_cost_usd), tokens: breakdown.total, breakdown, durationMs: measurement(usage.duration_ms) } };
+  return { commit: optionalText(parsed?.commit), ...(configuration ? { configuration: { revision: optionalText(configuration.revision), version: optionalText(configuration.version), tools: strings(configuration.tools), maxTurns: measurement(configuration.maxTurns), timeoutMinutes: measurement(configuration.timeoutMinutes) } } : {}), version: version ?? (backfill?.source === "operator-confirmed" && backfill.version === "1.0.0" ? backfill.version : null), id: text(d.id), round: count(d.round), step: text(d.step), lens: optionalText(d.lens), attempt: count(d.attempt), agent: text(d.agent), model: text(d.model), effort: text(d.effort), record: text(d.record), startedAt: text(d.startedAt), deadlineAt: text(d.deadlineAt), finishedAt: optionalText(d.finishedAt), outcome: optionalText(d.outcome), result: optionalText(parsed?.effective), reason: optionalText(parsed?.reason), note: optionalText(d.note), usage: { cost: measurement(usage.total_cost_usd), tokens: breakdown.total, breakdown, durationMs: measurement(usage.duration_ms) } };
 }
 
 export function agentTools(provider: string, tools: readonly string[]): string[] {

@@ -57,13 +57,13 @@ export function SandboxManager({ refresh, label = "Sandboxes", disabled = false,
       <div className="grid min-w-0 gap-4">{data?.sandboxes.map((row) => {
         const job = row.job;
         const removable = job && ["stopped", "merged"].includes(job.status);
-        return <article className="grid min-w-0 gap-3 rounded-xl border p-4 text-sm [&_code]:break-all" key={row.name}>
+        return <article className="grid min-w-0 gap-3 rounded-xl border p-6 text-sm [&_code]:break-all" key={row.name}>
           <h3 className="text-base font-semibold">{job?.feature || row.name}</h3><p><code>{row.name}</code></p>
           {job ? <p>Run: {job.id} · {statusLabels[job.status]}</p> : null}
           {!job || !row.initialized ? <p>Setup or ownership needs inspection with sbx. Automatic removal is unavailable.</p> : <div className="flex flex-wrap items-center gap-2"><Button type="button" variant="outline" disabled={busy || loading || !!selected || !!error} onClick={() => { setError(""); setMessage(""); setSelected({ kind: removable ? "remove" : "stop", id: job.id, feature: job.feature }); }}>{removable ? "Remove sandbox and worktree" : "Stop run"}</Button></div>}
         </article>;
-      })}</div><details className="space-y-4 rounded-xl border p-4 text-sm [&_summary]:cursor-pointer [&_summary]:font-medium"><summary>Capacity settings</summary><SandboxCapacity disabled={busy} onSaved={() => setRevision((value) => value + 1)} /></details></> : null}
-      {selected ? <div className="grid gap-4 rounded-xl border p-4 text-sm leading-relaxed" role="group" aria-label="Confirm sandbox action">
+      })}</div><details className="space-y-4 rounded-xl border p-6 text-sm [&_summary]:cursor-pointer [&_summary]:font-medium"><summary>Capacity settings</summary><SandboxCapacity disabled={busy} onSaved={() => setRevision((value) => value + 1)} /></details></> : null}
+      {selected ? <div className="grid gap-4 rounded-xl border p-6 text-sm leading-relaxed" role="group" aria-label="Confirm sandbox action">
         <h3 className="text-base font-semibold">{selected.kind === "stop" ? "Stop run?" : "Remove sandbox and worktree?"}</h3>
         <p>{selected.feature}</p>
         <p>{selected.kind === "stop" ? "The driver will stop before the sandbox is stopped. Files and history are kept. Stopping alone does not free capacity." : "This removes the run’s sandbox and local worktree. Run history stays available. Removal is refused if sandbox work is dirty or its commit is not preserved on the host."}</p>

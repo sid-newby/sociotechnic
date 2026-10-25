@@ -169,9 +169,9 @@ sociotechnic/bin/sociotechnic ui
 
 The server prints one JSON line `{ url, port, pid, sociotechnicHome }`, opens the URL in your browser and runs in the foreground until SIGINT or SIGTERM. Run `task build` first for the React console, or `task ui` to build and ensure a background server. Before a build exists, the server uses the original HTML console.
 
-The React console uses an inbox sidebar, decision bar, four summary cards, recorded token chart and Dispatches/Records/Log/Decisions tabs. Evidence opens in right-hand sheets; the round selector preserves earlier evidence. Controls offers Pause, Step once, hold after a transition and early bound overrides. Step once uses `POST /api/jobs/:id/run` with `{ "mode": "step" }`, which executes one engine instruction; raw `/step` only returns an engine envelope. Settings manages local concurrency, sandbox capacity and theme. The command palette lists legal actions with CLI equivalents. Records support formatted/raw reading and original-byte download, and dispatch details support interrupt with a note.
+The React console uses an inbox sidebar, decision bar, four summary cards, recorded token chart and Dispatches/Records/Log/Decisions tabs. Evidence opens in right-hand sheets; the round selector preserves earlier evidence. Controls offers Pause, Step once, hold after a transition and early bound overrides. Step once uses `POST /api/jobs/:id/run` with `{ "mode": "step" }`, which executes one engine instruction; raw `/step` only returns an engine envelope. Settings manages local concurrency, sandbox capacity, theme and browser-owned defaults for new-run holds. History and Agents are sidebar destinations; Run history and Run agents enter their run-scoped views. The command palette lists legal actions with CLI equivalents. Records support formatted/raw reading and original-byte download, and dispatch details support interrupt with a note.
 
-Both consoles offer Recover worktree and continue when a runnable run's worktree is missing; `/resume` restores and starts the driver. Restoring without continuing remains the CLI `restore <job>`.
+Both consoles offer Recover worktree and continue when a runnable run's worktree is missing; `/resume` restores and starts the driver. The React console also offers Restore worktree in Controls and Commands for eligible missing-worktree cases. It calls the dedicated `/restore` operation without starting a driver or changing the run's human gate.
 For frontend development, `task dev` first stops TCP listeners on ports 5173 and 4748, allowing five seconds for graceful shutdown before force-stopping any remaining listeners. It then starts a separate API at port 4748 and Vite at `http://127.0.0.1:5173`, opening the page when ready. Vite refuses to switch ports. It proxies `/api`, `/events` and `/legacy` to that API. Ctrl-C stops both processes. The production server on 4747 can keep running. Cleanup requires `lsof`.
 
 To see the live logs of an already-running console without restarting its driver,
@@ -242,11 +242,17 @@ scroll independently from the detail pane, with the rail filters fixed above.
 | Dispatches | Role/status, model/effort, tokens, elapsed, record and details; column customization and filtered visible-column CSV download |
 | Records | Name, kind, attribution, timestamp, size and original-byte download; formatted/raw sheets |
 | Log and Decisions | Buffered driver log with dispatch filter and SSE catch-up; human actions and notes |
-| Agents and Settings | Agent library; local dispatch limit, sandbox capacity and theme |
+| History | Run/project/archive filters, completion-day cost reports, tokens by role/round, separate outcomes and feedback, paged exact source evidence |
+| Agents | Global search and comparisons; In run uses pinned assignments, releases, tools and budgets; metric/category/cohort counts open contributing deployments |
+| Settings | Local dispatch limit, sandbox capacity, theme and saved new-run holds in this browser |
 
-The React console does not yet restore a worktree without continuing: use
-`restore <job>`. A separate restore-only API operation is planned; `/resume`
-starts the driver and must not be presented as restore-only.
+Record and dispatch selections use hash parameters `job`, `dispatch` and
+`record`; they survive navigation from History or Agents and a reload. Agent
+filters use `agentRun`, `agentMetric`, `agentCategory` and `agentCohort` alongside
+search, sort and page. History uses `historyJob`, `historyProject`, `historyRole`,
+`historyRound`, `historyDay`, `historyArchive`, `historyMetric`, `historyCategory`
+and `historyPage`. Missing or superseded evidence is never silently replaced
+with the latest attempt's record.
 
 ### Legacy console
 
@@ -267,6 +273,18 @@ do not replace saved resources; missing or malformed preferences restore Local
 and 4 CPUs, 8 GiB and 2 agents. Storage failures show a nonblocking status.
 These form preferences do not change existing runs, CLI/API defaults or the
 installation-wide sandbox slot limit.
+
+Settings saves new-run hold defaults in `localStorage` under
+`sociotechnic.new-run-holds.v1`. Allowed transitions are `planned`, `built`,
+`checked` and `reviewed`; the console always includes initial `planned` review.
+New run reads those defaults when opened and submits them as `consoleHolds`.
+The job persists that optional array in PostgreSQL. Continue uses its pinned
+holds, omitting the current status so an explicit continuation advances. A
+one-run Controls hold overrides the defaults only for that start. Existing jobs
+without `consoleHolds` retain their previous behavior; CLI/global defaults and
+running jobs are unchanged. Invalid or unavailable browser storage falls back
+to plan review with a local message. A failed save preserves the previous stored
+value and reports failure.
 
 The **New run** form takes a repository path, an optional base branch and a multi-line prompt. Start creates the job and runs it. The React console always holds at `planned` so you can read `plan.json` before any build; the legacy console also offers a hold toggle. Press Continue to build. A plan is never edited in place. To change it, stop the job and start a new one with a better prompt.
 
@@ -602,12 +620,13 @@ The console's server exposes these routes on its loopback port. API responses ar
 | `GET /legacy` | | Original HTML console |
 | `GET /assets/:name` | | Built JavaScript, CSS and local fonts |
 | `GET /api/health` | | `{ ok, sociotechnicHome, pid, startedAt }` |
-| `GET /api/meta` | | `{ sociotechnicHome, roles, agents: { ok, problems }, agentsMd }` |
+| `GET /api/meta?job=<id>` | Optional job scope: actual pinned run roles/configuration; omit it for latest catalog releases | `{ sociotechnicHome, roles, agents: { ok, problems }, agentsMd }` |
 | `GET /api/sandboxes` | | This installation’s retained sandbox names, owning run/status, initialization state, slot limit and whether capacity is configurable |
 | `POST /api/sandboxes/capacity` | `{ limit: 1..32, expectedLimit }` | Persist the installation slot limit under the admission lock; stale values return 409; explicit environment settings remain authoritative |
 | `GET /api/local/capacity` | | `{ limit, configurable, running, queued }`: the local dispatch limit (`null` is unlimited, the default), whether it can be changed here, and this console's running and queued local dispatches |
 | `POST /api/local/capacity` | `{ limit: 1..64 \| null, expectedLimit }` | `{ limit }`; persists the limit under the admission lock. 409 `stale-local-capacity` for a stale `expectedLimit`, 409 `local-capacity-managed` while `SOCIOTECHNIC_LOCAL_MAX_DISPATCHES` is set, 400 for an invalid limit |
 | `GET /api/jobs?project=<name\|path>&status=<s>` | | `{ source: "db", jobs: [ StatusLine & { feature, repo, branch, tier, updatedAt, driver, archived, worktreePresent } ] }`; both filters optional |
+| `GET /api/history` | Optional filters, paging and limits described under [History API](#history-api) | Database-backed measurements, coverage, source dispatches and checked builds |
 | `GET /api/projects` | | `{ projects: [...] }`, same as the `projects` command |
 | `GET /api/db` | | the `db status` object |
 | `GET /api/jobs/:id` | | `{ job, plan, records: [ { path, bytes, mtime } ], pr: boolean, worktreePresent: boolean, driver }` |
@@ -615,7 +634,7 @@ The console's server exposes these routes on its loopback port. API responses ar
 | `GET /api/jobs/:id/records/<path>?download=1` | | The record's exact bytes, binary records included, as an attachment named after the record path with `/` replaced by `-`. `Content-Type` follows the extension (`.md`, `.json`, `.txt`, `.patch`, `.diff`, `.png`, `.jpg`, `.jpeg`, `.webp`; otherwise `application/octet-stream`). Same path checks and errors as the JSON form |
 | `GET /api/jobs/:id/log?after=<seq>&limit=<n>` | | `{ job, entries: [ { seq, at, level, dispatchId, line } ], first, last, more }`; `after` defaults to 0, `limit` to 200 (1 to 1000); 400 for other values |
 | `POST /api/jobs/:id/dispatches/:dispatchId/interrupt` | `{ note?: string }` | `{ job, dispatch, outcome: "interrupted", note, terminated }` once recorded. 409 `driver-active` (another owner), `dispatch-starting` (this driver has not queued it yet; retry), `illegal-transition` (already finished) or `sandbox-interrupt`; 404 unknown dispatch; 400 malformed id or note |
-| `POST /api/jobs` | `{ repo, feature?, base?, workflow?: "comments" \| "design", scope?: string[], execution?: { kind: "local" } \| { kind: "docker-sandbox", cpus?: number, memoryGiB?: number, parallelAgents?: number } }`; feature required for general runs, explicit scope required for comments | `NewResult`; explicit cleanup adds `status: "planned"` and dispatches no agent; Docker defaults to 4 CPUs, 8 GiB and 2 top-level agents |
+| `POST /api/jobs` | `{ repo, feature?, base?, workflow?: "comments" \| "design", scope?: string[], consoleHolds?: ("planned" \| "built" \| "checked" \| "reviewed")[], execution?: { kind: "local" } \| { kind: "docker-sandbox", cpus?: number, memoryGiB?: number, parallelAgents?: number } }`; feature required for general runs, explicit scope required for comments | `NewResult`; explicit cleanup adds `status: "planned"` and dispatches no agent; Docker defaults to 4 CPUs, 8 GiB and 2 top-level agents |
 | `POST /api/jobs/:id/archive` | `{ archived: boolean }` | `{ id, archived }`; reversible database visibility for known runs, emits `jobs` |
 | `POST /api/jobs/:id/step` | `{ hold?: Status[] }` | step result |
 | `POST /api/jobs/:id/override` | `{ bound, note }` | engine result |
@@ -628,6 +647,7 @@ The console's server exposes these routes on its loopback port. API responses ar
 | `POST /api/jobs/:id/reopen` | `{ discard?: boolean }` | engine result |
 | `POST /api/jobs/:id/clean` | | engine result |
 | `POST /api/jobs/:id/run` | `{ mode: "run" \| "step", hold?: Status[] }` | `DriverState`; 409 when a driver is active |
+| `POST /api/jobs/:id/restore` | Empty body or `{}`; no options | `{ job, worktree: "restored" \| "present" }`; no agent dispatch or gate transition. 409 `no-branch` for missing repository/branch, 409 `driver-active` for active or unreconciled ownership |
 | `POST /api/jobs/:id/resume` | `{ hold?: Status[] }` | recovers a missing worktree, then starts the driver in `run` mode; `{ restored: { worktree }, driver: DriverState }`; 409 when a driver is active |
 | `POST /api/jobs/:id/pause` | | `DriverState` (stops after in-flight dispatches) |
 | `GET /api/jobs/:id/driver` | | `DriverState` |
@@ -661,6 +681,59 @@ and return a visible error. Historical packet records and approved designs remai
 readable. [Interactive design](design-ceremony.md) defines request bodies,
 installation, session persistence, preview lifecycle and verification limits.
 
+## History API
+
+`GET /api/history` is a bounded, read-only history projection. Its filters are:
+
+| Query | Values and behavior |
+| --- | --- |
+| `job` | One known-format job ID |
+| `project` | Repository basename, or exact repository path when it contains `/` |
+| `role` | Agent identity or recorded base-role assignment |
+| `round` | Whole number from 0 through 1,000,000 |
+| `day` | Valid UTC completion date, `YYYY-MM-DD` |
+| `archive` | `include` (default), `exclude` or `only` |
+| `metric` | `deployments`, `errors`, `ok`, `failed`, `timeout`, `interrupted`, `pending`, `malformed`, `negative`, `retries`, `timing`, `tokens` or `cost` |
+| `category` | `execution`, `timeout`, `interrupted`, `record`, `retry`, `typecheck`, `test`, `lint`, `build`, `checks`, `review` or `rework` |
+| `page` | Positive integer; default 1, clamped to the last result page |
+| `limit` | Dispatches per page, 1–100; default 25 |
+
+Invalid filters return 400 `bad-input`. Job/project/role/round/day/archive
+filters apply in the database before a scan of at most 100 runs, ordered by
+`updatedAt` and ID descending. One additional row detects truncation. Metric
+and observation filters select dispatches within that cohort before paging.
+`errors` means failed or timed-out calls; `negative` means valid CHANGES, BLOCKED
+or ESCALATE results. Timing, tokens and cost filters require that measurement.
+
+The response contains `{ source: "db", warnings, query, scan, page, pages,
+total, summary, rows, series, groups, feats }`. `scan` is `{ jobs, limit,
+incomplete }`. Totals and groups describe the matching dispatches in the scanned
+cohort, not all historical runs when `incomplete` is true. `rows` contains one
+page; summaries and series cover that cohort, independently of the page.
+`series` groups actual completion reports by UTC date, without interpolation.
+`groups` preserves agent, base role and round. Feats are checked builds whose
+build dispatch remains in the filtered cohort.
+
+Rows retain job, dispatch, round, commit, source record, model/effort/release,
+recorded configuration and token breakdown. Summary counters expose timing,
+token, cost and cache-read coverage. Missing values remain `null`; measured
+subtotals can be partial. Cache reads are included in total tokens. Live logs
+and unfinished calls are not durable completed measurements. Record bodies
+are fetched only through the existing per-record API. Archived runs are included
+by default; database outages fail explicitly without file fallback.
+
+## Restore without continuing
+
+`POST /api/jobs/:id/restore` delegates to `restoreJob` under the existing
+job-operation and driver coordination locks. It rejects all body options,
+including force, with 400 `bad-input`. Active drivers, foreign owners and stored
+interrupted ownership refuse recovery with 409 `driver-active`; callers must
+stop or reconcile ownership first. An existing worktree returns `present`, a
+recreated worktree returns `restored`, and a missing repository or retained
+branch returns 409 `no-branch`. Retry is idempotent. Restoration preserves job
+status, human decisions, dispatches, records and branch history, and dispatches
+no agent. `/resume` remains recovery followed by driver execution.
+
 ## Agent library API
 
 ### Compact capability roster
@@ -677,19 +750,35 @@ rather than falling back to a static list. See [discovery and help](agent-discov
 validate and lock explicit choices before creating Git worktrees. The existing
 `agents` command remains baseline-seed validation, separate from live discovery.
 
-The React header opens a read-only library independent of run selection.
-`GET /api/agents` returns profiles from the current role table and definitions,
-validation problems, history source/coverage warnings and cross-run metrics.
-`GET /api/agents/:name?page=1&sort=recent|longest|issues` returns ten deployments
-per page, a clamped page/range and up to three checked-build feats. The issues
-view includes execution errors, re-asks and recorded check/review/rework feedback.
-Unknown roles return 404; invalid page/sort values return 400. Existing origin and
-host rules apply. History routes are read-only. The version publication routes below publish immutable database releases.
+The React sidebar opens Agent library independently of run selection. Its
+**In run** selector and the run page's **Run agents** action apply job scope.
+`GET /api/agents?job=<id>` returns metrics for that run; omit `job` for global
+metrics. Global profile entries describe latest catalog releases. The scoped
+console reads `/api/meta?job=<id>` separately for pinned assignments, releases,
+tools, skills and budgets, retaining multiple role assignments for one identity.
+It never labels the latest catalog configuration as a run pin.
 
-History includes archived runs directly from PostgreSQL. Details and record
-inspection do not require staging, a local job folder or a worktree. A database
-outage returns an error; it cannot substitute a local snapshot.
-See the [measurement contract](../CONTRACTS.md#agent-library).
+`GET /api/agents/:name?page=1&sort=recent|longest|issues` returns ten deployments
+per page, a clamped page/range and up to three checked-build feats. Optional
+`job`, `metric`, `category` and `cohort` filters apply before paging. `metric`
+uses the History API values except `cost`; `category` uses its observation
+categories. `cohort` is a URL-encoded JSON tuple
+`[workflow,tier,model,effort,version,revision]`, matched exactly. Workflow is
+`feature`, `design` or `comments`; tier is `COMPLEX`, `EASY`, `BULK`, `COMMENTS`
+or null. Version/revision can be null. Invalid tuples return 400 `bad-input`.
+The issues sort includes interrupted calls, execution errors, re-asks and
+recorded check/review/rework feedback. Feats retain their own checked-build
+selection and are independent of these deployment filters.
+
+Unknown agents return 404; invalid pages, sorts or evidence filters return 400.
+Existing origin and host rules apply. Read-only history includes archived runs
+from PostgreSQL and needs no staging folder or worktree. Database outages fail
+without a local snapshot. Observation counts can exceed contributing dispatch
+counts because one deployment can contain several observations. Each row keeps
+its exact record, including superseded paths; feat entries include `dispatch`,
+`record` and `checksRecord` for direct inspection. Missing provenance stays an
+unavailable local state. See the [measurement contract](../CONTRACTS.md#agent-library).
+The version publication routes below publish immutable database releases.
 
 ### Agent release API
 

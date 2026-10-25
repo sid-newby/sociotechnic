@@ -1,3 +1,4 @@
+import { parseConsoleHolds } from "./console-preferences.ts";
 import * as git from "./git.ts";
 import { canonicalJson } from "./agent-version-data.ts";
 import { validateJobAgentVersions } from "./agent-versions.ts";
@@ -36,6 +37,8 @@ async function operation<T>(id: string | null, fn: (job: Job | null) => T | Prom
       const job = state.job;
       if (!job) throw new SociotechnicError("not-found", "Operation created no job");
       parseExecution(job.execution);
+      if (job.consoleHolds !== undefined) parseConsoleHolds(job.consoleHolds);
+      if (previous && id !== null && canonicalJson(previous.consoleHolds ?? null) !== canonicalJson(job.consoleHolds ?? null)) throw new SociotechnicError("console-holds-pinned", "A run's console holds cannot change after creation");
       if (previous && canonicalJson(previous.execution ?? {kind:"local"}) !== canonicalJson(job.execution ?? {kind:"local"})) throw new SociotechnicError("execution-pinned", "A run's execution setting cannot change after creation");
       await store.transaction(async (tx) => {
         await lease?.verify();

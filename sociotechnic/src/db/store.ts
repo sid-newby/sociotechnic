@@ -18,7 +18,7 @@ export function recordRow(path: string, content: Buffer, mtime = new Date().toIS
 export type JobLease = { token: string; signal: AbortSignal; verify: () => Promise<void>; release: () => Promise<void> };
 export type EventKind = "status" | "dispatch-started" | "dispatch-finished" | "human" | "override" | "sync";
 export type EventRow = { at: string; kind: EventKind; data: Record<string, unknown> };
-export type JobFilter = { project?: string | null; repos?: readonly string[] | null; status?: string | null; limit?: number | null };
+export type JobFilter = { project?: string | null; repos?: readonly string[] | null; status?: string | null; limit?: number | null; job?: string | null; archive?: "include" | "exclude" | "only"; role?: string | null; round?: number | null; day?: string | null };
 export type StoredJob = { id: string; project: string; repo: string; feature: string; status: string; round: number; tier: string | null; branch: string; updatedAt: string; job: Job };
 export type ProjectRow = { project: string; repo: string; jobs: number; lastUpdated: string; statuses: Record<string, number> };
 export type Counts = { jobs: number; records: number; events: number };
@@ -213,6 +213,15 @@ async function pgRecords(c: PgQueryable, id: string): Promise<RecordRow[]> {
 
 const LIST_JOBS = `select id, project, repo, feature, status, round, tier, branch, updated_at, job from jobs
 where ($1::text is null or project = $1) and ($2::text[] is null or repo = any($2)) and ($3::text is null or status = $3)
+and ($5::text is null or id = $5)
+and ($6::text = 'include' or coalesce((job->>'archived')::boolean, false) = ($6 = 'only'))
+and (($7::text is null and $8::int is null and $9::text is null) or exists (
+  select 1 from jsonb_array_elements(coalesce(job->'dispatches', '[]'::jsonb)) d
+  where ($7::text is null or d->>'agent' = $7 or d->'configuration'->>'baseRole' = $7)
+    and ($8::int is null or (d->>'round')::int = $8)
+    and ($9::text is null or case when pg_input_is_valid(d->>'finishedAt', 'timestamp with time zone') then to_char((d->>'finishedAt')::timestamptz at time zone 'UTC', 'YYYY-MM-DD') else null end = $9)
+    and coalesce(d->'performanceAnnotation'->>'kind', '') <> 'development-cancellation'
+))
 order by updated_at desc, id desc limit $4`;
 
 async function pgAgentVersions(c: PgQueryable, agent?: string): Promise<AgentVersionRow[]> {
@@ -368,7 +377,7 @@ export function createPgStore(rawUrl: string): Store {
     }),
     listJobs: (filter) => withClient(async (c) => {
       const repos = filter.repos === undefined || filter.repos === null ? null : [...filter.repos];
-      const r = await c.query(LIST_JOBS, [filter.project ?? null, repos, filter.status ?? null, filter.limit ?? null]);
+      const r = await c.query(LIST_JOBS, [filter.project ?? null, repos, filter.status ?? null, filter.limit ?? null, filter.job ?? null, filter.archive ?? "include", filter.role ?? null, filter.round ?? null, filter.day ?? null]);
       return r.rows.map((x) => ({
         id: String(x.id),
         project: String(x.project),
@@ -412,10 +421,25 @@ type MemState = {
   events: Map<string, EventRow[]>;
 };
 
-function matchesFilter(row: { project: string; repo: string; status: string }, filter: JobFilter): boolean {
+function matchesFilter(row: StoredJob, filter: JobFilter): boolean {
   if (filter.project !== undefined && filter.project !== null && row.project !== filter.project) return false;
   if (filter.repos !== undefined && filter.repos !== null && !filter.repos.includes(row.repo)) return false;
   if (filter.status !== undefined && filter.status !== null && row.status !== filter.status) return false;
+  if (filter.job !== undefined && filter.job !== null && row.id !== filter.job) return false;
+  if (filter.archive === "exclude" && row.job.archived === true || filter.archive === "only" && row.job.archived !== true) return false;
+  if (filter.role != null || filter.round != null || filter.day != null) {
+    const found = row.job.dispatches.some((dispatch) => {
+      if (dispatch.performanceAnnotation?.kind === "development-cancellation") return false;
+      if (filter.role != null && dispatch.agent !== filter.role && dispatch.configuration?.baseRole !== filter.role) return false;
+      if (filter.round != null && dispatch.round !== filter.round) return false;
+      if (filter.day != null) {
+        const at = dispatch.finishedAt ? Date.parse(dispatch.finishedAt) : NaN;
+        if (!Number.isFinite(at) || new Date(at).toISOString().slice(0, 10) !== filter.day) return false;
+      }
+      return true;
+    });
+    if (!found) return false;
+  }
   return true;
 }
 

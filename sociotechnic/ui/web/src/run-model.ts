@@ -8,7 +8,7 @@ export type Bound = "rounds" | "dispatchesPerRound" | "retriesPerStep";
 export const BOUNDS: readonly Bound[] = ["rounds", "dispatchesPerRound", "retriesPerStep"];
 export const boundLabels: Record<Bound, string> = { rounds: "Rounds", dispatchesPerRound: "Dispatches per round", retriesPerStep: "Retries per step" };
 export const isBound = (value: string): value is Bound => (BOUNDS as readonly string[]).includes(value);
-export const HOLDABLE: readonly Status[] = ["planned", "built", "checked", "reviewed"];
+export { CONSOLE_HOLDABLE as HOLDABLE } from "../../../src/console-preferences.ts";
 
 const TERMINAL: readonly Status[] = ["merged", "stopped"];
 const GATES: readonly Status[] = ["design-input", "planned", "ready", "needs-human", "merged-local", "accepted", "stopped", "merged"];
@@ -126,7 +126,7 @@ function parkedCopy(detail: Detail, reason: Reason): { sentence: string; line: s
   }
 }
 
-export type ActionId = "continue" | "step" | "hold" | "pause" | "stop" | "merge" | "accept" | "rework" | "retry-planning" | "override" | "pr-push" | "pr-text" | "merge-remote" | "reopen" | "clean" | "sandboxes" | "open-owner" | "refresh";
+export type ActionId = "restore" | "continue" | "step" | "hold" | "pause" | "stop" | "merge" | "accept" | "rework" | "retry-planning" | "override" | "pr-push" | "pr-text" | "merge-remote" | "reopen" | "clean" | "sandboxes" | "open-owner" | "refresh";
 export type Placement = "bar" | "controls" | "palette";
 export type RunAction = { id: ActionId; label: string; cli: string | null; emphasis: "primary" | "secondary" | "quiet" | "danger"; placement: Placement[]; blocked: boolean };
 
@@ -140,6 +140,7 @@ export function runActions(detail: Detail): RunAction[] {
   ];
   const out: RunAction[] = [];
   const add = (action: Omit<RunAction, "blocked">, gate = true) => out.push({ ...action, blocked: gate && running });
+  if (!detail.worktreePresent && !running && driver.ownership.kind !== "interrupted" && status !== "merged") add({ id: "restore", label: "Restore worktree", cli: cli("restore <job>"), emphasis: "secondary", placement: ["controls", "palette"] });
   const sandboxed = job.execution?.kind === "docker-sandbox";
   const planningFailure = isPlanningFailure(detail);
   const reason = parseReason(job.statusReason);

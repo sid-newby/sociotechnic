@@ -13,10 +13,13 @@ import { homedir } from "node:os";
 import { dirname, extname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { designAsset, verifyDesign } from "../src/design.ts";
-import { BASE_AGENT_VERSION, agentBase, agentVersionChoices, createAgent, isAgentVersion, listAgentVersions, loadAgentCatalog, pinAgentVersions, publishAgentVersion, readAgentVersion } from "../src/agent-versions.ts";
+import { agentBase, agentVersionChoices, createAgent, isAgentVersion, listAgentVersions, loadAgentCatalog, pinAgentVersions, publishAgentVersion, readAgentVersion } from "../src/agent-versions.ts";
 import { agentRoster } from "../src/agent-versions.ts";
 import { catalogEntry } from "../src/agent-catalog.ts";
-import { agentHistory, agentSummaries } from "../src/agent-library.ts";
+import { agentHistory, agentSummaries, AGENT_HISTORY_METRICS, OBSERVATION_CATEGORIES, parseAgentCohort } from "../src/agent-library.ts";
+import { loadHistory, parseHistoryQuery } from "../src/history.ts";
+import { restoreJob } from "../src/db/restore.ts";
+import { parseConsoleHolds } from "../src/console-preferences.ts";
 import { dbStatus } from "../src/db/init.ts";
 import { listJobs, listProjects, loadJobHistory } from "../src/db/listing.ts";
 import { readJob, effectJob, createJobOperation } from "../src/job-store.ts";
@@ -278,8 +281,10 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
       const role = await agentBase(params[0]), version = await publishAgentVersion(role, body);
       broadcast("jobs", { agent: role.name }); return version;
     } },
-    { method: "GET", pattern: /^\/api\/agents$/, handler: async () => {
-      const history = await loadJobHistory();
+    { method: "GET", pattern: /^\/api\/agents$/, handler: async ({ req }) => {
+      const job = queryOf(req).get("job");
+      if (job) await readJob(jobIdParam(encodeURIComponent(job)), () => undefined);
+      const history = await loadJobHistory(job ? { job } : {});
       const catalog = await loadAgentCatalog();
       return { source: history.source, warnings: history.warnings, runs: history.jobs.length, validation: { ok: true, problems: [] }, agents: agentSummaries(history.jobs, catalog) };
     } },
@@ -289,9 +294,15 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
       const query = new URL(req.url ?? "/", "http://localhost").searchParams;
       const page = query.get("page") ?? "1", sort = query.get("sort") ?? "recent";
       if (!/^[1-9][0-9]*$/.test(page) || !Number.isSafeInteger(Number(page)) || (sort !== "recent" && sort !== "longest" && sort !== "issues")) throw new HttpError(400, "bad-input", "Use a positive page and sort recent, longest or issues");
-      const history = await loadJobHistory();
+      const job = query.get("job");
+      if (job) await readJob(jobIdParam(encodeURIComponent(job)), () => undefined);
+      const history = await loadJobHistory(job ? { job } : {});
+      const metricValue = query.get("metric"), categoryValue = query.get("category");
+      const metric = AGENT_HISTORY_METRICS.find((entry) => entry === metricValue);
+      const category = OBSERVATION_CATEGORIES.find((entry) => entry === categoryValue);
+      if (metricValue !== null && !metric || categoryValue !== null && !category) throw new HttpError(400, "bad-input", "Unknown evidence filter");
       if (!(await loadAgentCatalog()).some((r) => r.name === name) && !history.jobs.some((j) => j.dispatches.some((d) => d.agent === name))) throw new HttpError(404, "unknown-agent", "Unknown agent");
-      return { ...agentHistory(history.jobs, name, Number(page), sort), warnings: history.warnings };
+      return { ...agentHistory(history.jobs, name, Number(page), sort, { metric, category, ...(query.has("cohort") ? { cohort: parseAgentCohort(query.get("cohort") ?? "") } : {}) }), warnings: history.warnings };
     } },
     { method: "POST", pattern: /^\/api\/repositories\/browse$/, handler: ({ body }) => {
       if (body.fallback !== undefined && typeof body.fallback !== "boolean") throw new HttpError(400, "bad-input", "fallback must be a boolean");
@@ -306,12 +317,15 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
         const id = new URL(req.url ?? "/", "http://localhost").searchParams.get("job");
         const job = id ? await readJob(jobIdParam(encodeURIComponent(id)), (job) => job) : null;
         return { sociotechnicHome: sociotechnicHome(), roles: job ? await Promise.all(ROLES.map(async (base) => {
-          const recorded = job.agentConfigurations?.[base.name] ?? [...job.dispatches].reverse().find((d) => d.agent === base.name)?.configuration;
-          const configuration = recorded ?? catalogEntry(await readAgentVersion(base, job.agentVersions?.[base.name] ?? BASE_AGENT_VERSION)).configuration;
-          return { ...base, name: configuration.agentName ?? base.name, ...configuration };
-        })) : (await loadAgentCatalog()).map((entry) => ({ ...ROLES.find((r) => r.name === (entry.configuration.baseRole ?? entry.name)), name: entry.name, ...entry.configuration })), agents: { ok: true, problems: [] }, agentsMd: existsSync(AGENTS_MD) ? readFileSync(AGENTS_MD, "utf8") : "" };
+          const assigned = job.agentAssignments?.[base.name] ?? base.name;
+          const recorded = job.agentConfigurations?.[base.name] ?? [...job.dispatches].reverse().find((d) => d.configuration && (d.configuration.baseRole === base.name || !d.configuration.baseRole && d.agent === assigned))?.configuration;
+          const version = job.agentVersions?.[base.name];
+          const configuration = recorded ?? (version ? catalogEntry(await readAgentVersion(await agentBase(assigned), version), base.name).configuration : null);
+          return configuration ? { ...base, name: configuration.agentName ?? assigned, ...configuration } : null;
+        })).then((roles) => roles.filter((role) => role !== null)) : (await loadAgentCatalog()).map((entry) => ({ ...ROLES.find((r) => r.name === (entry.configuration.baseRole ?? entry.name)), name: entry.name, ...entry.configuration })), agents: { ok: true, problems: [] }, agentsMd: existsSync(AGENTS_MD) ? readFileSync(AGENTS_MD, "utf8") : "" };
       },
     },
+    { method: "GET", pattern: /^\/api\/history$/, handler: ({ req }) => loadHistory(parseHistoryQuery(queryOf(req))) },
     { method: "GET", pattern: /^\/api\/jobs$/, handler: ({ req }) => jobsListing(drivers, queryOf(req), consoleUrl()) },
     {
       method: "POST",
@@ -378,6 +392,7 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
         const feature = str(body, "feature", body.workflow !== "comments") ?? "";
         const base = str(body, "base", false);
         const execution = parseExecution(body.execution);
+        const consoleHolds = body.consoleHolds === undefined ? undefined : parseConsoleHolds(body.consoleHolds);
         if (body.workflow !== undefined && body.workflow !== "comments" && body.workflow !== "design") throw new HttpError(400, "bad-input", "workflow must be comments or design when provided");
         if (body.scope !== undefined && body.workflow !== "comments") throw new HttpError(400, "bad-input", "scope requires the comments workflow");
         if (body.initialize !== undefined && typeof body.initialize !== "boolean") throw new HttpError(400, "bad-input", "initialize must be a boolean");
@@ -409,6 +424,7 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
         if (githubRepository !== null) publishRepository(repoPath, baseBranch, githubRepository);
         return createJobOperation(async () => {
         const out = body.workflow === "comments" ? await engine.newCommentJob(repoPath, feature, baseBranch, body.scope, undefined, pinned, execution) : body.workflow === "design" ? await engine.newDesignJob(repoPath, feature, baseBranch, pinned, execution) : await engine.newJob(repoPath, feature, baseBranch, undefined, undefined, pinned, execution);
+        if (consoleHolds !== undefined) loadJob(out.job).consoleHolds = consoleHolds;
         return out;
         });
       },
@@ -516,6 +532,12 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
         return effectJob(jobIdParam(params[0]), "clean", engine.clean);
       },
     },
+    { method: "POST", pattern: /^\/api\/jobs\/([^/]+)\/restore$/, handler: async ({ params, body }) => {
+      if (Object.keys(body).length) throw new HttpError(400, "bad-input", "Restore takes no options");
+      const result = await restoreJob(jobIdParam(params[0]));
+      if (result.worktree === "no-branch") throw new HttpError(409, "no-branch", "The repository or retained job branch is missing. Restore it before retrying.");
+      return result;
+    } },
     {
       method: "POST",
       pattern: /^\/api\/jobs\/([^/]+)\/resume$/,

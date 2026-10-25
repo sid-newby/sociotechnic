@@ -151,6 +151,12 @@ Worktree branch `engine/parity`. Can run beside wave 2; touches
 
 ### Wave 4: history, agents, settings
 
+Implemented on `codex/console-history`, following merged PR #28. The next handoff
+is [wave 4 delivery](console-wave-4-handoff.md). History uses an explicit bounded
+cohort, Agents shows pinned run configuration and exact provenance, Settings pins
+browser defaults per new run, and Restore worktree has a guarded API operation.
+Verification and PR status are recorded in that handoff; wave 5 remains open.
+
 Worktree branch `console/history`. After waves 2 and 3.
 
 - History view: per run and across runs, tokens by role per round, cost over

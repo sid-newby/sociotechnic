@@ -1228,7 +1228,7 @@ The snapshot is provenance, not a claim that optional services were available or
 that referenced skill contents, generated briefs or provider aliases were frozen.
 The existing JSON/JSONB store preserves it without a SQL schema change.
 
-Metrics separate completed provider calls, failed calls, timeouts, pending calls,
+Metrics separate completed provider calls, interrupted calls, failed calls, timeouts, pending calls,
 malformed records and valid results requesting changes or escalation. Missing
 tokens/times stay unavailable, with coverage counts. Duration comes only from
 valid recorded start/finish timestamps. Revision cohorts retain recorded model
@@ -1441,18 +1441,19 @@ Status labels/icons remain present alongside supplementary semantic colors.
 Forms keep drafts on failure, prevent duplicate submits and show inline errors.
 Installed Radix/shadcn dialogs and sheets trap focus, close with Escape and return
 to their opener. English is the current locale; full recorded timestamps remain
-available in details. New runs hold at the plan. Restore without continuing stays
-in the CLI until a dedicated API operation exists. `/legacy` remains the fallback.
+available in details. New runs hold at the plan. Restore worktree uses the guarded restore-only API
+and leaves human gates and driver state unchanged. `/legacy` remains the fallback.
 
 | Capability | Canonical owner | Source of truth | Allowed variants | Verification |
 | --- | --- | --- | --- | --- |
 | Select/Listbox | `components/ui/select.tsx`, `components/form-select.tsx` | Installed Radix primitives | Projects, bounds, holds, roles, provider/model settings | Keyboard, labels, mobile popup geometry |
+| CRUD | `components/new-run.tsx`, agent management forms, `ui/server.ts` | Database operations and immutable releases | Create run, create agent, publish version; confirmations before publication | Fixture API and browser success/failure journeys |
 | Shell/navigation | `components/shell/`, `components/ui/sidebar.tsx` | `use-console.ts`, engine job status | Inbox, agent library, settings, commands | Loading/error/empty, ownership, narrow sidebar and shortcuts |
-| Form/actions | `components/run/use-run-actions.tsx`, `components/new-run.tsx`, retained design/agent forms | Existing HTTP routes and engine transitions | Human gates, driver controls, dispatch interrupt | Draft/error recovery, confirmations, duplicate prevention |
+| Form | `components/run/use-run-actions.tsx`, `components/new-run.tsx`, retained design/agent forms | Existing HTTP routes and engine transitions | Human gates, driver controls, dispatch interrupt | Draft/error recovery, confirmations, duplicate prevention |
 | Data table | `components/run/run-table.tsx`, `run-table-model.ts` | Parsed dispatch/record/human history | TanStack column visibility, search, filtered CSV | Helper tests and browser export/column proof |
 | Chart | `components/run/token-burn-chart.tsx`, `run-model.ts`, `components/ui/chart.tsx` | Completed recorded dispatch usage | Dispatch, round and run ranges; cache subset overlay | Real timestamps, missing/live coverage, dispatch drill-down |
 | Records/evidence | `components/records.tsx`, `components/run/evidence-sheet.tsx` | Committed records, checks and gate heads | Formatted/raw, download, round selector | Commit freshness, original bytes, focus return |
-| Scrollbar/theme | `index.css`, `theme/` | Runtime tokens | Light/dark presets, reduced motion | Computed styles and responsive browser checks |
+| Scrollbar | `index.css`, `theme/` | Runtime tokens | Light/dark presets, reduced motion | Computed styles and responsive browser checks |
 | Feedback | `components/ui/sonner.tsx`, inline form errors | Confirmed request outcomes | Success toast, retryable inline errors | No success before completion; stale-data recovery |
 
 #### Legacy console
@@ -2106,3 +2107,56 @@ repository code cannot execute outside the model sandbox. Configured engine
 checks remain mandatory. Shell writes stay confined to the job worktree; no Git
 metadata directories are added as shell-writable roots. Partial work, including a
 staged index after a failed commit, is preserved for diagnosis rather than reset.
+
+
+## Console history, pinned inspection and recovery
+
+History reads PostgreSQL through the existing job-history reader. GET /api/history
+accepts job, project, role, round, completion day (YYYY-MM-DD UTC), metric,
+observation category, archive (include default, exclude, only), page
+(default 1) and limit (default 25, maximum 100). Invalid filters return 400.
+Database filters precede a 100-job scan (one extra row detects truncation), ordered
+by update time and ID. scan reports jobs, limit and incomplete; totals describe
+that labelled cohort, never all history when truncated. Dispatch rows page within
+it. Responses contain source/warnings/query/scan, page/pages/total, summary metrics
+and cost coverage, rows, daily completion series, role/round groups and feats.
+There is no file fallback, record-body bulk download or durable-log claim.
+
+Measurements use completed recorded reports; missing counters remain null and
+measured counts explain partial totals. Cache reads are included in total tokens.
+Elapsed time requires valid recorded start/finish timestamps. Interrupted calls
+have a separate metric and observation category, distinct from failed calls,
+timeouts, pending calls, malformed records and valid requests for changes.
+Development-cancellation exclusions and checked-build feat requirements remain.
+Acceptance is context, never an accuracy score.
+
+Metrics and chart selections expose contributing dispatches. Evidence retains
+job, dispatch, round, commit, recorded configuration and exact source paths,
+including superseded paths. Unavailable records never fall back to newer attempts.
+Hash navigation preserves job, dispatch and record on reload. Agent summary and
+history routes accept job scope; history accepts metric (deployments, errors, ok,
+failed, timeout, interrupted, pending, malformed, negative, retries, timing,
+tokens) and observation category filters before paging. History additionally accepts
+the cost metric. Agent history accepts an exact JSON cohort tuple (workflow, tier,
+model, effort, version, revision), validated before projection. Counts of observations
+can exceed contributing dispatch counts. In-run profiles use /api/meta?job=<id>
+for pinned assignments/configuration; global profiles remain latest releases.
+
+Settings extends existing capacity/theme controls with New run defaults in this
+browser. A versioned localStorage entry owns default transition holds; failed
+saves retain the previous defaults and report an error. POST /api/jobs accepts
+validated optional consoleHolds and pins them in the database job at creation.
+Changing browser defaults never changes existing runs or CLI/global defaults.
+Console Continue uses pinned holds, excluding the current status so an explicit
+continuation advances. Initial plan review always holds at planned. One-run
+Controls holds override these defaults for that start only. Existing jobs without
+the field keep existing behavior. Allowed defaults are planned, built, checked
+and reviewed. No setting bypasses engine human gates. Validate before effects.
+
+POST /api/jobs/:id/restore accepts an empty body and delegates to restoreJob
+without force. It returns {job,worktree:restored|present}; no-branch becomes HTTP
+409 code no-branch, never success. Existing driver coordination locks, foreign
+and interrupted ownership guards and the job-operation boundary govern recovery.
+It dispatches no agents and preserves status, human gates, records and branch
+history. Retry is idempotent. Restore worktree is a separate console action from
+Recover and continue for missing-worktree cases without active/external ownership.

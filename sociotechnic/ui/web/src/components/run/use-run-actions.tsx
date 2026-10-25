@@ -1,3 +1,4 @@
+import { continueConsoleHolds, initialConsoleHolds } from "../../../../../src/console-preferences.ts";
 import { currentOpener, returnFocus } from "../../lib/focus";
 import { useRef, useState } from "react";
 import type { FormEvent } from "react";
@@ -7,7 +8,7 @@ import { errorMessage, statusLabels } from "../../model";
 import type { Detail } from "../../model";
 import { BOUNDS, HOLDABLE, boundLabels, isBound, isPlanningFailure, overrideBound, runActions } from "../../run-model";
 import type { ActionId, Bound, RunAction } from "../../run-model";
-import type { Status } from "../../../../../src/job.ts";
+import type { ConsoleHold } from "../../../../../src/console-preferences.ts";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog";
@@ -21,7 +22,7 @@ export function useRunActions({ detail, disabled, refresh, sandboxes }: { detail
   const [tested, setTested] = useState(false);
   const [discard, setDiscard] = useState(false);
   const [bound, setBound] = useState<Bound>(overrideBound(detail));
-  const [hold, setHold] = useState<Status>("planned");
+  const [hold, setHold] = useState<ConsoleHold>("planned");
   const [method, setMethod] = useState("merge");
   const [confirmedPr, setConfirmedPr] = useState<{ url: string; head: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -50,9 +51,10 @@ export function useRunActions({ detail, disabled, refresh, sandboxes }: { detail
     if (entry.id === "refresh") { refresh(); return; }
     if (entry.blocked || disabled || inFlight.current) return;
     if (entry.id === "sandboxes") { sandboxes(); return; }
-    if (entry.id === "continue") { void mutate(detail.worktreePresent ? "run" : "resume", { mode: "run", ...(["new", "planning", "researching"].includes(job.status) ? { hold: ["planned"] } : {}) }, "Run continued."); return; }
+    if (entry.id === "continue") { void mutate(detail.worktreePresent ? "run" : "resume", { mode: "run", hold: continueConsoleHolds(job) }, "Run continued."); return; }
+    if (entry.id === "restore") { void mutate("restore", {}, "Worktree restored. The run remains paused."); return; }
     if (entry.id === "pause") { void mutate("pause", {}, "Pause requested. In-flight work will finish."); return; }
-    if (entry.id === "step") { void mutate("run", { mode: "step", ...(["new", "planning", "researching"].includes(job.status) ? { hold: ["planned"] } : {}) }, "One step started."); return; }
+    if (entry.id === "step") { void mutate("run", { mode: "step", hold: continueConsoleHolds(job) }, "One step started."); return; }
     opener.current = source?.isConnected ? source : currentOpener();
     setAction(entry.id); setNote(""); setTested(false); setDiscard(false); setBound(overrideBound(detail)); setHold(job.round === 0 && job.status !== "planned" ? "planned" : "reviewed"); setMethod("merge"); setError("");
     setConfirmedPr(detail.pullRequest ? { url: detail.pullRequest.url, head: detail.pullRequest.head } : null);
@@ -66,7 +68,7 @@ export function useRunActions({ detail, disabled, refresh, sandboxes }: { detail
     let route: string = selected.id;
     let body: Record<string, unknown> = { note: note.trim() };
     let after: (() => Promise<unknown>) | undefined;
-    const continueAfterGate = () => request(`${jobUrl(job.id)}/${detail.worktreePresent ? "run" : "resume"}`, undefined, { mode: "run", ...(job.round === 0 ? { hold: ["planned"] } : {}) });
+    const continueAfterGate = () => request(`${jobUrl(job.id)}/${detail.worktreePresent ? "run" : "resume"}`, undefined, { mode: "run", hold: job.round === 0 ? initialConsoleHolds(continueConsoleHolds(job)) : continueConsoleHolds(job) });
     switch (selected.id) {
       case "stop": body = { note }; break;
       case "retry-planning": route = "rework"; after = continueAfterGate; break;
@@ -76,7 +78,7 @@ export function useRunActions({ detail, disabled, refresh, sandboxes }: { detail
       case "merge-remote": body = { confirm: true, ...confirmedPr, method }; break;
       case "pr-push": route = "pr"; body = { push: true }; break;
       case "pr-text": route = "pr"; body = { push: false }; break;
-      case "hold": route = detail.worktreePresent ? "run" : "resume"; body = { mode: "run", hold: [hold] }; break;
+      case "hold": route = detail.worktreePresent ? "run" : "resume"; body = { mode: "run", hold: job.round === 0 && job.status !== "planned" ? initialConsoleHolds([hold]) : [hold] }; break;
     }
     void mutate(route, body, selected.id === "rework" ? "Rework recorded. Continue when ready." : selected.id === "pr-text" ? "PR text saved as pr.md." : `${selected.label} completed.`, after);
   };
