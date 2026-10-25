@@ -23,7 +23,7 @@ concurrency:
 jobs:
   prepare:
     name: Read release decision
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
       pr: ${{ steps.prepare.outputs.pr }}
@@ -68,7 +68,7 @@ jobs:
     name: Publish GitHub release
     needs: [prepare, checks]
     if: vars.AUTOMATED_RELEASES == 'true' && github.ref == 'refs/heads/main' && needs.prepare.outputs.bump != 'none'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: write

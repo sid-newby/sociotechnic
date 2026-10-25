@@ -91,7 +91,9 @@ manual process below; automatic bumps support patch and minor versions only.
 
 ### What CI establishes
 
-The shared workflow runs `task checks` on an isolated Linux runner: engine/web
+Workflow jobs use `ubuntu-24.04` so the operating-system version changes only in
+a reviewed maintenance update, rather than following `ubuntu-latest` migrations.
+The shared workflow runs `task checks` on that isolated Linux runner: engine/web
 type checks, console build, agent validation, release automation tests, workflow
 tests and the production dependency audit. Actions are pinned to reviewed
 commit IDs. Contributor jobs have read-only repository access. The release
