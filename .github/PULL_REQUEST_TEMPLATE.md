@@ -17,6 +17,8 @@ Call out migrations, changed permissions and human gates. -->
 <!-- Apply exactly one PR label: release:patch (fix/maintenance/refinement),
 release:minor (capability/workflow change), or release:none (explicit opt-out).
 With automation enabled, merging patch/minor authorizes a release after checks.
+For patch/minor, run task changelog -- patch|minor /path/to/notes.md before
+committing, and include the next version plus notes in CHANGELOG.md.
 Use a clear title for generated release notes; link any upgrade instructions
 from the PR description and affected technical documentation. -->
 

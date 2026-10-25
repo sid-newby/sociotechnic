@@ -82,7 +82,10 @@ async function publish(github, repo, tested) {
   if (comparison.status !== 'ahead') {
     throw new Error('This PR is already covered by a release, or release history diverged. Do not release an older commit.');
   }
-  const tag = nextTag(previous.tag_name, tested.bump);
+  const { changelogAt, entries, releaseTag } = require('./changelog.cjs');
+  const changelog = await changelogAt(github, repo, tested.sha);
+  const tag = releaseTag(changelog, tested.bump);
+  if (compareVersions(version(tag), version(previous.tag_name)) <= 0) throw new Error('Committed changelog version is already published or older than the latest release.');
   let tagExists = true;
   try {
     await github.rest.git.getRef({ ...repo, ref: `tags/${tag}` });
@@ -96,9 +99,9 @@ async function publish(github, repo, tested) {
   });
   const { data: release } = await github.rest.repos.createRelease({
     ...repo, tag_name: tag, name: tag, target_commitish: tested.sha,
-    body: `${marker}\n\n${notes.body}`, draft: false, prerelease: false, make_latest: 'true',
+    body: `${marker}\n\n${entries(changelog)[0].notes}\n\n${notes.body}`, draft: false, prerelease: false, make_latest: 'true',
   });
   return { created: true, url: release.html_url };
 }
 
-module.exports = { releaseBump, nextTag, prepare, preparePush, publish };
+module.exports = { version, compareVersions, releaseBump, nextTag, prepare, preparePush, publish };

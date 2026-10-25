@@ -22,18 +22,14 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
       - uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         with:
           script: |
-            const { data: pr } = await github.rest.pulls.get({
-              ...context.repo, pull_number: context.issue.number,
-            });
-            const labels = pr.labels.map(label => label.name)
-              .filter(name => name.startsWith('release:'));
-            const allowed = ['release:patch', 'release:minor', 'release:none'];
-            if (labels.length !== 1 || !allowed.includes(labels[0])) {
-              core.setFailed('Choose exactly one: release:patch, release:minor, release:none.');
-            }
+            const { validatePullRequest } = require('./.github/scripts/changelog.cjs');
+            await validatePullRequest(github, context.repo, context.issue.number);
   checks:
     name: Checks
     uses: ./.github/workflows/checks.yml
