@@ -368,6 +368,7 @@ sequenceDiagram
 
 - The server binds `127.0.0.1` only and has no authentication. Anyone on the machine can reach it.
 - It refuses a request whose `Host` is not its own address (DNS rebinding), and a mutating request with a foreign `Origin` or without `Content-Type: application/json`. `finish` is not exposed, and the console never edits a record, `job.json` or the plan.
+- `stop <job> [note...]` and `POST /api/jobs/:id/stop` with `{ "note": "..." }` keep the optional note verbatim in the run's human decision history. Omitting it keeps an empty note. A non-string HTTP note is rejected before stopping the driver or changing the run. The stop reason and aborted dispatch notes stay "stopped by human".
 - Only one driver may run a job at a time. PostgreSQL holds driver ownership through a session advisory lock and a stored owner record (`host`, `pid`, `token`, `startedAt`, `mode`, `owner` of `ui` or `cli`). `step` from elsewhere is refused while that owner holds the job; interrupted ownership must be reconciled before takeover. Connection loss aborts execution and rejects stale completions. Local lock files cannot grant ownership. Pause the driver or wait for a gate; handoff remains available there.
 
 UI owners also record `consoleUrl`. The jobs, job-detail and driver endpoints
@@ -540,7 +541,7 @@ Engine commands run as `sociotechnic/bin/sociotechnic <command> [args]`. Command
 | `/sociotechnic pr <job> --push` | `pr <job> --push` | `{ record: "pr.md", title, pushed: true, url, number }`. From `accepted` only. Errors: `illegal-transition` before accept, `no-github-remote`, `gh-unavailable`, `no-branch` |
 | `/sociotechnic merge <job>` | `merge <job>` | `{ job, status, mergeCommit, merged, warnings? }` |
 | `/sociotechnic merge <job> --remote --confirm [--method merge\|squash\|rebase]` | `merge <job> --remote --confirm [--method merge\|squash\|rebase]` | `{ job, remote: true, url, mergeCommit, alreadyMerged }`; local checkout preserved |
-| `/sociotechnic stop <job>` | `stop <job>` | `{ job, status }` |
+| `/sociotechnic stop <job>` | `stop <job> [note...]` | `{ job, status }` |
 | `/sociotechnic reopen <job>` | `reopen <job> [--discard]` | `{ job, status, worktree, changes, files }` |
 | `/sociotechnic usage <job>` | `usage <job>` | `{ roles: [{ role, model, effort, dispatches, usage }] }` |
 | `/sociotechnic continue <job>` | `run <job>` | `{ job, status, url, restored, driver }`. Global skill only: the console drives |
@@ -637,7 +638,7 @@ The console's server exposes these routes on its loopback port. API responses ar
 | `POST /api/jobs/:id/pr` | `{ push?: boolean }` | `{ record: "pr.md", title, text, pushed, url?, number? }`. `push: true` needs status `accepted`, otherwise 409 |
 | `POST /api/jobs/:id/merge` | `{ confirm: true }` | engine result (`merged-local` from `ready` or `needs-human`, `merged` from `accepted`); 400 without `confirm` |
 | `POST /api/jobs/:id/merge-remote` | `{ confirm: true, url, head, method? }` | Confirmed GitHub merge; URL/head must match the published PR. Default method: merge |
-| `POST /api/jobs/:id/stop` | | engine result; also stops the driver |
+| `POST /api/jobs/:id/stop` | `{ note?: string }` | engine result; also stops the driver; supplied notes must be strings |
 | `POST /api/jobs/:id/reopen` | `{ discard?: boolean }` | engine result |
 | `POST /api/jobs/:id/clean` | | engine result |
 | `POST /api/jobs/:id/run` | `{ mode: "run" \| "step", hold?: Status[] }` | `DriverState`; 409 when a driver is active |

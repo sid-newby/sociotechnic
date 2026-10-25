@@ -447,7 +447,7 @@ export async function run(argv: readonly string[]): Promise<unknown> {
       if (args.flags.method || args.flags.confirm) usageError("--method and --confirm require merge --remote");
       return effectJob(need(args, 0, "<job>"), "merge", (job) => engine.merge(job));
     case "stop":
-      return mutate(need(args, 0, "<job>"), (job) => engine.stopJob(job));
+      return mutate(need(args, 0, "<job>"), (job) => engine.stopJob(job, undefined, args.positional.slice(1).join(" ")));
     case "reopen":
       return mutate(need(args, 0, "<job>"), (job) => engine.reopen(job, args.flags.discard === "true"));
     case "clean": {

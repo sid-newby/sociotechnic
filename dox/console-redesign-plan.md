@@ -24,6 +24,40 @@ Checks that count: `task typecheck`, `task build`, `task test` (fake agents),
 `task test:release`, `task audit`. `task test:pg` when storage changes. The
 browser verification scripts and a screenshot refresh when the console changes.
 
+## Completion rules across the console
+
+The approved prototype supplies composition, not application data or working
+controls. Its sample totals, narrative, navigation links and table buttons are
+not implementation. Every visible control must perform its named action with
+real data, and every displayed result must reflect the evidence actually held
+by the engine. A passing check from a different commit cannot become a PASS
+headline; missing usage remains unknown.
+
+Wave 2 removes the repeated run-page explanations with the old stage strip,
+Overview, Activity, Analysis and in-run Agents views. The decision bar says what
+needs doing; cards summarize recorded evidence; sheets hold the supporting
+details. Preserve access to earlier rounds and their checks and reviews.
+
+Wave 4 owns the same content cleanup in the retained Agent library, New run,
+Add agent, Manage versions, Sandboxes and Settings surfaces. Remove repeated
+instructions about attribution, configuration, sandbox retention and capacity
+from the normal reading path. Put the explanation at the relevant setting or
+behind help once. Keep input guidance and consequential confirmation text where
+the user makes the decision. This is a content and interaction pass within the
+approved design, not another visual redesign.
+
+Wave 5 verifies every retained surface against these rules. For each control,
+record the route or local action, a successful interaction, and the relevant
+failure state. For each unfinished capability, name its remaining work here;
+omit decorative controls that imply it already works. Development wave numbers
+do not belong in product copy. Empty histories, missing records and unavailable
+measurements remain explicit data states, not material to fill with sample data.
+
+docsImpact: the wave 2 and wave 4 source scopes include their retained forms,
+dialogs and views; the README, console UI guide, CLI parity table, behavioral
+contracts and development feature map must describe the implemented behavior.
+The prototype remains a design reference and is not promoted to runtime code.
+
 ## Waves
 
 ### Wave 0: land the branch
@@ -77,6 +111,13 @@ Worktree branch `console/run-page`. Starts after wave 1 merges.
   SSE refresh.
 - `RunTable`: TanStack table with tabs Dispatches, Records, Log, Decisions;
   rows open sheets with the record viewer (formatted, raw, download).
+- Customize columns changes the actual dispatch table and remains usable by
+  keyboard. Its Download action exports the currently filtered table with
+  visible columns; record Download returns the original record bytes. Exercise
+  both with real fixture data; do not retain the prototype's decorative buttons.
+- Stop accepts an optional note and persists it in human history. The supporting
+  API and engine change must land before the UI claims to save the note; sending
+  a field the server ignores does not satisfy this requirement.
 - Remove the Overview, Activity, Analysis and Agents tabs and the stage strip.
   New run, Agent library and Sandboxes keep working on the new primitives.
 - Done when the demo store renders every status, the browser verification
@@ -100,8 +141,10 @@ Worktree branch `engine/parity`. Can run beside wave 2; touches
   paged buffer.
 - Record download: `Content-Disposition` on the record route.
 - Fix the reopen discard flag and the PR-text-without-push path in the
-  console client; expose step, hold-after-status, raise-bound-early and
-  restore-without-continue through routes that exist.
+  console client; expose step, hold-after-status and raise-bound-early through
+  their existing routes. Restore-without-continue still needs a separate API
+  operation and is assigned to wave 4 below; `/resume` starts the driver and
+  must not be presented as restore-only.
 - Done when the contract tests cover each new route and the driver behavior,
   `task test` and `task test:pg` pass, and `cli-reference.md` and
   `CONTRACTS.md` describe the routes.
@@ -116,6 +159,17 @@ Worktree branch `console/history`. After waves 2 and 3.
 - Agent library absorbs the old in-run Agents tab as an "in run" filter;
   provenance links on every count.
 - Settings: sandbox capacity, theme, default holds, local concurrency cap.
+- Restore without continuing: add a dedicated API operation around the existing
+  engine restore command, preserving ownership and recovery guards, before
+  offering a restore-only control. Prove that it restores the worktree without
+  dispatching an agent or changing a human gate. The CLI remains available until
+  this is implemented; the console parity table must continue to say so.
+- Complete the retained-surface content pass described above. Agent metrics and
+  feedback counts open their actual source run, dispatch or record; explain
+  unavailable provenance without inventing links or repeating caveats per row.
+- docsImpact: retained console components, restore route and tests, console
+  contracts, CLI/API reference, engine recovery reference, development feature
+  map, README and changelog. Update these with the implementation.
 
 ### Wave 5: finish
 
