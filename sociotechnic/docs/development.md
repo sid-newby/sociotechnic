@@ -153,6 +153,14 @@ sociotechnic/
   src/staging.ts      dispatch input materialization and output ingestion
   ui/                 server.ts, driver.ts, runner.ts, legacy index.html, seed/demo-job/
   ui/web/             React/Vite workspace: source, package.json, built dist/
+  ui/web/src/App.tsx  console composition and selected-run routing
+  ui/web/src/components/shell/  sidebar, header, commands, controls and settings
+  ui/web/src/components/run/    decision bar, cards, chart, table and evidence sheets
+  ui/web/src/components/new-run.tsx  stable New run dialog and repository setup
+  ui/web/src/components/records.tsx  formatted/raw record sheets and downloads
+  ui/web/src/run-model.ts      legal actions, reasons, bounds and measured telemetry
+  ui/web/src/run-log.ts        bounded log catch-up, deduplication and retention
+  ui/web/src/run-table-model.ts  filtered visible-column CSV values
   tests/              node:test suites
 assets/               banner and console screenshots
 notes/                upstream study

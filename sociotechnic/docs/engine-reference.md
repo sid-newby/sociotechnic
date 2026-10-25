@@ -378,7 +378,7 @@ Nothing else changes. The dispatches the stop aborted stay `failed` with the not
 
 When changes were kept, the retry block of the builder's brief says so and lists the files. The builder inspects them, keeps what is sound and commits before it writes its record. This is the one exception to the builder's clean-tree rule. A build attempt you [interrupted](#interrupted-dispatches) is retried the same way.
 
-In the React console, the human gate panel for a `stopped` job shows Reopen run, which keeps uncommitted changes, and Remove worktree (Remove sandbox and worktree for a Docker Sandbox run). Reopen and discard changes (behind a confirm) is in `/legacy`; every client can discard with `reopen <job> --discard` or `POST /api/jobs/:id/reopen` with `{ "discard": true }`. In a session, type `/sociotechnic reopen <job>`, then `run` through either skill's shared console driver.
+In the React console, the decision bar for a `stopped` job offers Reopen run and Remove worktree (Remove sandbox and worktree for a Docker Sandbox run). Reopen keeps uncommitted changes by default; the confirmation dialog offers an explicit Discard uncommitted changes choice for local runs and sends that choice as `discard`. `/legacy`, `reopen <job> --discard` and `POST /api/jobs/:id/reopen` with `{ "discard": true }` retain the same behavior. In a session, type `/sociotechnic reopen <job>`, then `run` through either skill's shared console driver.
 
 ## Loop bounds
 
