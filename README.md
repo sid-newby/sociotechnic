@@ -78,7 +78,7 @@ Choose **Agent library**, beside **New run**, to browse the whole team across
 projects and runs. Each role has a distinct icon shared with run profiles,
 activity and analysis. Search by role, model or description, then inspect when
 it is called, its model and effort, allowed tools, limits and explicit skill
-access. Operator-installed skills are not automatically granted to agents.
+access. Operator-installed skills are not automatically granted to agents. 
 
 ![Agent library showing the planner, versioned specialist roster and deployment evidence from the committed demo fixture.](assets/console/agent-library.png)
 
@@ -97,7 +97,7 @@ effort and definition revision alongside timing and token coverage. New deployme
 capture a definition fingerprint; older ones remain **Version unrecorded**.
 All initial agents start at **v1.0.0**. Icons and names share meaningful colors
 that adapt to light and dark backgrounds. New agents inherit their role's icon
-and color, so the same identity follows them through run evidence.
+and color, so the same identity follows them through run evidence..
 
 To **add an agent**, open **Agent library → Add agent**. Give it a unique name,
 purpose and role template. Write instructions, import a Markdown/text file, or
