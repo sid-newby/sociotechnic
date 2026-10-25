@@ -2,15 +2,21 @@
 
 ![Sociotechnic: one request becomes a coordinated team of planning, building, review, security, and approval specialists.](assets/sociotechnic-banner-v4.png)
 
-Sociotechnic turns a development task into a branch you can test, review and merge with confidence. Start a run in the web console, review its plan, and follow the work through building, checks and independent reviews. The engine coordinates fresh coding agents and stops when it needs your decision.
+Sociotechnical (or sociotechnic) refers to the interlinked relationship between people (social systems) and machines, tools, or software (technical systems) within organizations and society. The theory states that an organization or system works best when its social and technical parts are designed together to fit each other, rather than optimizing technology alone.
 
-The console is the main interface. The engine and semantically versioned agent definitions live in this repository. PostgreSQL stores job records across projects and versions.
+Human behavior, culture, and values shape how technology is used, while technology simultaneously changes how people work and communicate. Speak like a human. Ship like a machine. 
+
+We invite you to join us. Be Sociotechnic.
+
+Sociotechnic turns a development task into a safe, isolated branch you can test, review and merge with confidence. Start a run in the web console, review its plan, and follow the work through building, checks and independent reviews. The engine coordinates fresh coding agents and stops when it needs your decision. 
+
+The console is the intended main interface. The engine and semantically versioned agent definitions live in this repository. PostgreSQL stores job records across projects and versions. Full CLI parity exists for further automations or dev feats against itself. 
 
 [Start a run](#start-a-run) · [Agent library](#agent-library) · [Follow the work](#follow-the-work) · [Review and decide](#review-and-decide) · [How it works](#how-it-works) · [Technical documentation](#technical-documentation)
 
 ![Run console overview with the run list, workflow stages, gate evidence and review summary.](assets/console/overview.png)
 
-Console screenshots use demonstration data and a consistent 1600 × 1000 viewport.
+Console screenshots use demonstration data and a consistent 1600 × 1000ish apeture.
 
 ## Start a run
 
