@@ -664,7 +664,11 @@ catalog import; existing and explicit legacy runs keep their pinned definitions.
 Pins do not freeze the engine binary: after an operator-controlled upgrade, the
 new routing applies to an eligible unreviewed checked round. Already-issued
 review waves finish normally and saved dispatch envelopes are never rewritten.
-Existing holds stay in force. No live catalog mutation is part of development.
+Existing holds stay in force. Unpublished bundles live in
+`seeds/agent-release-candidates/`, outside automatic startup and `db init`
+migrations. Candidate imports must first reconcile versions with the target
+catalog; conflicting identities remain errors. No live catalog mutation is part
+of development.
 
 
 ### 7.3 Approver hard rules

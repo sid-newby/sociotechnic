@@ -8,9 +8,9 @@ import { catalogEntry } from "../src/agent-catalog.ts";
 import { activeAgentCatalog } from "../src/agent-library.ts";
 import { agentBase, pinAgentVersions, publishAgentVersion, validateJobAgentVersions } from "../src/agent-versions.ts";
 import type { PinnedAgents } from "../src/agent-versions.ts";
-import { canonicalJson, compareAgentVersions, parseAgentVersion, releaseContentDigest, releaseDigest } from "../src/agent-version-data.ts";
+import { canonicalJson, compareAgentVersions, parseAgentVersion, releaseContentDigest, releaseDigest, versionRole } from "../src/agent-version-data.ts";
 import type { AgentVersion } from "../src/agent-version-data.ts";
-import { parseFrontmatter, validateAgentText } from "../src/agents.ts";
+import { agentDefinition, parseFrontmatter, validateAgentText } from "../src/agents.ts";
 import { defaultConfig } from "../src/config.ts";
 import { applyCatalogBundles, checkCatalogBundles, exportCatalogBundle, parseCatalogBundle, readCatalogBundles } from "../src/db/catalog-migrations.ts";
 import type { CatalogBundle } from "../src/db/catalog-migrations.ts";
@@ -20,13 +20,14 @@ import { step } from "../src/engine.ts";
 import { addDispatch, createJob } from "../src/job.ts";
 import { mutateJob } from "../src/job-store.ts";
 import { roleOf } from "../src/roles.ts";
+import { startServer } from "../ui/server.ts";
 
 const home = mkdtempSync(join(tmpdir(), "sociotechnic-release-policy-"));
 process.env.SOCIOTECHNIC_HOME = home;
 process.env.SOCIOTECHNIC_DATABASE_URL = "off";
 after(() => { setStore(null); rmSync(home, { recursive: true, force: true }); });
-const candidate = parseCatalogBundle(JSON.parse(readFileSync(new URL("../seeds/agent-releases/20261025-focused-verification.json", import.meta.url), "utf8")));
-const historical = readCatalogBundles().filter((bundle) => bundle.digest !== candidate.digest);
+const candidate = parseCatalogBundle(JSON.parse(readFileSync(new URL("../seeds/agent-release-candidates/20261025-focused-verification.json", import.meta.url), "utf8")));
+const historical = readCatalogBundles();
 const oldRows = [...new Map(historical.flatMap((bundle) => bundle.releases).map((row) => [`${row.agent}@${row.version}`, row])).values()];
 const oldLatest = new Map<string, AgentVersionRow>();
 for (const row of oldRows) if (!oldLatest.has(row.agent) || compareAgentVersions(row.version, oldLatest.get(row.agent)!.version) > 0) oldLatest.set(row.agent, row);
@@ -73,6 +74,28 @@ function pinnedJob(id: string, pins: PinnedAgents) {
   id = `20261025-${id}`;
   return { ...createJob({ id, feature: "Release migration fixture", repo: "/unused/repo", worktree: "/unused/worktree", branch: `sociotechnic/${id}`, base: { branch: "main", commit: "1".repeat(40) }, caps: defaultConfig().caps, now: "2026-10-25T00:00:00.000Z" }), agentVersions: pins.versions, agentConfigurations: pins.configurations, ...(pins.assignments ? { agentAssignments: pins.assignments } : {}), ...(pins.roster ? { agentRoster: pins.roster } : {}), ...(pins.locks ? { agentLocks: pins.locks } : {}) };
 }
+
+test("console startup excludes unpublished candidates and preserves operator-published browser releases", async () => {
+  assert.equal(historical.some((bundle) => bundle.digest === candidate.digest), false);
+  const store = await fixture(); setStore(store);
+  try {
+    for (const agent of ["sociotechnic-browser-builder", "sociotechnic-browser-builder-lite"]) {
+      const source = decode(oldLatest.get(agent)!);
+      const role = versionRole(source.role, { ...source.role, model: "gpt-6-luna", effort: "medium" });
+      const definition = agentDefinition(role, "Browser verification using the operator's Luna settings.", source.definition, source.skillResources?.map((skill) => skill.name));
+      const release = row({ ...source, version: "1.0.1", role, definition, digest: releaseDigest(role, definition), label: "Operator Luna release" });
+      await store.transaction((tx) => tx.insertAgentVersion(release));
+    }
+    const before = canonicalJson(await exportCatalogBundle(store));
+    const server = await startServer({ port: 0 });
+    try {
+      assert.equal((await fetch(new URL("/api/health", server.url))).status, 200);
+      assert.equal(canonicalJson(await exportCatalogBundle(store)), before);
+    } finally { await server.close(); }
+    await assert.rejects(store.transaction((tx) => applyCatalogBundles(tx, [candidate])), /Conflicting immutable release sociotechnic-browser-builder@1.0.1/);
+    assert.equal(canonicalJson(await exportCatalogBundle(store)), before);
+  } finally { setStore(null); }
+});
 
 test("the additive candidate covers exactly active builders and planners, preserving execution and specialist metadata", () => {
   const active = activeAgentCatalog([...oldLatest.values()].map((row) => catalogEntry(decode(row))));
@@ -263,6 +286,7 @@ test("new default and specialist pins change only after import; existing, legacy
 
 test("baseline seed and every historical bundle remain byte-identical", () => {
   const hashes: Record<string, string> = {
+    "agent-release-candidates/20261025-focused-verification.json": "72f06df42e502e3c08c21194778ead5d87c48ccd2dea12d11c62c1ea222078ce",
     "agents.json": "7b333513f1a2594a6ff81b2df84829cf9607f4b88f56dff24b12c0d8d14d5fb2",
     "agent-releases/20261024-azure-builder-tiers.json": "7223e5d09cbc5c4ce140c4d35fb5e215a0dfa856928d3aff87d490c48d12151d",
     "agent-releases/20261024-azure-onboarding.json": "9fea72266516570b64e968c30a98f952e63b206230494d699aa865d27e6dd0e9",

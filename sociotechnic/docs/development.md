@@ -201,6 +201,7 @@ source/               upstream reference copies
 Taskfile.yml          go-task entry point
 sociotechnic/seeds/agents.json       original initialization definitions
 sociotechnic/seeds/agent-releases/  committed complete immutable catalog migration bundles
+sociotechnic/seeds/agent-release-candidates/  unpublished bundles excluded from automatic migration
 .claude/skills/sociotechnic/SKILL.md  the driver skill
 ```
 
@@ -294,7 +295,7 @@ browser interaction was exercised.
 | Dispatch staging and validated ingestion | [staging.ts](../src/staging.ts), [driver.ts](../ui/driver.ts), provider adapters and write guards | Driver, design and Codex tests; staging-loss and output-boundary checks |
 | Development cancellation cleanup | [history-cleanup.ts](../src/db/history-cleanup.ts), [agent-library.ts](../src/agent-library.ts), [job.ts](../src/job.ts) | [history-cleanup.test.ts](../tests/history-cleanup.test.ts); explicit pair manifests, canonical execution preservation and library projections |
 | Infrastructure planner/builder and pinned instruction skills | [agent-skills.ts](../src/agent-skills.ts), [packaged skills](../skills/), [Codex adapter](../ui/codex-runner.ts), [scoped Git tool](../ui/codex-build-tools.ts), [expert guide](infrastructure-agent.md) | [agent-skills.test.ts](../tests/agent-skills.test.ts), [codex-build-tools.test.ts](../tests/codex-build-tools.test.ts), [codex.test.ts](../tests/codex.test.ts), catalog migration suites; bounded live builder smoke |
-| Portable semantic agent history | [catalog-migrations.ts](../src/db/catalog-migrations.ts), [agent-releases/](../seeds/agent-releases/), [agent-versions.ts](../src/agent-versions.ts) | [catalog-migrations.test.ts](../tests/catalog-migrations.test.ts), PostgreSQL catalog round trip and export/check |
+| Portable semantic agent history | [catalog-migrations.ts](../src/db/catalog-migrations.ts), [agent-releases/](../seeds/agent-releases/), [unpublished candidates](../seeds/agent-release-candidates/), [agent-versions.ts](../src/agent-versions.ts) | [catalog-migrations.test.ts](../tests/catalog-migrations.test.ts), PostgreSQL catalog round trip and export/check |
 | Stop notes in human decision history | [job.ts](../src/job.ts), [engine.ts](../src/engine.ts), [cli.ts](../src/cli.ts), [server.ts](../ui/server.ts) | [stop.test.ts](../tests/stop.test.ts): verbatim persisted notes, omitted-note compatibility, validation before driver abort and unchanged reopen state |
 | HTTP API, events and static console assets | [server.ts](../ui/server.ts) | [ui.test.ts](../tests/ui.test.ts), [csp.test.ts](../tests/csp.test.ts) |
 | New run folder browsing, creation, saved start point, initial Git commit and base publication | [repositories.ts](../ui/repositories.ts), [server.ts](../ui/server.ts), [new-run.tsx](../ui/web/src/components/new-run.tsx), [repository-browser.tsx](../ui/web/src/components/repository-browser.tsx) | [repositories.test.ts](../tests/repositories.test.ts): preservation, origin checks, real Git setup and publication to local bare remotes through [fake GitHub transport](../tests/fixtures/github.ts), push retry and PR after local merge; [verify-run-wizard.mjs](../scripts/verify-run-wizard.mjs): browser persistence, creation/selection, GitHub setup errors, keyboard and narrow layout |
@@ -542,6 +543,12 @@ export a new bundle and check catalog coverage before committing:
 task db:catalog:export -- --out sociotechnic/seeds/agent-releases/<new-bundle>.json
 task db:catalog:check
 ```
+
+Keep unpublished candidates in `seeds/agent-release-candidates/`, outside the
+automatic migration directory. Check their versions against the target catalog
+before promotion; offline fixtures cannot detect operator-published releases.
+Version collisions require fresh semantic versions, preserving existing releases
+and pins. Startup and `db init` continue to reject conflicting migration content.
 
 Keep existing bundles immutable. A database export alone is not committed until
 the new artifact is staged in Git; review its complete release payload and run

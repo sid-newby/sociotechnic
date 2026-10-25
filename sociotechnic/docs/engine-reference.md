@@ -836,11 +836,14 @@ Catalog export/import includes the snapshots and preserves existing run pins.
 
 ### Verification-policy release compatibility
 
-The additive [candidate bundle](../seeds/agent-releases/20261025-focused-verification.json)
+The additive [candidate bundle](../seeds/agent-release-candidates/20261025-focused-verification.json)
 contains eleven new releases alongside 32 immutable historical releases in the
 bundle union. [The inventory](evidence/workflow-integration/candidate-releases.json)
-records exact versions and definition/content/bundle digests. These are committed
-migration inputs; development has not imported them into a live catalog.
+records exact versions and definition/content/bundle digests. Candidates are kept
+outside `seeds/agent-releases/`, so console startup and `db init` do not import
+them. Development has not imported them into a live catalog. Before promotion,
+compare all candidate identities/versions with the target database. Publish
+colliding improvements under fresh versions; preserve existing releases and pins.
 
 | Run or operation | Instruction/configuration behavior | Engine behavior |
 | --- | --- | --- |

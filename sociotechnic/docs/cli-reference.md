@@ -888,9 +888,12 @@ including historical semantic versions, unused/custom agents, instructions,
 tools, model/effort, limits and release metadata. After publishing changes, run
 `db catalog-export --out <new-bundle.json>` and `db catalog-check` before committing
 the corresponding code. Use a new filename; keep earlier migration bundles.
-`db init` applies their union idempotently to empty or existing catalogs, rejects
-conflicting identity/version content and leaves run pins unchanged. A bundle is
-a migration artifact, not a runtime fallback.
+Unpublished bundles in `seeds/agent-release-candidates/` are excluded from
+startup, `db init` and catalog coverage. Promotion requires checking the target
+catalog for version collisions and publishing improvements under fresh versions.
+`db init` applies the migration union idempotently to empty or existing catalogs,
+rejects conflicting identity/version content and leaves run pins unchanged. A
+bundle is a migration artifact, not a runtime fallback.
 
 ## Development cancellation history cleanup
 

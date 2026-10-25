@@ -93,9 +93,13 @@ live catalog mutation or publication is required or performed by this verificati
 [The engine reference](engine-reference.md#verification-policy-release-compatibility)
 contains the new/existing/legacy run matrix and upgrade/rollback procedure.
 [The candidate inventory](evidence/workflow-integration/candidate-releases.json)
-records eleven unpublished releases and all their digests. The bundle union
-preserves 32 historical releases, 43 total. New instructions become defaults only
-after an authorized catalog import; pins do not freeze engine binary behavior.
+records eleven unpublished releases and all their digests. Automatic migrations
+preserve 32 historical releases. The explicitly imported candidate fixture has
+43 total; candidates are excluded from startup and `db init`. New instructions
+become defaults only after an authorized catalog import; pins do not freeze
+engine binary behavior. The release-policy suite also starts the real HTTP server
+with customized browser-builder releases, verifies its health and unchanged
+catalog, and proves that explicit conflicting imports still abort atomically.
 
 Optional C3 reader-recovery concurrency is deferred. Native Impeccable execution
 is separately opt-in via `SOCIOTECHNIC_TEST_IMPECCABLE_SKILL`; an unrun opt-in is
