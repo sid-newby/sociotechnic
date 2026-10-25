@@ -21,7 +21,7 @@ See [the v3 environment recipe, admission limits and recovery](docker-sandboxes.
 
 ## Repository preparation
 
-The React New run form can browse existing directories and prepare a missing Git
+The React New run form can browse or create directories and prepare a missing Git
 repository before engine job creation. The HTTP layer's explicit `initialize`
 option creates missing starter files and their first commit, then calls the same
 engine entry points as an existing repository. It preserves committed repos and
@@ -29,6 +29,12 @@ existing starter contents and excludes unrelated files from the initial commit.
 The engine still resolves the repository root and committed base and creates an
 isolated job branch/worktree. CLI requirements, records, driver locks, bounds and
 human gates are unchanged. See [Starting a run](cli-reference.md#starting-a-run).
+New repository is a console setup preset, not an engine workflow. Folder creation
+and the remembered browser starting point are separate from job creation. UI
+work without an existing UI scaffold is routed through design so the interview
+can recommend the bundled React + NestJS house special; the human chooses the
+stack and approves the design before implementation. Non-UI projects need no
+scaffold. Explicitly requested scaffolds and existing UI foundations are respected.
 
 ## Job states
 

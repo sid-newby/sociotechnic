@@ -1,4 +1,4 @@
-import { lstatSync, readdirSync, realpathSync, statSync, writeFileSync } from "node:fs";
+import { lstatSync, mkdirSync, readdirSync, realpathSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { SociotechnicError } from "../src/errors.ts";
@@ -40,7 +40,15 @@ export function repositoryDirectory(input: string): string {
   throw new SociotechnicError("bad-directory", `Choose an existing, accessible directory: ${input}`);
 }
 
-export function browseRepositories(input = homedir()): { path: string; parent: string | null; directories: string[] } {
+export function browseRepositories(input?: string, fallback = false): { path: string; parent: string | null; directories: string[] } {
+  if (!input) {
+    try { return browseRepositories(join(homedir(), "Prog")); }
+    catch { return browseRepositories(homedir()); }
+  }
+  if (fallback) {
+    try { return browseRepositories(input); }
+    catch { return browseRepositories(homedir()); }
+  }
   const path = repositoryDirectory(input);
   try {
     const directories = readdirSync(path, { withFileTypes: true }).filter((entry) => entry.isDirectory() && entry.name !== ".git").map((entry) => entry.name).sort((a, b) => a.localeCompare(b));
@@ -48,6 +56,18 @@ export function browseRepositories(input = homedir()): { path: string; parent: s
   } catch {
     throw new SociotechnicError("bad-directory", `Cannot browse ${path}. Check directory permissions or enter another path.`);
   }
+}
+
+export function createRepositoryDirectory(input: string, name: string): ReturnType<typeof browseRepositories> {
+  const parent = repositoryDirectory(input);
+  if (!name.trim() || name === "." || name === ".." || name.toLowerCase() === ".git" || /[/\\\x00-\x1f\x7f]/.test(name)) throw new SociotechnicError("bad-input", "Enter one folder name without slashes, control characters, dot entries or .git.");
+  const path = join(parent, name);
+  try { mkdirSync(path); }
+  catch (error) {
+    const exists = error instanceof Error && "code" in error && error.code === "EEXIST";
+    throw new SociotechnicError("bad-directory", exists ? "A file or folder with that name already exists. Choose another name." : "Cannot create the folder. Check its name and directory permissions, then try again.");
+  }
+  return browseRepositories(path);
 }
 
 export function prepareRepository(input: string, base: string | null): string {

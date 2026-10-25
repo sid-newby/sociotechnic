@@ -128,6 +128,10 @@ input::placeholder, textarea::placeholder { color: var(--muted-foreground); opac
 .repository-folders li button { width: 100%; justify-content: flex-start; height: auto; text-align: left; }
 .repository-folders li span, .repository-current { overflow-wrap: anywhere; white-space: normal; }
 .repository-current { font-family: ui-monospace, monospace; font-size: 12px; color: var(--muted-foreground); }
+.repository-create { margin-bottom: 12px; }
+.repository-create .repository-path-row { flex-wrap: wrap; }
+.repository-create input { flex-basis: 160px; }
+.repository-browser > .dialog-footer { margin-top: 12px; }
 .dialog-footer { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
 .record-dialog { inset: 24px; border-radius: 10px; display: flex; flex-direction: column; min-height: 0; }
 .record-dialog > .dialog-heading { padding: 20px 24px; border-bottom: 1px solid var(--border); }

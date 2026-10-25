@@ -30,7 +30,7 @@ import { createDriverRegistry, mutateJob } from "./driver.ts";
 import type { Runner } from "./runner.ts";
 import { runnerFromEnv } from "./runner.ts";
 import { mergeMethod, mergeRemote } from "../src/remote-merge.ts";
-import { browseRepositories, prepareRepository } from "./repositories.ts";
+import { browseRepositories, createRepositoryDirectory, prepareRepository } from "./repositories.ts";
 
 const UI_DIR = dirname(fileURLToPath(import.meta.url));
 const INDEX_HTML = join(UI_DIR, "index.html");
@@ -236,7 +236,11 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
       if (!(await loadAgentCatalog()).some((r) => r.name === name) && !history.jobs.some((j) => j.dispatches.some((d) => d.agent === name))) throw new HttpError(404, "unknown-agent", "Unknown agent");
       return { ...agentHistory(history.jobs, name, Number(page), sort), warnings: history.warnings };
     } },
-    { method: "POST", pattern: /^\/api\/repositories\/browse$/, handler: ({ body }) => browseRepositories(str(body, "path", false)?.trim() || undefined) },
+    { method: "POST", pattern: /^\/api\/repositories\/browse$/, handler: ({ body }) => {
+      if (body.fallback !== undefined && typeof body.fallback !== "boolean") throw new HttpError(400, "bad-input", "fallback must be a boolean");
+      return browseRepositories(str(body, "path", false)?.trim() || undefined, body.fallback === true);
+    } },
+    { method: "POST", pattern: /^\/api\/repositories\/create$/, handler: ({ body }) => createRepositoryDirectory(str(body, "path", true) ?? "", str(body, "name", true) ?? "") },
     { method: "GET", pattern: /^\/api\/health$/, handler: () => ({ ok: true, sociotechnicHome: sociotechnicHome(), pid: process.pid, startedAt }) },
     {
       method: "GET",

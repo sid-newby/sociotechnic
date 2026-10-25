@@ -109,6 +109,7 @@ export function planBrief(i: PlanBriefInput): string {
   ];
   if (i.design) lines.push("", "## Approved design", i.design);
   if (i.allowDesign) lines.push("", "## Major UI changes", 'For a new UI, replacement identity, substantial layout/interaction change or multi-screen design work, write {"status":"needs-design","reason":"..."} instead of a plan. The Fable design ceremony runs first; you will plan against its human-approved result. Small local fixes and comment cleanup retain normal planning.');
+  if (i.allowDesign) lines.push("For requested UI work, inspect the target for an existing UI scaffold. If none exists, use needs-design so the interview can suggest the bundled React + NestJS house special and obtain the user's stack choice. Respect an explicitly requested scaffold; never adopt or replace one automatically. Repositories without UI work need no scaffold or design ceremony.");
   if (i.researchFiles.length > 0) {
     lines.push("- Research records to read first:");
     for (const f of i.researchFiles) lines.push(`  - ${f}`);

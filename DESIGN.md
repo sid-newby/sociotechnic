@@ -368,6 +368,20 @@ parent navigation, a typed location and Use this folder. Loading and errors stay
 inside the browser; closing it restores focus to Browse. Selection fills the
 repository path. The visible Initialize Git if needed checkbox explains the
 starter files and initial commit before Start. No new palette or modal is added.
+The New repository run type keeps Git initialization checked and required, while
+preserving the optional choice for other types. It uses the existing planning
+flow. UI work without a scaffold is offered the React + NestJS house special
+through the existing design interview; the user chooses the stack.
+
+The folder browser starts at `~/Prog` or home and remembers successful Go paths
+in browser storage for future sessions on the same console origin. Directory
+navigation does not overwrite that preference. An unavailable saved path opens
+home. Storage failure has visible supporting text. New folder opens an inline
+name field with Create folder and Cancel; errors preserve the name and return
+focus to it. Creation blocks navigation and closing until the response arrives,
+opens the new directory and leaves selection explicit. Escape cancels name entry
+before dismissing the dialog. Controls wrap on narrow screens, and all styles
+reuse the existing fields, Button variants, tokens and live error/status regions.
 
 The record viewer defaults to formatted Markdown with headings, lists, tables and highlighted fenced code. JSON, diffs and recognized code records retain their original text in monospace with syntax colors. `record-content.tsx` owns rendering, `record-format.ts` owns language selection and bounds, and `records.css` owns the scoped reading styles. Syntax colors reuse primary, violet, cyan, amber, positive, destructive and muted-foreground variables in both themes; they identify tokens rather than workflow outcomes. Code blocks and tables scroll independently and remain keyboard reachable. Raw view preserves the exact source and whitespace; Formatted view restores reading. Unsupported languages remain plain code and large inputs bypass formatting. Embedded HTML stays inert and images are explicit links. Loading, empty, stale, and error states use explicit text; retry controls remain available where implemented. Reduced-motion preferences disable transitions and animations.
 

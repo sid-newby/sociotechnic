@@ -17,10 +17,15 @@ Console screenshots use demonstration data and a consistent 1600 × 1000 viewpor
 For a first-time installation, follow [local setup](sociotechnic/docs/development.md#local-setup). Once the console is running, open [the local console](http://127.0.0.1:4747).
 
 1. Choose **New run**.
-2. Enter a repository path or choose **Browse** to select an existing folder. Add an optional base branch and a description of the change. Say who it is for and how you will know it worked.
+2. Enter a repository path or choose **Browse** to select a folder or create one with **New folder**. Browsing starts at `~/Prog` when available, otherwise your home folder. Enter a path and choose **Go** to save a different starting point for future sessions in this browser. Add an optional base branch and a description of the change. Say who it is for and how you will know it worked.
 3. Choose **Start planning**. With **Initialize Git if needed** enabled, a new folder gets a `readme.md` containing `tbd`, a generic `.gitignore`, and an initial commit. Existing starter files are preserved; other files stay untracked. Sociotechnic then creates a job branch and a separate worktree in which agents make their changes.
 4. Read the plan. The React console always pauses before building so you can check its scope and acceptance criteria.
 5. Choose **Continue build** when the plan is right. To change the pinned plan, stop the run and start another with a revised request.
+
+Choose **New repository** for a fresh project. It requires local Git tracking and
+uses the same initial commit and planning flow. If UI work has no existing
+scaffold, the design interview suggests our React + NestJS house special. You
+can request another scaffold; you choose the stack before implementation.
 
 New run also offers **Docker Sandbox — experimental**. The run's agents and
 checks share an isolated local Linux environment with explicit CPU, memory and

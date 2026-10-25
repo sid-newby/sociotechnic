@@ -20,7 +20,11 @@ dependencies, build output and untracked files were not imported. The original
 
 ## Choosing and consuming a starter
 
-Offer this stack when it fits the requested product. The user may choose another
+For requested UI work without an existing UI scaffold, always suggest this
+React + NestJS house special. The planner requests the existing design ceremony,
+and the interview explains the recommendation while the console collects the
+human's stack choice. Non-UI projects need no scaffold. Respect an explicitly
+requested scaffold and preserve existing UI foundations. The user may choose another
 stack; an existing product's stack is not replaced implicitly. A starter supplies
 implementation foundations, not the product's visual direction or design
 approval.

@@ -252,8 +252,16 @@ run. Restore and single-step controls remain in the legacy console or CLI.
 The **New run** form takes a repository path, an optional base branch and a multi-line prompt. Start creates the job and runs it. The React console always holds at `planned` so you can read `plan.json` before any build; the legacy console also offers a hold toggle. Press Continue to build. A plan is never edited in place. To change it, stop the job and start a new one with a better prompt.
 
 In the React console, **Browse** opens an inline folder browser on the server's
-computer. Enter a location, open a child or parent folder, then choose **Use this
-folder**. Browsing does not modify files. **Initialize Git if needed** is enabled
+computer. It starts at `~/Prog` if accessible, otherwise the user's home. Enter a
+location and choose **Go** to remember that start point in this browser across
+sessions on the same console origin. Clicking child/parent folders does not
+replace it. An unavailable saved path falls back to home; an invalid Go path
+shows an error and keeps the previous preference. Browser storage failures are
+visible but do not prevent browsing. **New folder** creates one child and opens
+it; **Use this folder** selects it. Browsing alone does not modify files.
+**New repository** is a UI preset for feature planning that requires Git
+initialization; it uses the same job route without a new engine workflow.
+**Initialize Git if needed** is enabled
 by default: Start initializes an existing directory outside Git on the supplied
 base branch (default `main`), adds missing `readme.md` (`tbd\n`) and `.gitignore`
 starter files, and commits only those files. Existing starter contents and README
@@ -261,9 +269,14 @@ casing are preserved. Committed repositories, including selected subdirectories,
 are unchanged. Unrelated files stay untracked; they will not appear in the run's
 worktree. Fix Git identity or hook errors and retry if the initial commit fails.
 
-HTTP clients use `POST /api/repositories/browse` with `{ path?: string }` for
-`{ path, parent, directories }`, or `POST /api/jobs` with `initialize: true` to opt
-into setup. Both use the existing JSON and same-origin protections. The CLI and
+HTTP clients use `POST /api/repositories/browse` with
+`{ path?: string, fallback?: boolean }` for `{ path, parent, directories }`.
+`fallback: true` uses home if a supplied path cannot be browsed; otherwise invalid
+paths fail. `POST /api/repositories/create` takes `{ path, name }`, creates one
+child without Git setup, and returns its listing. Dot entries, `.git`, separators,
+control characters and existing entries are refused. `POST /api/jobs` with
+`initialize: true` opts into Git setup. All use the existing JSON and same-origin
+protections. The CLI and
 legacy console continue to require an existing committed repository.
 
 ### How it drives agents
