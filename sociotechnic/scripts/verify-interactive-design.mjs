@@ -64,9 +64,9 @@ try {
   await browser('check', '.design-answer-options label:first-child input');
   await browser('find', 'role', 'button', 'click', '--name', 'Reply to Claude');
   await browser('wait', '--text', 'Open previews');
-  const preview = await browser('get', 'attr', '.design-conversation .action-row a', 'href');
+  const preview = await browser('get', 'attr', '.design-conversation a[target^="impeccable-"]', 'href');
   assert.match(preview, /^http:\/\/127\.0\.0\.1:[0-9]+\//);
-  assert.equal(await browser('get', 'attr', '.design-conversation .action-row a', 'target'), `impeccable-${(await readJob(id, j => j.designSession)).id}`);
+  assert.equal(await browser('get', 'attr', '.design-conversation a[target^="impeccable-"]', 'target'), `impeccable-${(await readJob(id, j => j.designSession)).id}`);
   await browser('screenshot', join(proof, 'conversation-desktop.png'), '--full');
   await browser('tab', 'new', '--label', 'preview', preview);
   await browser('wait', '--text', 'Reading desk');

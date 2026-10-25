@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readdirSync, realpathSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -38,16 +38,31 @@ try {
   browser = await chromium.launch({ channel: 'chrome', headless: true });
   let context = await browser.newContext({ viewport: { width: 1440, height: 1100 }, colorScheme: 'dark', reducedMotion: 'reduce' });
   let page = await context.newPage();
-  const errors = [];
-  const observe = () => page.on('pageerror', error => errors.push(error.message));
+  const errors = [], consoleErrors = [];
+  const observe = () => {
+    page.on('pageerror', error => errors.push(error.message));
+    page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
+  };
   observe();
   const until = async (check) => {
     const deadline = Date.now() + 15000;
     while (!await check()) { if (Date.now() > deadline) throw new Error('Browser condition timed out'); await sleep(20); }
   };
+  const sidebarAction = async name => {
+    const target = page.getByRole('button', { name, exact: true });
+    if (!await target.isVisible()) await page.getByRole('button', { name: /^Toggle sidebar$/i }).click();
+    await target.click();
+  };
+  const choose = async (label, option) => {
+    const trigger = page.getByRole('combobox', { name: label, exact: true });
+    await trigger.click();
+    await page.getByRole('option', { name: option, exact: true }).click();
+    assert.equal((await trigger.textContent()).trim(), option);
+  };
+  const selected = async label => (await page.getByRole('combobox', { name: label, exact: true }).textContent()).trim();
   const open = async () => {
     await page.goto(server.url);
-    await page.getByRole('button', { name: 'New run', exact: true }).click();
+    await sidebarAction('New run');
     await page.getByRole('button', { name: 'Browse', exact: true }).click();
   };
   const at = async path => until(async () => await page.locator('.repository-current').textContent().catch(() => '') === path);
@@ -59,14 +74,14 @@ try {
   const savedEnvironment = () => page.evaluate(key => JSON.parse(localStorage.getItem(key)), environmentKey);
   const openRun = async () => {
     await page.reload();
-    await page.getByRole('button', { name: 'New run', exact: true }).click();
+    await sidebarAction('New run');
   };
   const inventory = route => route.fulfill({ json: { limit: 2, configurable: false, sandboxes: [] } });
   await page.route('**/api/sandboxes', inventory);
   await page.goto(server.url);
-  await page.getByRole('button', { name: 'New run', exact: true }).click();
-  assert.equal(await page.getByLabel('Run environment', { exact: true }).inputValue(), 'local');
-  await page.getByLabel('Run environment', { exact: true }).selectOption('docker-sandbox');
+  await sidebarAction('New run');
+  assert.equal(await selected('Run environment'), 'Local');
+  await choose('Run environment', 'Docker Sandbox · experimental');
   assert.equal(await page.getByLabel('CPUs', { exact: true }).inputValue(), '4');
   assert.equal(await page.getByLabel('Memory (GiB)', { exact: true }).inputValue(), '8');
   assert.equal(await page.getByLabel('Agents running at once', { exact: true }).inputValue(), '2');
@@ -77,7 +92,7 @@ try {
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await openRun();
   const assertResources = async () => {
-    assert.equal(await page.getByLabel('Run environment', { exact: true }).inputValue(), 'docker-sandbox');
+    assert.equal(await selected('Run environment'), 'Docker Sandbox · experimental');
     assert.equal(await page.getByLabel('CPUs', { exact: true }).inputValue(), '6');
     assert.equal(await page.getByLabel('Memory (GiB)', { exact: true }).inputValue(), '12');
     assert.equal(await page.getByLabel('Agents running at once', { exact: true }).inputValue(), '3');
@@ -107,11 +122,11 @@ try {
   assert.deepEqual(submitted.execution, resources);
   await assertResources();
   await page.unroute('**/api/jobs');
-  await page.getByLabel('Run environment', { exact: true }).selectOption('local');
+  await choose('Run environment', 'Local');
   await until(async () => (await savedEnvironment()).kind === 'local');
   await openRun();
-  assert.equal(await page.getByLabel('Run environment', { exact: true }).inputValue(), 'local');
-  await page.getByLabel('Run environment', { exact: true }).selectOption('docker-sandbox');
+  assert.equal(await selected('Run environment'), 'Local');
+  await choose('Run environment', 'Docker Sandbox · experimental');
   await assertResources();
   await page.screenshot({ path: join(output, 'run-wizard-remembered-sandbox.png') });
   await page.evaluate(() => { Storage.prototype.setItem = () => { throw new Error('Storage full'); }; });
@@ -123,8 +138,8 @@ try {
   for (const raw of ['{broken', 'null', JSON.stringify({ kind: 'unknown', sandbox: resources }), JSON.stringify({ kind: 'docker-sandbox', sandbox: { ...resources, cpus: 99 } })]) {
     await page.evaluate(({ key, raw }) => localStorage.setItem(key, raw), { key: environmentKey, raw });
     await openRun();
-    assert.equal(await page.getByLabel('Run environment', { exact: true }).inputValue(), 'local');
-    await page.getByLabel('Run environment', { exact: true }).selectOption('docker-sandbox');
+    assert.equal(await selected('Run environment'), 'Local');
+    await choose('Run environment', 'Docker Sandbox · experimental');
     assert.equal(await page.getByLabel('CPUs', { exact: true }).inputValue(), '4');
   }
   await page.evaluate(({ key, sandbox }) => localStorage.setItem(key, JSON.stringify({ kind: 'local', sandbox })), { key: environmentKey, sandbox: resources });
@@ -172,9 +187,11 @@ try {
   await page.getByRole('button', { name: 'Use this folder', exact: true }).click();
   assert.equal(await page.getByLabel('Repository path', { exact: true }).inputValue(), target);
   await page.getByLabel('Initialize Git if needed', { exact: true }).uncheck();
-  const runType = page.getByLabel('Run type', { exact: true });
-  assert.deepEqual(await runType.locator('option').allTextContents(), ['Feature or fix', 'New repository', 'Design ceremony', 'Comment cleanup']);
-  await runType.selectOption('repository');
+  const runType = page.getByRole('combobox', { name: 'Run type', exact: true });
+  await runType.click();
+  assert.deepEqual(await page.getByRole('option').allTextContents(), ['Feature or fix', 'New repository', 'Design conversation', 'Comment cleanup']);
+  await page.getByRole('option', { name: 'New repository', exact: true }).click();
+  assert.equal((await runType.textContent()).trim(), 'New repository');
   const init = page.getByRole('checkbox', { name: 'Initialize Git (required for a new repository)', exact: true });
   assert.equal(await init.isChecked(), true); assert.equal(await init.isDisabled(), true);
   await page.getByText('For a UI without an existing scaffold, we suggest our house special:', { exact: false }).waitFor();
@@ -217,14 +234,14 @@ try {
   page = await context.newPage(); observe();
   await page.route('**/api/sandboxes', inventory);
   await page.goto(server.url);
-  await page.getByRole('button', { name: 'New run', exact: true }).click();
-  assert.equal(await page.getByLabel('Run environment', { exact: true }).inputValue(), 'local');
-  await page.getByLabel('Run environment', { exact: true }).selectOption('docker-sandbox');
+  await sidebarAction('New run');
+  assert.equal(await selected('Run environment'), 'Local');
+  await choose('Run environment', 'Docker Sandbox · experimental');
   await assertResources();
   const sandboxDimensions = await page.getByRole('dialog', { name: 'Start a run' }).evaluate(el => ({ width: el.clientWidth, scroll: el.scrollWidth }));
   assert.ok(sandboxDimensions.scroll <= sandboxDimensions.width + 1, JSON.stringify(sandboxDimensions));
   await page.screenshot({ path: join(output, 'run-wizard-sandbox-narrow.png') });
-  await page.getByLabel('Run environment', { exact: true }).selectOption('local');
+  await choose('Run environment', 'Local');
   await open(); await at(projects);
   await page.getByRole('button', { name: 'New folder', exact: true }).click();
   await page.getByLabel('New folder name', { exact: true }).fill('another-project');
@@ -235,15 +252,21 @@ try {
   await page.setViewportSize({ width: 1440, height: 1100 });
   await page.screenshot({ path: join(output, 'run-wizard-folders.png') });
   await go(home); await at(home); await until(async () => await saved() === home);
-  await page.reload(); await page.getByRole('button', { name: 'New run', exact: true }).click(); await page.getByRole('button', { name: 'Browse', exact: true }).click(); await at(home);
+  await page.reload(); await sidebarAction('New run'); await page.getByRole('button', { name: 'Browse', exact: true }).click(); await at(home);
   await page.evaluate(({ key, path }) => localStorage.setItem(key, path), { key: storageKey, path: join(root, 'deleted') });
-  await page.reload(); await page.getByRole('button', { name: 'New run', exact: true }).click(); await page.getByRole('button', { name: 'Browse', exact: true }).click(); await at(home);
+  await page.reload(); await sidebarAction('New run'); await page.getByRole('button', { name: 'Browse', exact: true }).click(); await at(home);
   assert.equal(await saved(), join(root, 'deleted'));
   await page.getByRole('button', { name: 'Cancel browsing', exact: true }).click();
   await until(() => page.getByRole('button', { name: 'Browse', exact: true }).evaluate(el => el === document.activeElement));
   await page.getByRole('button', { name: 'Close new run', exact: true }).click();
-  await page.getByRole('button', { name: 'Agent library', exact: true }).click();
-  await page.getByRole('heading', { name: 'Agent library', exact: true }).waitFor();
+  await sidebarAction('Agents');
+  await page.getByRole('heading', { name: 'Agent library', exact: true }).waitFor().catch(async error => {
+    await page.screenshot({ path: join(output, 'agent-library-failure.png'), fullPage: true });
+    writeFileSync(join(output, 'agent-library-failure.html'), await page.content());
+    writeFileSync(join(output, 'agent-library-failure.txt'), `URL: ${page.url()}\n${await page.locator('body').innerText()}`);
+    writeFileSync(join(output, 'agent-library-failure-errors.json'), JSON.stringify({ pageErrors: errors, consoleErrors }, null, 2));
+    throw error;
+  });
   await page.addInitScript(() => {
     Storage.prototype.getItem = () => { throw new Error('Storage disabled'); };
     Storage.prototype.setItem = () => { throw new Error('Storage disabled'); };
@@ -254,11 +277,11 @@ try {
   await page.getByRole('status').filter({ hasText: 'This starting folder will not be remembered' }).waitFor();
   await page.getByRole('status').filter({ hasText: 'Your run environment settings will not be remembered' }).waitFor();
   await page.getByRole('button', { name: 'Cancel browsing', exact: true }).click();
-  await page.getByLabel('Run environment', { exact: true }).selectOption('docker-sandbox');
+  await choose('Run environment', 'Docker Sandbox · experimental');
   await page.getByLabel('CPUs', { exact: true }).fill('5');
   assert.equal(await page.getByLabel('CPUs', { exact: true }).inputValue(), '5');
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
-  await page.getByRole('button', { name: 'New run', exact: true }).click();
+  await sidebarAction('New run');
   assert.equal(await page.getByLabel('CPUs', { exact: true }).inputValue(), '5');
   assert.deepEqual(errors, []);
   console.log(JSON.stringify({ ok: true, output, verified: ['remembered sandbox resources and execution payload', 'canceled environment edits, reload and browser session persistence', 'local switching preserves sandbox resources', 'invalid resource drafts and corrupt preferences', 'default and saved start points', 'browser session persistence and modification', 'invalid path fallback and recovery', 'storage failure recovery', 'directory navigation without preference changes', 'creation validation, offline retry and duplicate prevention', 'Git tracking and initial commit', 'private GitHub setup and base publication', 'GitHub validation and failed-push retry', 'feature plan hold', 'run type options and selection', 'keyboard focus and Escape', 'narrow folder and repository layouts', 'sibling agent library'] }));

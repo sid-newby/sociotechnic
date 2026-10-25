@@ -489,12 +489,14 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
     {
       method: "POST",
       pattern: /^\/api\/jobs\/([^/]+)\/stop$/,
-      handler: async ({ params }) => {
+      handler: async ({ params, body }) => {
         const id = jobIdParam(params[0]);
+        const note = body.note === undefined ? "" : body.note;
+        if (typeof note !== "string") throw new HttpError(400, "bad-input", "note must be a string");
         drivers.stop(id);
         if (await readJob(id, (job) => !!job.designSession)) await drivers.settled(id);
         if (await readJob(id, (job) => job.execution?.kind === "docker-sandbox")) await drivers.settled(id);
-        return mutateJob(id, (job) => engine.stopJob(job));
+        return mutateJob(id, (job) => engine.stopJob(job, undefined, note));
       },
     },
     {

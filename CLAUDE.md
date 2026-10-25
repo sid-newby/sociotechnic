@@ -23,7 +23,7 @@ task rather than the whole repository.
 | Behavior changes | [Behavioral contracts](sociotechnic/CONTRACTS.md) |
 | Comment-cleanup workers | [Cleanup workflow](sociotechnic/docs/comment-cleanup.md) |
 | Setup, checks, dependencies or source ownership | [Development guide](sociotechnic/docs/development.md) |
-| Contributions, licenses or releases | [Contributor guide](CONTRIBUTING.md), [release guide](sociotechnic/docs/releasing.md), [third-party notices](THIRD_PARTY_NOTICES.md) |
+| Contributions, licenses or releases | [Contributor guide](dox/CONTRIBUTING.md), [release guide](sociotechnic/docs/releasing.md), [third-party notices](dox/THIRD_PARTY_NOTICES.md) |
 | Fable interviews, previews and design approval | [Design ceremony](sociotechnic/docs/design-ceremony.md) |
 | Bundled project starters and validation before use | [Scaffold maintenance](sociotechnic/docs/scaffolds.md) |
 | Product scope, UI behavior or visual design | [PRODUCT.md](PRODUCT.md) and [DESIGN.md](DESIGN.md) |

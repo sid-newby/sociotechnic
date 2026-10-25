@@ -1,23 +1,40 @@
+import { useId } from "react";
 import { agentTools } from "../model";
 import { effortChoices, effortForModel, isCodexModel } from "../../../../src/agent-models.ts";
+import { Field, Muted } from "./field";
+import { FormSelect } from "./form-select";
+import { Input } from "./ui/input";
+import { Checkbox } from "./ui/checkbox";
+import { Label } from "./ui/label";
 
 export type AgentSettingsValue = { model: string; effort: string; maxTurns: number; timeoutMinutes: number; tools: string[] };
 export function AgentSettings({ value, onChange, models, allowance, disabled }: { value: AgentSettingsValue; onChange: (v: AgentSettingsValue) => void; models: string[]; allowance: string[]; disabled: boolean }) {
+  const id = useId();
   const provider = isCodexModel(value.model) ? "codex" : "claude";
   const efforts = effortChoices(value.model);
-  const builder = allowance.includes("Bash");
-  const codexModels = models.filter(isCodexModel);
+  const hasCodex = models.some(isCodexModel);
   return <>
-    <div className="version-fields">
-      <label>Model<select value={value.model} disabled={disabled} onChange={(e) => { const model = e.target.value; onChange({ ...value, model, effort: effortForModel(model, value.effort), ...(isCodexModel(model) ? { tools: [...allowance] } : {}) }); }}><optgroup label="Anthropic / Claude">{models.filter((model) => !isCodexModel(model)).map((model) => <option key={model}>{model}</option>)}</optgroup>{codexModels.length ? <optgroup label="OpenAI / Codex">{codexModels.map((model) => <option key={model}>{model}</option>)}</optgroup> : null}</select></label>
-      <label>Effort<select value={value.effort} disabled={disabled} onChange={(e) => onChange({ ...value, effort: e.target.value })}>{efforts.map((effort) => <option key={effort} value={effort}>{effort}</option>)}</select></label>
-      <label>{provider === "codex" ? "Tool-call limit" : "Turn limit"}<input type="number" min={1} max={250} value={value.maxTurns} disabled={disabled} onChange={(e) => onChange({ ...value, maxTurns: Number(e.target.value) })} /></label>
-      <label>Deadline (minutes)<input type="number" min={1} max={120} value={value.timeoutMinutes} disabled={disabled} onChange={(e) => onChange({ ...value, timeoutMinutes: Number(e.target.value) })} /></label>
+    <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+      <Field label="Model" htmlFor={`${id}-model`}>
+        <FormSelect id={`${id}-model`} value={value.model} disabled={disabled} options={models.map((model) => ({ value: model, label: `${isCodexModel(model) ? "Codex" : "Claude"} · ${model}` }))} onValueChange={(model) => onChange({ ...value, model, effort: effortForModel(model, value.effort), ...(isCodexModel(model) ? { tools: [...allowance] } : {}) })} />
+      </Field>
+      <Field label="Effort" htmlFor={`${id}-effort`}>
+        <FormSelect id={`${id}-effort`} value={value.effort} disabled={disabled} options={efforts.map((effort) => ({ value: effort, label: effort }))} onValueChange={(effort) => onChange({ ...value, effort })} />
+      </Field>
+      <Field label={provider === "codex" ? "Tool-call limit" : "Turn limit"} htmlFor={`${id}-turns`}>
+        <Input id={`${id}-turns`} type="number" min={1} max={250} value={value.maxTurns} disabled={disabled} onChange={(event) => onChange({ ...value, maxTurns: Number(event.target.value) })} />
+      </Field>
+      <Field label="Deadline (minutes)" htmlFor={`${id}-deadline`}>
+        <Input id={`${id}-deadline`} type="number" min={1} max={120} value={value.timeoutMinutes} disabled={disabled} onChange={(event) => onChange({ ...value, timeoutMinutes: Number(event.target.value) })} />
+      </Field>
     </div>
-    <p className="technical-description">{codexModels.length === 0 ? "OpenAI / Codex is unavailable for this template. Its design or worker tools require Claude." : provider === "codex" ? "Uses Codex with saved ChatGPT login. Your account must have access to the selected model. Codex uses the selected effort and the tools listed below." : "Choose an OpenAI / Codex model to run this agent with your saved ChatGPT login."}</p>
-    <fieldset className="version-tools"><legend>Allowed tools</legend>{provider === "codex" ? <><ul className="tool-list">{agentTools(provider, allowance).map((tool) => <li key={tool}><code>{tool}</code></li>)}</ul><p className="technical-description">{builder ? "Can edit files and run commands in the assigned worktree. Existing checks and approvals still apply." : "Fixed read-only adapter tools. The runner publishes the record."}</p></> : allowance.map((tool) => {
-      const required = ["Read", "Grep", "Glob", "Write", "mcp__design__impeccable"].includes(tool);
-      return <label key={tool}><input type="checkbox" checked={value.tools.includes(tool)} disabled={disabled || required} onChange={(e) => onChange({ ...value, tools: e.target.checked ? [...value.tools, tool] : value.tools.filter((v) => v !== tool) })} /><code>{tool}</code>{required ? <small>Required</small> : null}</label>;
-    })}</fieldset>
+    {!hasCodex ? <Muted>This template requires Claude for its design or worker tools.</Muted> : provider === "codex" ? <Muted>Uses your saved ChatGPT login and the selected model’s access.</Muted> : null}
+    <fieldset className="grid gap-3 rounded-xl border p-4">
+      <legend className="px-1 text-sm font-medium">Allowed tools</legend>
+      {provider === "codex" ? <><ul className="flex flex-wrap gap-2 text-sm">{agentTools(provider, allowance).map((tool) => <li className="rounded-md bg-muted px-2 py-1" key={tool}><code>{tool}</code></li>)}</ul><Muted>{allowance.includes("Bash") ? "Can edit files and run commands in the assigned worktree." : "Read-only adapter tools; the runner publishes the record."}</Muted></> : <div className="flex flex-wrap gap-4">{allowance.map((tool) => {
+        const required = ["Read", "Grep", "Glob", "Write", "mcp__design__impeccable"].includes(tool);
+        return <Label className="flex items-center gap-2 text-sm" key={tool}><Checkbox checked={value.tools.includes(tool)} disabled={disabled || required} onCheckedChange={(checked) => onChange({ ...value, tools: checked === true ? [...value.tools, tool] : value.tools.filter((item) => item !== tool) })} /><code>{tool}</code>{required ? <span className="text-muted-foreground">Required</span> : null}</Label>;
+      })}</div>}
+    </fieldset>
   </>;
 }

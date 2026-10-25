@@ -5,6 +5,11 @@ Dates on backfilled entries use America/Chicago. See the [release guide](sociote
 
 ## Unreleased
 
+- Rebuild the run console around an inbox sidebar, decision bar, evidence sheets, four live summary cards, recorded token chart and Dispatches/Records/Log/Decisions table. Add working column customization and CSV export, metric and dispatch drill-down, buffered live logs and record downloads.
+- Expose single-step execution, hold-after-transition, early bound overrides, dispatch interruption, local concurrency settings, Stop notes, explicit reopen discard and PR text without publishing. Preserve ownership gates and local-testing/merge confirmations, and move detailed explanations into sheets.
+
+- Preserve optional Stop notes from the CLI and HTTP API in the run's human decision history, and reject invalid notes before stopping a driver.
+
 - Move the web console onto the shadcn token contract with neutral colors, chart and sidebar tokens and the shared radius scale, and add the shadcn component set, Recharts and TanStack Table for the upcoming console layout. Existing views keep their layout. The Agent library history and dispatch filter now accept interrupted dispatches.
 - Add a theme switcher to the console header with the shadcn neutral theme and 42 TweakCN presets in light and dark. The console starts in neutral dark and remembers your choice in this browser.
 

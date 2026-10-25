@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { request } from "../api";
 import { object, text } from "../model";
+import { roleColor } from "../role-colors";
 import { BadgeCheck, Bot, Braces, BrushCleaning, Compass, DraftingCompass, Feather, Fingerprint, Hammer, ListChecks, Microscope, Paintbrush, ShieldCheck, Sparkles, Waypoints } from "lucide-react";
 
 const identities = {
@@ -34,12 +35,14 @@ export function AgentIdentityProvider({ children }: { children: ReactNode }) {
   }, [revision]);
   return <AgentTemplates.Provider value={templates}>{children}</AgentTemplates.Provider>;
 }
-export function AgentIcon({ name, size = 20 }: { name: string; size?: number }) {
-  const templates = useContext(AgentTemplates), template = templates[name] ?? name;
+export function useAgentTemplate(name: string): string {
+  return useContext(AgentTemplates)[name] ?? name;
+}
+export function AgentIcon({ name, size = 20, step }: { name: string; size?: number; step?: string | null }) {
+  const template = useAgentTemplate(name);
   const Icon = identity(template)?.icon ?? Bot;
-  return <Icon className={`agent-icon agent-color-${template.replace(/^sociotechnic-/, "")}`} size={size} aria-hidden="true" />;
+  return <Icon className="shrink-0" style={{ color: roleColor(template, step) }} size={size} aria-hidden="true" />;
 }
 export function AgentName({ name, version = "1.0.0" }: { name: string; version?: string | null }) {
-  const templates = useContext(AgentTemplates), template = templates[name] ?? name;
-  return <span className={`agent-name agent-color-${template.replace(/^sociotechnic-/, "")}`}>{agentLabel(name)} <span className="agent-version">{version ? `v${version}` : "version unrecorded"}</span></span>;
+  return <span className="font-medium">{agentLabel(name)} <span className="text-[13px] font-normal whitespace-nowrap text-muted-foreground">{version ? `v${version}` : "version unrecorded"}</span></span>;
 }
