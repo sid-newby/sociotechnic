@@ -3,6 +3,11 @@
 Release notes are committed before publication. [GitHub Releases](https://github.com/sid-newby/sociotechnic/releases) confirms which versions shipped.
 Dates on backfilled entries use America/Chicago. See the [release guide](sociotechnic/docs/releasing.md).
 
+## v0.3.3
+
+- Publish the starter base branch to a private GitHub repository before planning a New repository run, with setup errors and retry guidance.
+- Keep the record viewer usable when formatting fails, show the original source, and prevent rendering tests from sharing the development server's Vite cache.
+
 ## v0.3.2
 
 - Remember the selected new-run environment and valid sandbox CPU, memory and concurrency settings across browser sessions, including canceled dialogs.
