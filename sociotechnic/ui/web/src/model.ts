@@ -39,8 +39,8 @@ export type Detail = {
   job: Pick<Job, "id" | "feature" | "repo" | "worktree" | "branch" | "status" | "statusReason" | "round" | "base" | "updatedAt" | "caps" | "execution">;
   rounds: Round[];
   records: { path: string; bytes: number; mtime: string }[];
-  plan: { title: string; summary: string; acceptance: string[]; stages?: Stage[] } | null;
-  driver: { ownership: DriverOwnership; running: boolean; mode: string | null; startedAt: string | null; lastStep: string | null; active: { id: string; agent: string; startedAt: string; deadlineAt: string; lastActivity: string | null }[]; log: { at: string; level: string; text: string }[]; error: string | null };
+  plan: { title: string; summary: string; tier: string | null; tierReason: string; acceptance: string[]; stages?: Stage[] } | null;
+  driver: { ownership: DriverOwnership; running: boolean; mode: string | null; hold: string[]; startedAt: string | null; lastStep: string | null; active: { id: string; agent: string; startedAt: string; deadlineAt: string; lastActivity: string | null }[]; queued: string[]; log: LogLine[]; error: string | null };
   dispatches: Dispatch[];
   human: { at: string; action: string; note: string }[];
   overrides: { at: string; bound: string; note: string }[];
@@ -51,6 +51,7 @@ export type Detail = {
   verification: BuildVerification | null;
   verificationError: string | null;
 };
+export type LogLine = { seq: number | null; at: string; level: string; text: string; dispatchId: string | null };
 export type Checks = { commit: string; configured: boolean; pass: boolean; results: { name: string; pass: boolean }[] };
 export type BuildVerification = { commit: string; completed: number; outstanding: number };
 
@@ -123,10 +124,10 @@ export function parseDetail(value: unknown): Detail {
     job: { id: text(j.id), feature: text(j.feature), repo: text(j.repo), worktree: text(j.worktree), branch: text(j.branch), status: status(j.status), statusReason: text(j.statusReason), round: count(j.round), updatedAt: text(j.updatedAt), base: { branch: text(base.branch), commit: text(base.commit) }, caps: { rounds: count(caps.rounds), dispatchesPerRound: count(caps.dispatchesPerRound), retriesPerStep: count(caps.retriesPerStep) }, execution: parseExecution(j.execution) },
     rounds: list(j.rounds).map(parseRound),
     records: list(d.records).map((value) => { const r = object(value); return { path: text(r.path), bytes: count(r.bytes), mtime: text(r.mtime) }; }),
-    plan: plan && typeof plan.title === "string" ? { title: plan.title, summary: text(plan.summary), acceptance: strings(plan.acceptance), stages: list(plan.stages ?? []).map((value) => { const stage = object(value); return { id: text(stage.id), title: text(stage.title), description: text(stage.description), files: strings(stage.files), acceptance: strings(stage.acceptance), risks: strings(stage.risks) }; }) } : null,
-    driver: { ownership: parseOwnership(driver?.ownership, text(j.id)), running: driver?.running === true || object(driver?.ownership ?? {}).kind === "external", mode: optionalText(driver?.mode), startedAt: optionalText(driver?.startedAt), lastStep: driver?.lastStep ? optionalText(object(driver.lastStep).action) : null,
+    plan: plan && typeof plan.title === "string" ? { title: plan.title, summary: text(plan.summary), tier: optionalText(plan.tier), tierReason: text(plan.tierReason), acceptance: strings(plan.acceptance), stages: list(plan.stages ?? []).map((value) => { const stage = object(value); return { id: text(stage.id), title: text(stage.title), description: text(stage.description), files: strings(stage.files), acceptance: strings(stage.acceptance), risks: strings(stage.risks) }; }) } : null,
+    driver: { ownership: parseOwnership(driver?.ownership, text(j.id)), running: driver?.running === true || object(driver?.ownership ?? {}).kind === "external", mode: optionalText(driver?.mode), hold: strings(driver?.hold), startedAt: optionalText(driver?.startedAt), lastStep: driver?.lastStep ? optionalText(object(driver.lastStep).action) : null,
       active: list(driver?.active ?? []).map((v) => { const a = object(v); return { id: text(a.dispatchId), agent: text(a.agent), startedAt: text(a.startedAt), deadlineAt: text(a.deadlineAt), lastActivity: optionalText(a.lastActivity) }; }),
-      log: list(driver?.log ?? []).map((v) => { const l = object(v); return { at: text(l.at), level: text(l.level), text: text(l.text) }; }), error: optionalText(driver?.error) },
+      queued: strings(driver?.queued), log: list(driver?.log ?? []).map((v) => { const l = object(v); return { seq: typeof l.seq === "number" ? l.seq : null, at: text(l.at), level: text(l.level), text: text(l.text), dispatchId: optionalText(l.dispatchId) }; }), error: optionalText(driver?.error) },
     dispatches: list(j.dispatches ?? []).map(parseDispatch),
     human: list(j.human ?? []).map((v) => { const h = object(v); return { at: text(h.at), action: text(h.action), note: text(h.note) }; }),
     overrides: list(j.overrides ?? []).map((v) => { const o = object(v); return { at: text(o.at), bound: text(o.bound), note: text(o.note) }; }),
