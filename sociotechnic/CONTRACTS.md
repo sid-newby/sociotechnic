@@ -407,6 +407,29 @@ belong in `docsImpact.files`, plan stages and `touches`; a no-impact assessment 
 explained in `docsImpact.note`. This is planner guidance, not automatic detection
 of documentation drift by the engine.
 
+The planner may write `{"status":"needs-input","questions":["..."]}` when a
+human decision is needed for an actionable plan. It asks 1..6 nonempty questions
+of at most 4000 characters each, before or after research. Preserve requested
+review/report deliverables; an empty repository alone does not imply integration
+or scaffolding. Never encode unanswered human decisions as builder stages.
+
+The engine saves the questions and originating dispatch in `job.planningInput`,
+enters `planning-input` at round zero, and returns a human gate without pinning a
+plan or dispatching a builder. `answer <job> <dispatch> <answer...>` and
+`POST /api/jobs/:id/answer` with `{dispatch, answer}` accept a nonblank answer of
+at most 16000 characters for that exact pending dispatch. Stale/duplicate replies
+and answers outside this gate fail without changes. Questions and answers remain
+in human history (`plan-answer`) and enter the next planner's brief. The console
+resumes planning with a `planned` hold; CLI users explicitly run with
+`--hold planned`. Answering never lifts a bound, changes role pins, unpins a plan,
+or consumes the research escape. Further questions use the existing round-zero
+dispatch cap; retry and deadline limits remain. Stop/reopen retains questions.
+Driver ownership guards apply to answers as to other mutations.
+
+The console shows questions in the decision bar and Answer planner dialog,
+preserves drafts on failure, and exposes validation, pending feedback and Stop.
+Continue, accept, merge and rework cannot advance `planning-input`.
+
 The planner may instead write `{"status": "needs-research", "questions": ["..."]}`
 (1..6 questions). The engine then dispatches one researcher per question in
 parallel and re-dispatches the planner with the research files. This happens at
@@ -549,7 +572,7 @@ Overrides accumulate and never reset.
 Red deterministic checks take `checked` -> `reviewed` directly with a failed
 gate and no review dispatches; the next round still starts through `reviewed`.
 | `needs-human` -> `merged-local` -> `accepted` -> `merged`; `stopped` from any
-non-terminal status. The human gates are `ready`, `needs-human` and
+non-terminal status. The human gates include `planning-input`, `design-input`, `ready`, `needs-human` and
 `merged-local`: `step` returns `human` there and a driver never advances them.
 The standard order is merge locally, test in the main checkout, accept, then
 publish or merge on GitHub. `accept` straight from `ready` or `needs-human`
@@ -560,7 +583,8 @@ remains legal for a human who tested in the worktree instead.
 | new | database job, branch and worktree exist | `step` dispatches the planner |
 | designing | Claude working in the interactive Local design session | native SDK response or question -> design-input; failure is visible without automatic retry |
 | design-input | interactive design awaits the human | message/answer resumes the same session; explicit artifact approval enables final planning |
-| planning | planner dispatched | `finish` + `step`: valid plan -> planned; needs-design -> designing; needs-research -> researching; malformed -> retry once, then needs-human |
+| planning | planner dispatched | `finish` + `step`: valid plan -> planned; needs-input -> planning-input; needs-design -> designing; needs-research -> researching; malformed -> retry once, then needs-human |
+| planning-input | planner questions await the human; no pinned plan or build round | `answer` records the reply -> planning; stop |
 | researching | researchers dispatched | all finished -> `step` re-dispatches planner -> planning |
 | planned | plan pinned, tier known | `step` opens round 1 and dispatches the tier's builder -> building |
 | building | builder dispatched | READY with COMMIT == HEAD -> built; BLOCKED -> needs-human; malformed/stale -> retry once, then needs-human |

@@ -91,6 +91,8 @@ Use **Dispatches**, **Records**, **Log** and **Decisions** below the chart. Cust
 
 Checks and reviews retain their commit binding. Stale evidence never becomes a passing headline, skipped lenses remain **SKIPPED**, and missing measurements are never a reported zero.
 
+If the planner needs a decision from you, its questions appear at the top of the run. Choose **Answer planner** and send your reply. Planning resumes and stops for your plan review before building.
+
 For an externally owned run, **Open owning console** takes you to its controls. Records stay readable here; **Refresh status** checks ownership again. Continue uses the normal recovery checks when a previous driver stopped or a runnable run lost its worktree. For an eligible missing worktree, **Controls → Restore worktree** recovers it and keeps the current run status without starting agents. **Recover worktree and continue** recovers it and starts the driver.
 
 In **Settings → New run defaults in this browser**, choose where future runs

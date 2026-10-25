@@ -84,6 +84,7 @@ shows every project and job on the machine and the live state of each run.
 | `/sociotechnic stop <job>` | `stop <job>` | Report the status. |
 | `/sociotechnic reopen <job> [--discard]` | `reopen <job>` (add `--discard` only when the user typed it) then `run <job>` | Report `status`, `changes` and `files`, and that the console is driving it. |
 | `/sociotechnic accept <job> [note]` | `accept <job> [note]` | Report the status; suggest `pr --push`, then `merge --remote --confirm`. Accept is the human's signature that they tested the change, in their checkout after `merge` or in the worktree. |
+| `/sociotechnic answer <job> <dispatch> <answer>` | `answer <job> <dispatch> <answer>` then `run <job> --hold planned` | Relay only the human's answer to the exact pending planner dispatch; hold for plan review. Never answer on their behalf. |
 | `/sociotechnic rework <job> <note>` | `rework <job> <note>` then `run <job>` | Report the new round and that the console is driving it. |
 | `/sociotechnic override <job> <bound> <note>` | `override ...` then `run <job>` | Report the effective cap and that the run resumed. |
 | `/sociotechnic pr <job>` | `pr <job>` | Committed text only: report `title` and the `pr.md` record in the console. |

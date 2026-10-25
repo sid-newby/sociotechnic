@@ -66,6 +66,9 @@ stateDiagram-v2
   designing --> design_input: Claude awaits human input
   design_input --> designing: reply or resume session
   design_input --> planning: approve design artifacts
+  state "planning-input" as planning_input
+  planning --> planning_input: needs-input
+  planning_input --> planning: human answer
   planning --> researching: needs-research (once)
   researching --> planning
   planning --> planned: valid plan pinned
@@ -519,6 +522,22 @@ Archive state is part of the PostgreSQL job document. Archive and unarchive
 change visibility only: records, workflow status and active execution are kept.
 The HTTP listing includes archived runs, and Show archived controls rail
 visibility. Archive state survives staging loss and database backup/restore.
+
+## Planning questions
+
+When a human decision prevents an actionable plan, the planner can return
+`{"status":"needs-input","questions":["..."]}` before or after research. The
+engine enters `planning-input` with no pinned plan and no build round. The
+console shows the questions and an Answer planner action. Your reply is saved
+with its questions and dispatch ID in PostgreSQL, then a fresh planner runs to
+the plan-review hold. Stale replies fail, and failed sends keep the draft.
+
+The CLI exposes the pending questions and dispatch in `status <job>`. Reply with
+`answer <job> <dispatch> <answer...>`, then `run <job> --hold planned`. Answers
+do not lift bounds or change frozen agent releases. Follow-up questions count
+toward the existing dispatch cap. Stop/reopen preserves pending questions.
+Previously pinned plans are unaffected. Requested reviews may plan a written
+report; an empty repository is not itself a reason to invent an integration.
 
 ## State store
 

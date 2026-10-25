@@ -5,7 +5,7 @@ export type InboxGroup = "needs" | "working" | "done";
 export const INBOX_GROUPS: readonly InboxGroup[] = ["needs", "working", "done"];
 export const inboxLabels: Record<InboxGroup, string> = { needs: "Needs you", working: "Working", done: "Done" };
 
-const NEEDS: readonly Status[] = ["needs-human", "planned", "ready", "merged-local", "accepted", "design-input"];
+const NEEDS: readonly Status[] = ["planning-input", "needs-human", "planned", "ready", "merged-local", "accepted", "design-input"];
 const DONE: readonly Status[] = ["merged", "stopped"];
 
 export function inboxGroup(job: Pick<JobItem, "status" | "running" | "archived">): InboxGroup {

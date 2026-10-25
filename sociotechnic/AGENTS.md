@@ -135,6 +135,7 @@ concurrency slot; that wait counts against their deadlines.
 | --- | --- | --- |
 | `design-input` | the interactive design conversation awaits human input | reply, answer native question, open previews, approve artifacts, stop |
 | `planned` (held) | the plan is pinned and nothing has been built | continue, stop |
+| `planning-input` | the planner needs a human decision; no plan is pinned | answer the exact pending dispatch, then run held at planned; stop |
 | `ready` | approver APPROVED at the gate head; merge locally to test the change in the main checkout | merge (local, worktree kept), accept, rework, pr (local text), stop |
 | `needs-human` | parked: a bound, a BLOCKED build, a policy flag, an escalation, or a malformed record past its retries | merge (local), accept, rework, override then run, stop |
 | `merged-local` | the job branch is merged into the base branch of the main checkout; the human tests it there | accept, rework, pr (local text), stop |

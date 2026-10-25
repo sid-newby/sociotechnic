@@ -18,6 +18,7 @@ import type { Parsed } from "./verdict.ts";
 export const STATUSES = [
   "new",
   "planning",
+  "planning-input",
   "researching",
   "designing",
   "design-input",
@@ -39,7 +40,7 @@ export type Status = (typeof STATUSES)[number];
 export type Step = "plan" | "research" | "design" | "build" | "review" | "approve";
 export type Bound = keyof Caps;
 export type Outcome = "ok" | "failed" | "timeout" | "interrupted";
-export type HumanAction = "accept" | "rework" | "stop" | "override" | "merge" | "merge-remote" | "reopen" | "pr-push" | "interrupt" | "design-answer" | "design-select" | "design-revise" | "design-approve" | "design-migrate" | "design-handoff";
+export type HumanAction = "accept" | "rework" | "stop" | "override" | "merge" | "merge-remote" | "reopen" | "pr-push" | "interrupt" | "design-answer" | "design-select" | "design-revise" | "design-approve" | "design-migrate" | "design-handoff" | "plan-answer";
 
 export const BOUNDS: readonly Bound[] = ["rounds", "dispatchesPerRound", "retriesPerStep"];
 export const HUMAN_REVIEW_KEY = "review-human";
@@ -47,6 +48,8 @@ export const STOPPED_NOTE = "stopped by human";
 
 export type Override = { at: string; bound: Bound; note: string };
 export type HumanEntry = { at: string; action: HumanAction; note: string };
+export type PlanningInput = { dispatch: string; questions: string[] } &
+  ({ state: "pending" } | { state: "answered"; answer: string });
 export type MergeMethod = "merge" | "squash" | "rebase";
 export type RemoteMerge = { commit: string; mergedAt: string; method: MergeMethod | "external" };
 export type LocalMerge = { commit: string; head: string; mergedAt: string };
@@ -94,6 +97,7 @@ export type Dispatch = {
 };
 
 export type Job = {
+  planningInput?: PlanningInput;
   consoleHolds?: ConsoleHold[];
   designReleaseMigration?: { session: string; from: string; to: string; at: string };
   execution?: Execution;
@@ -142,7 +146,8 @@ export const TRANSITIONS: Readonly<Record<Status, readonly Status[]>> = {
   new: ["planning", "designing", "stopped"],
   designing: ["design-input", "needs-human", "stopped"],
   "design-input": ["designing", "planning", "stopped"],
-  planning: ["designing", "researching", "planned", "needs-human", "stopped"],
+  planning: ["planning-input", "designing", "researching", "planned", "needs-human", "stopped"],
+  "planning-input": ["planning", "stopped"],
   researching: ["planning", "needs-human", "stopped"],
   planned: ["building", "needs-human", "stopped"],
   building: ["built", "needs-human", "stopped"],
@@ -167,7 +172,7 @@ export function isTerminal(status: Status): boolean {
 }
 
 export function isHumanGate(status: Status): boolean {
-  return status === "design-input" || HUMAN_GATES.includes(status);
+  return status === "planning-input" || status === "design-input" || HUMAN_GATES.includes(status);
 }
 
 export function assertStatus(job: Job, allowed: readonly Status[], action: string): void {

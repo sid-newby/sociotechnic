@@ -6,14 +6,14 @@ import { tokenBreakdown, tokenReportScope } from "./token-usage.ts";
 import type { TokenBreakdown } from "./token-usage.ts";
 import type { SandboxInventory } from "../../../src/sandbox.ts";
 import type { Stage } from "../../../src/plan.ts";
-import type { Job, Status } from "../../../src/job.ts";
+import type { Job, PlanningInput, Status } from "../../../src/job.ts";
 import { sectionLines } from "../../../src/verdict.ts";
 import { parseExecution } from "../../../src/execution.ts";
 import { owningConsoleUrl } from "../../../src/driver-location.ts";
 import type { DriverOwnership } from "../../../src/driver-location.ts";
 
 export const statusLabels: Record<Status, string> = {
-  designing: "Designing", "design-input": "Your design decision", new: "New", planning: "Planning", researching: "Researching", planned: "Plan ready",
+  designing: "Designing", "design-input": "Your design decision", "planning-input": "Planner questions", new: "New", planning: "Planning", researching: "Researching", planned: "Plan ready",
   building: "Building", built: "Built", checked: "Checked", reviewing: "Reviewing",
   reviewed: "Reviewed", approving: "Approving", ready: "Ready for you",
   "needs-human": "Needs your attention", "merged-local": "Merged locally", accepted: "Accepted", merged: "Merged", stopped: "Stopped",
@@ -37,7 +37,7 @@ export type Detail = {
   interactive: InteractiveDesignView | null;
   design: DesignView | null;
   worktreePresent: boolean;
-  job: Pick<Job, "id" | "feature" | "repo" | "worktree" | "branch" | "status" | "statusReason" | "round" | "base" | "updatedAt" | "caps" | "execution" | "consoleHolds">;
+  job: Pick<Job, "id" | "feature" | "repo" | "worktree" | "branch" | "status" | "statusReason" | "round" | "base" | "updatedAt" | "caps" | "execution" | "consoleHolds" | "planningInput">;
   rounds: Round[];
   records: { path: string; bytes: number; mtime: string }[];
   plan: { title: string; summary: string; tier: string | null; tierReason: string; acceptance: string[]; stages?: Stage[] } | null;
@@ -114,6 +114,22 @@ function parseOwnership(value: unknown, id: string): DriverOwnership {
   throw new Error("Unknown driver ownership. Refresh after updating the console.");
 }
 
+function parsePlanningInput(value: unknown): PlanningInput | undefined {
+  if (value === undefined) return undefined;
+  const input = object(value);
+  const questions = list(input.questions);
+  const parsed: string[] = [];
+  for (const question of questions) {
+    if (typeof question !== "string" || !question.trim() || question.length > 4000) throw new Error("Invalid planner question. Refresh after updating the console.");
+    parsed.push(question);
+  }
+  if (typeof input.dispatch !== "string" || !input.dispatch || parsed.length < 1 || parsed.length > 6) throw new Error("Invalid planner questions. Refresh after updating the console.");
+  const base = { dispatch: input.dispatch, questions: parsed };
+  if (input.state === "pending") return { ...base, state: "pending" };
+  if (input.state === "answered" && typeof input.answer === "string") return { ...base, state: "answered", answer: input.answer };
+  throw new Error("Invalid planning answer. Refresh after updating the console.");
+}
+
 export function parseDetail(value: unknown): Detail {
   const d = object(value), j = object(d.job), base = object(j.base), caps = object(j.caps);
   const driver = d.driver == null ? null : object(d.driver);
@@ -122,7 +138,7 @@ export function parseDetail(value: unknown): Detail {
   const merge = pr?.merge == null ? null : object(pr.merge);
   const local = j.localMerge == null ? null : object(j.localMerge);
   return {
-    job: { id: text(j.id), feature: text(j.feature), repo: text(j.repo), worktree: text(j.worktree), branch: text(j.branch), status: status(j.status), statusReason: text(j.statusReason), round: count(j.round), updatedAt: text(j.updatedAt), base: { branch: text(base.branch), commit: text(base.commit) }, caps: { rounds: count(caps.rounds), dispatchesPerRound: count(caps.dispatchesPerRound), retriesPerStep: count(caps.retriesPerStep) }, execution: parseExecution(j.execution), ...(j.consoleHolds === undefined ? {} : { consoleHolds: parseConsoleHolds(j.consoleHolds) }) },
+    job: { planningInput: parsePlanningInput(j.planningInput), id: text(j.id), feature: text(j.feature), repo: text(j.repo), worktree: text(j.worktree), branch: text(j.branch), status: status(j.status), statusReason: text(j.statusReason), round: count(j.round), updatedAt: text(j.updatedAt), base: { branch: text(base.branch), commit: text(base.commit) }, caps: { rounds: count(caps.rounds), dispatchesPerRound: count(caps.dispatchesPerRound), retriesPerStep: count(caps.retriesPerStep) }, execution: parseExecution(j.execution), ...(j.consoleHolds === undefined ? {} : { consoleHolds: parseConsoleHolds(j.consoleHolds) }) },
     rounds: list(j.rounds).map(parseRound),
     records: list(d.records).map((value) => { const r = object(value); return { path: text(r.path), bytes: count(r.bytes), mtime: text(r.mtime) }; }),
     plan: plan && typeof plan.title === "string" ? { title: plan.title, summary: text(plan.summary), tier: optionalText(plan.tier), tierReason: text(plan.tierReason), acceptance: strings(plan.acceptance), stages: list(plan.stages ?? []).map((value) => { const stage = object(value); return { id: text(stage.id), title: text(stage.title), description: text(stage.description), files: strings(stage.files), acceptance: strings(stage.acceptance), risks: strings(stage.risks) }; }) } : null,
