@@ -219,7 +219,7 @@ actual agent identity, role template, model/effort, tools, limits and definition
 published release in its place. Old jobs without a version map keep baseline roles.
 SDK definitions execute with the same write/design guard scripts. Codex reader
 versions, including compatible planner, review, conformance and approval templates,
-may choose the OpenAI models in `src/agent-models.ts` with high effort and their
+may choose the OpenAI models in `src/agent-models.ts` with the model-specific effort choices in that module and their
 fixed reader tools. Ordinary build templates also support Codex with shell/edit
 tools in the assigned worktree and a scoped branch-bound commit tool. Design and
 Agent-worker templates still require Claude. The selected model determines the provider. Network access follows pinned tools.

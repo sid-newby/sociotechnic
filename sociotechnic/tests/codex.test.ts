@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 import type { Dispatch } from "../src/job.ts";
 import { roleOf } from "../src/roles.ts";
 import { ROLES } from "../src/roles.ts";
-import { CODEX_MODELS, supportsCodexReader } from "../src/agent-models.ts";
+import { CODEX_MODELS, effortChoices, supportsCodexReader } from "../src/agent-models.ts";
 import { versionRole } from "../src/agent-version-data.ts";
 import { bundledAgentDefinition } from "../src/agents.ts";
 import { usageByRole } from "../src/usage.ts";
@@ -136,15 +136,18 @@ test("switched and custom readers route every supported OpenAI model with templa
     const ctx: RunContext = { inputRoot: root, outputRoot: root, sociotechnicHome: root, repo: root, worktree: root, jobId: "fixture", round: 1, recordPath: join(root, "record.md"), signal: new AbortController().signal, onActivity: () => {}, onWarn: () => {} };
     for (const [index, base] of ROLES.filter(supportsCodexReader).entries()) {
       const model = CODEX_MODELS[index % CODEX_MODELS.length];
-      const role = versionRole(base, { ...base, model, effort: "high" });
-      const configuration = { ...role, agentName: "sociotechnic-custom-reader", baseRole: base.name, version: "1.0.0", revision: null, definition: bundledAgentDefinition(base.name), skills: [] };
-      const entry = { id: "d-switched", agent: configuration.agentName, model, effort: "high", configuration, record: "record.md", prompt: "Read evidence.txt and return your record.", deadlineAt: new Date(Date.now() + 10_000).toISOString() };
-      process.env.SOCIOTECHNIC_CODEX_TEST_NETWORK = base.tools.includes("WebSearch") ? "live" : "disabled";
-      process.env.SOCIOTECHNIC_CODEX_TEST_MODEL = model;
-      const result = await runnerFromEnv().run(entry, { ...role, name: entry.agent }, ctx);
-      assert.equal(result.outcome, "ok", `${base.name}: ${result.note ?? ""}`);
-      assert.ok(existsSync(ctx.recordPath)); rmSync(ctx.recordPath);
-      await assert.rejects(codexRunner().run({ ...entry, configuration: { ...configuration, tools: [...base.tools, "Bash"] } }, role, ctx), /baseline allowance/);
+      for (const effort of effortChoices(model)) {
+        const role = versionRole(base, { ...base, model, effort });
+        const configuration = { ...role, agentName: "sociotechnic-custom-reader", baseRole: base.name, version: "1.0.0", revision: null, definition: bundledAgentDefinition(base.name), skills: [] };
+        const entry = { id: "d-switched", agent: configuration.agentName, model, effort, configuration, record: "record.md", prompt: "Read evidence.txt and return your record.", deadlineAt: new Date(Date.now() + 10_000).toISOString() };
+        process.env.SOCIOTECHNIC_CODEX_TEST_NETWORK = base.tools.includes("WebSearch") ? "live" : "disabled";
+        process.env.SOCIOTECHNIC_CODEX_TEST_MODEL = model;
+        process.env.SOCIOTECHNIC_CODEX_TEST_EFFORT = effort;
+        const result = await runnerFromEnv().run(entry, { ...role, name: entry.agent }, ctx);
+        assert.equal(result.outcome, "ok", `${base.name}: ${result.note ?? ""}`);
+        assert.ok(existsSync(ctx.recordPath)); rmSync(ctx.recordPath);
+        await assert.rejects(codexRunner().run({ ...entry, configuration: { ...configuration, tools: [...base.tools, "Bash"] } }, role, ctx), /baseline allowance/);
+      }
     }
     const builder = roleOf("sociotechnic-designer");
     await assert.rejects(codexRunner().run({ id: "d-no", agent: builder.name, model: "gpt-6-sol", effort: "high", record: "record.md", prompt: "", deadlineAt: new Date(Date.now() + 10_000).toISOString() }, builder, ctx), /Unsupported Codex role/);

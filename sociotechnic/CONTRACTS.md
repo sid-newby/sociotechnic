@@ -1042,9 +1042,14 @@ Planning, research, review, conformance and approval templates may switch betwee
 Claude and the OpenAI models listed in `src/agent-models.ts`. Ordinary build
 templates also support Codex; design and Agent-worker templates remain Claude-only. Both editor flows group choices by provider and
 explain unsupported templates. The selected model determines the provider; Codex
-requires high effort and the template's fixed adapter toolset. Switching to Codex
-resets effort and tools to those supported settings before review. Claude
-versions may remove baseline tools but cannot add privileges; core
+uses the template's fixed adapter toolset. Both editors and version validation
+use the per-model effort choices in `src/agent-models.ts`: Claude supports low,
+medium, high, xhigh and max; Codex supports those levels plus ultra except on
+the two Luna models. Provider adapters execute the pinned effort unchanged.
+Switching models preserves a supported effort or resets it to high; switching
+to Codex restores the fixed toolset before review. Effort never expands tool
+permissions, delegation access or job bounds. Existing releases and run pins
+remain unchanged. Claude versions may remove baseline tools but cannot add privileges; core
 Read/Grep/Glob/Write remain required, as does the designer's scoped design tool.
 Limits are 1..250 turns/tool calls and 1..120 minutes. Job loop/round/retry caps
 remain separate. Snapshot-backed Claude agents run with programmatic definitions,

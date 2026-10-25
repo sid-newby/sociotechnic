@@ -132,3 +132,17 @@ test("version API validates overrides before run creation, rejects stale publica
     assert.equal(existsSync(join(empty, ".git")), false);
   } finally { await server.close(); }
 });
+
+test("Claude SDK options forward each saved effort to the session and agent definition", () => {
+  const base = roleOf("sociotechnic-planner");
+  for (const effort of ["low", "medium", "high", "xhigh", "max"]) {
+    const role = versionRole(base, { ...base, effort });
+    const entry = { id: "d-effort", agent: role.name, model: role.model, effort, deadlineAt: "2099-01-01T00:00:00Z", record: "plan.json", prompt: "Produce the plan" };
+    const options = sdkOptions(entry, role, root, new AbortController(), null);
+    assert.equal(options.effort, effort);
+    assert.equal(options.agents?.[role.name].effort, effort);
+  }
+  for (const effort of ["ultra", "none", "bogus"]) {
+    assert.throws(() => sdkOptions({ id: "d-bad", agent: base.name, model: base.model, effort, deadlineAt: "", record: "plan.json", prompt: "" }, base, root, new AbortController(), null), /Unsupported dispatch effort/);
+  }
+});

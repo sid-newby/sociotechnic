@@ -11,7 +11,7 @@ import { hasBash, needsContext7, roleOf } from "../src/roles.ts";
 import { bundledAgentDefinition, parseFrontmatter } from "../src/agents.ts";
 import { codexRunner } from "./codex-runner.ts";
 import { versionRole } from "../src/agent-versions.ts";
-import { isCodexModel } from "../src/agent-models.ts";
+import { isClaudeEffort, isCodexModel, isModelEffort } from "../src/agent-models.ts";
 import type { Execution } from "../src/execution.ts";
 
 import { materializeSkills } from "../src/agent-skills.ts";
@@ -159,7 +159,7 @@ export function sdkOptions(
   executable: string | null,
   context7: McpServerConfig | null = null,
 ): Options {
-  if (entry.effort !== "high" && entry.effort !== "xhigh") throw new Error("Unsupported dispatch effort");
+  if (isCodexModel(entry.model) || !isClaudeEffort(entry.effort) || !isModelEffort(entry.model, entry.effort)) throw new Error("Unsupported dispatch effort");
   const options: Options = {
     agent: entry.agent,
     cwd: sociotechnicHome,
@@ -204,6 +204,7 @@ export function sdkOptions(
   if (templateName === "sociotechnic-comment-cleaner") {
     const baseWorker = roleOf("sociotechnic-comment-sicko");
     const worker = entry.workerConfiguration ? versionRole(baseWorker, entry.workerConfiguration) : baseWorker;
+    if (worker.provider !== "claude") throw new Error("Comment worker requires Claude");
     const definition = parseFrontmatter(entry.workerConfiguration?.definition ?? bundledAgentDefinition(worker.name));
     if (definition === null || !definition.body.trim()) throw new Error("Comment Sicko worker definition is missing or empty");
     const teamStart = entry.prompt.lastIndexOf("\n\n## Team capabilities\n");

@@ -18,6 +18,7 @@ assert.equal(process.env.CODEX_API_KEY, undefined);
 assert.equal(process.env.CODEX_ACCESS_TOKEN, undefined);
 if (process.env.SOCIOTECHNIC_CODEX_TEST_NETWORK) assert.ok(args.includes(`web_search=${JSON.stringify(process.env.SOCIOTECHNIC_CODEX_TEST_NETWORK)}`));
 if (process.env.SOCIOTECHNIC_CODEX_TEST_MODEL) assert.equal(args[args.indexOf("--model") + 1], process.env.SOCIOTECHNIC_CODEX_TEST_MODEL);
+if (process.env.SOCIOTECHNIC_CODEX_TEST_EFFORT) assert.ok(args.includes(`model_reasoning_effort=${JSON.stringify(process.env.SOCIOTECHNIC_CODEX_TEST_EFFORT)}`));
 let prompt = "";
 for await (const chunk of process.stdin) prompt += chunk;
 assert.ok(prompt.includes("Return ONLY the complete required record"));
