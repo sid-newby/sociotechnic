@@ -3,6 +3,9 @@ import { getDetail, getJobs, jobUrl, request } from "./api";
 import { errorMessage } from "./model";
 import type { Detail, JobItem } from "./model";
 
+export type LogEvent = { jobId: string; dispatchId: string | null; seq: number; at: string; level: string; line: string };
+type LogListener = (event: LogEvent | "reconnected") => void;
+
 export type Load<T> = { kind: "loading" } | { kind: "ready"; value: T; error: string | null } | { kind: "error"; message: string };
 export function useConsole() {
   const [jobs, setJobs] = useState<Load<JobItem[]>>({ kind: "loading" });
@@ -11,6 +14,7 @@ export function useConsole() {
   const [connection, setConnection] = useState<"connecting" | "live" | "reconnecting">("connecting");
   const [revision, setRevision] = useState(0);
   const selectedRef = useRef(selected);
+  const logListeners = useRef(new Set<LogListener>());
   selectedRef.current = selected;
   const refresh = useCallback(() => setRevision((v) => v + 1), []);
   const externallyOwned = detail.kind === "ready" && detail.value.driver.ownership.kind === "external";
@@ -44,7 +48,18 @@ export function useConsole() {
     let lastEvent = Date.now();
     const touch = () => { lastEvent = Date.now(); };
     const update = () => { touch(); if (!timer) timer = setTimeout(() => { timer = undefined; refresh(); }, 250); };
-    stream.addEventListener("open", () => { touch(); setConnection("live"); refresh(); });
+    stream.addEventListener("open", () => { touch(); setConnection("live"); refresh(); for (const listener of logListeners.current) listener("reconnected"); });
+    stream.addEventListener("log", (event) => {
+      touch();
+      try {
+        const data: unknown = JSON.parse(event.data);
+        if (typeof data !== "object" || data === null) return;
+        const entry = Object.fromEntries(Object.entries(data));
+        if (typeof entry.jobId !== "string" || typeof entry.seq !== "number") return;
+        const log: LogEvent = { jobId: entry.jobId, seq: entry.seq, dispatchId: typeof entry.dispatchId === "string" ? entry.dispatchId : null, at: typeof entry.at === "string" ? entry.at : "", level: typeof entry.level === "string" ? entry.level : "info", line: typeof entry.line === "string" ? entry.line : "" };
+        for (const listener of logListeners.current) listener(log);
+      } catch { /* A malformed log event is dropped; catch-up paging restores the buffer. */ }
+    });
     stream.addEventListener("ping", touch);
     stream.addEventListener("jobs", update);
     stream.addEventListener("driver", update);
@@ -69,5 +84,6 @@ export function useConsole() {
     setJobs((previous) => previous.kind === "ready" ? { ...previous, value: previous.value.map((job) => job.id === id ? { ...job, archived } : job) } : previous);
     refresh();
   };
-  return { jobs, selected, detail, connection, revision, refresh, select, setArchived };
+  const subscribeLog = useCallback((listener: LogListener) => { logListeners.current.add(listener); return () => { logListeners.current.delete(listener); }; }, []);
+  return { jobs, selected, detail, connection, revision, refresh, select, setArchived, subscribeLog };
 }
