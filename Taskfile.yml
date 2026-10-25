@@ -56,9 +56,14 @@ tasks:
       - node --test sociotechnic/tests/*.test.ts
 
   test:release:
-    desc: "Test GitHub release versioning, commit binding and safe retries without publishing"
+    desc: "Test release versioning, changelog preparation, commit binding and safe retries without publishing"
     cmds:
       - node --test .github/scripts/*.test.cjs
+
+  changelog:
+    desc: "Prepare a release entry: task changelog -- patch|minor /path/to/notes.md"
+    cmds:
+      - node .github/scripts/changelog.cjs {{.CLI_ARGS}}
 
   test:pg:
     desc: "Run the suite including the PostgreSQL test against the local homebrew postgresql@17 (creates and drops sociotechnic_test_<pid>)"

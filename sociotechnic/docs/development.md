@@ -183,7 +183,7 @@ browser interaction was exercised.
 
 | Capability | Implementation entry points | Existing verification |
 | --- | --- | --- |
-| Contributor CI and PR-driven repository releases | [CI workflow](../../.github/workflows/ci.yml), [shared checks](../../.github/workflows/checks.yml), [release workflow](../../.github/workflows/release.yml), [release script](../../.github/scripts/release.cjs), [setup and recovery](releasing.md) | `task checks` includes `task test:release` ([safety tests](../../.github/scripts/release.test.cjs)) for exact push-to-PR resolution, versioning and retries; hosted CI and repository settings require GitHub verification; PostgreSQL/live-model checks remain separate |
+| Contributor CI and PR-driven repository releases | [CI workflow](../../.github/workflows/ci.yml), [shared checks](../../.github/workflows/checks.yml), [release workflow](../../.github/workflows/release.yml), [release script](../../.github/scripts/release.cjs), [changelog preparation](../../.github/scripts/changelog.cjs), [setup and recovery](releasing.md) | `task checks` includes `task test:release` ([safety tests](../../.github/scripts/release.test.cjs) and [changelog tests](../../.github/scripts/changelog.test.cjs)) for exact push-to-PR resolution, version reservations, backfills, pre-merge changelog validation and safe retries; hosted CI and repository settings require GitHub verification; PostgreSQL/live-model checks remain separate |
 | Capability roster, team awareness and bounded advisor consultation | [agent-roster.ts](../src/agent-roster.ts), [agent-versions.ts](../src/agent-versions.ts), [engine.ts](../src/engine.ts), [plan.ts](../src/plan.ts), [driver guidance](agent-discovery.md) | [agent-discovery.test.ts](../tests/agent-discovery.test.ts): actual prompts, future-agent discovery, locks, advisor retries, blocked builder, nested-worker awareness and PostgreSQL auxiliary bindings |
 | CLI commands and console bridge | [cli.ts](../src/cli.ts), [console-client.ts](../src/console-client.ts) | [run.test.ts](../tests/run.test.ts), [ensure.test.ts](../tests/ensure.test.ts), [e2e.test.ts](../tests/e2e.test.ts) |
 | Workflow and legal transitions | [engine.ts](../src/engine.ts), [job.ts](../src/job.ts) | [job.test.ts](../tests/job.test.ts), [e2e.test.ts](../tests/e2e.test.ts) |
@@ -259,6 +259,7 @@ The root `Taskfile.yml` is the entry point. `task` with no argument lists them. 
 | `task build` | Build `ui/web` for the Node server |
 | `task agents` | `sociotechnic agents`: validate bundled initialization seeds against the role table |
 | `task test` | `node --test sociotechnic/tests/*.test.ts`. Local loopback servers and fake agents; no external model calls; PostgreSQL integration is opt-in |
+| `task changelog -- patch\|minor /path/to/notes.md` | Prepend the next root changelog entry before committing a release PR; see [release preparation](releasing.md#prepare-the-changelog-before-commit) |
 | `task test:pg` | The same suite with `SOCIOTECHNIC_TEST_DATABASE_URL=postgres://localhost:5433/postgres`, so `dbpg.test.ts` runs against the local `postgresql@17` |
 | `task audit` | `pnpm audit --prod --audit-level high` |
 | `task dev` | Vite on 5173 and development API on 4748. Ctrl-C stops both |

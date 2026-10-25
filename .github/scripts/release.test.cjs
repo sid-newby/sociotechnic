@@ -16,7 +16,7 @@ function fixture() {
     releases: [{ tag_name: 'v0.1.0', draft: false, prerelease: false, body: '' }],
     associated: [], comparisons: [], writes: [], tagExists: false, tagError: null,
     mainStatus: 'ahead', releaseStatus: 'ahead', tagSha: sha,
-    failAfterCreate: false,
+    failAfterCreate: false, changelog: '## v0.1.1\n\n- A useful release change.\n\n## v0.1.0\n\n- Initial release.',
   };
   const github = {
     paginate: async method => method === github.rest.repos.listPullRequestsAssociatedWithCommit
@@ -33,6 +33,7 @@ function fixture() {
       repos: {
         listReleases() {},
         listPullRequestsAssociatedWithCommit() {},
+        getContent: async args => { state.changelogRef = args.ref; return { data: { type: 'file', encoding: 'base64', content: Buffer.from(state.changelog).toString('base64') } }; },
         getCommit: async () => ({ data: { sha: state.tagSha } }),
         compareCommits: async args => {
           state.comparisons.push(args);
@@ -130,7 +131,9 @@ test('publication creates notes and a version tag bound to the verified merge co
     { tag_name: 'v9.0.0', draft: true, prerelease: false },
     { tag_name: 'v8.0.0-beta.1', draft: false, prerelease: true },
   );
+  state.changelog = '## v0.1.11\n\n- Reserve the version in this tested commit.\n\n## v0.1.10\n\n- Previous release.';
   const result = await publish(github, repo, tested);
+  assert.equal(state.changelogRef, sha);
   assert.equal(result.created, true);
   assert.equal(state.writes.length, 1);
   assert.equal(state.writes[0].tag_name, 'v0.1.11');
@@ -138,6 +141,7 @@ test('publication creates notes and a version tag bound to the verified merge co
   assert.equal(state.writes[0].draft, false);
   assert.equal(state.writes[0].make_latest, 'true');
   assert.match(state.writes[0].body, /pr=3 sha=aaaaaaaa/);
+  assert.match(state.writes[0].body, /Reserve the version in this tested commit/);
   assert.equal(state.notes.previous_tag_name, 'v0.1.10');
   assert.equal(state.notes.target_commitish, sha);
   assert.deepEqual(state.comparisons.map(args => [args.base, args.head]), [[sha, 'main'], ['v0.1.10', sha]]);
@@ -146,6 +150,7 @@ test('publication creates notes and a version tag bound to the verified merge co
 test('a minor-labelled PR resets the patch number', async () => {
   const { github, state } = fixture();
   state.pr.labels = [{ name: 'release:minor' }];
+  state.changelog = '## v0.2.0\n\n- Reserve a minor release.\n\n## v0.1.0\n\n- Previous release.';
   await publish(github, repo, { ...tested, bump: 'minor' });
   assert.equal(state.writes[0].tag_name, 'v0.2.0');
 });
@@ -194,4 +199,18 @@ test('tag collisions, API failures and a missing initial release never create or
   state.releases = [];
   await assert.rejects(publish(github, repo, tested), /initial vX.Y.Z/);
   assert.equal(state.writes.length, 0);
+});
+
+
+test('publication uses the committed reservation, rejects invalid bumps and permits gaps after failed releases', async () => {
+  const { github, state } = fixture();
+  state.changelog = '## v0.1.3\n\n- Cover work from failed earlier publications.\n\n## v0.1.2\n\n- Earlier prepared entry.';
+  await publish(github, repo, tested);
+  assert.equal(state.writes[0].tag_name, 'v0.1.3');
+  const bad = fixture(); bad.state.changelog = '## v0.2.0\n\n- Wrong bump for a patch label.\n\n## v0.1.0\n\n- Initial release.';
+  await assert.rejects(publish(bad.github, repo, tested), /do not match/);
+  assert.equal(bad.state.writes.length, 0);
+  const older = fixture(); older.state.releases.push({ tag_name: 'v0.1.2', draft: false, prerelease: false });
+  await assert.rejects(publish(older.github, repo, tested), /already published or older/);
+  assert.equal(older.state.writes.length, 0);
 });

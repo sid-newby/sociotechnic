@@ -18,12 +18,13 @@ pass. Use patch for maintenance PRs when each merged update should receive a
 version; none is a deliberate exception. This policy applies to releases of Sociotechnic itself; it does not change
 the runtime agents' acceptance, publication or merge gates for target projects.
 
-The [CI workflow](../../.github/workflows/ci.yml) validates the label and runs
+The [CI workflow](../../.github/workflows/ci.yml) validates the label and committed changelog entry, then runs
 the [shared checks](../../.github/workflows/checks.yml). After merge, the
 [Release workflow](../../.github/workflows/release.yml) starts on a push to
 protected `main`, resolves the PR whose merge commit exactly matches that pushed
 commit, and reads its release label. It verifies that commit again, then creates
-its version tag and GitHub release with generated notes. GitHub supplies the
+the version tag reserved in that commit's changelog and a GitHub release with
+those notes plus generated PR links. GitHub supplies the
 short-lived token; no personal access token, provider
 login or live development database belongs in Actions secrets.
 
@@ -53,16 +54,17 @@ Start with a small real fix labelled `release:patch`. After its CI checks pass,
 merge it and watch **Actions → Release**. The resulting release appears under
 **Releases**. Verify that its tag points at that PR's merged commit. Use
 `release:minor` instead if the changes since the last release warrant a minor
-bump. The current baseline is the highest published stable `vX.Y.Z` release;
-drafts and prereleases do not advance it.
+bump. The next version advances the latest entry on main, or the highest published
+stable version when backfilling an older changelog. Drafts and prereleases do
+not advance it.
 
 ### Everyday use and recovery
 
 Write clear PR titles: GitHub uses them in generated release notes, with links
 to the PRs. Put upgrade instructions in the affected technical documentation
-and link them from the PR. GitHub Releases holds the versioned notes after the
-initial 0.1.0 entry in `CHANGELOG.md`. Automation does not commit changelog or
-package-version edits back to `main`. The Git tag and GitHub release identify the
+and link them from the PR. Include the new version and release notes in root
+`CHANGELOG.md` before commit. Publication reads that same entry; it does not
+write changelog or package-version edits back to `main`. The Git tag and GitHub release identify the
 shipped repository snapshot; the private package manifests are not the version
 authority.
 
@@ -89,6 +91,58 @@ the notice identifies the skipped decision; use the manual PR-number run after
 checking the association. Major and prerelease versions use the
 manual process below; automatic bumps support patch and minor versions only.
 
+### Prepare the changelog before commit
+
+Patch and minor PRs must include their release entry in `CHANGELOG.md`. Write
+short notes describing the resulting behavior, then run:
+
+```bash
+task changelog -- patch /tmp/release-notes.md
+# For a minor release instead:
+task changelog -- minor /tmp/release-notes.md
+```
+
+The notes file contains Markdown bullets or subheadings below level two. The
+command prepends the next version and preserves earlier entries. Review and
+commit the result with the implementation. It is a local preparation command,
+not a Git hook or a network operation. Run it once per release PR; edit that
+entry when revising the same PR rather than adding another version.
+
+The existing **Release label** CI check reads the PR's exact head and current
+main with read-only APIs. It enforces the selected patch/minor bump, meaningful
+notes, semantic ordering, preserved history and the absence of invented unshipped
+entries. Previously published releases may be backfilled. `release:none` needs
+no new version and cannot reserve an unpublished one. Required branch freshness
+still applies: if another release PR lands first, update from main and adjust
+the pending version before rerunning checks. Do not duplicate the old reservation.
+
+The Release workflow reads the reserved tag and notes from the verified merge
+commit. GitHub release notes include that summary and generated PR/compare links.
+The tag points at the same tested commit; no follow-up commit, bot PR, GitHub App,
+PEM key or extra repository secret is needed. Existing saved model-provider
+credentials are unrelated and remain outside this workflow.
+
+Prepared changelog entries can exist before a release publishes. GitHub Releases
+confirms which versions shipped. Version reservations advance even while an older
+publication is pending, so concurrent work does not reuse a number. If an earlier
+publication failed, later versions may leave a gap; the next published release
+still covers all changes since the last actual published tag. Existing checks
+refuse publishing an older commit after a newer one has shipped. Release retries
+recognize their existing provenance marker and never increment or move a tag.
+
+The October 24 backfill includes published v0.1.1 through v0.1.3, with dates in
+America/Chicago. The original v0.1.0 notes are preserved byte-for-byte. Future
+entries omit a guessed publication date and are prepared in their feature PR.
+
+Implementation stages: extend the release contract; add local preparation and
+read-only PR validation; bind publication to the committed version and notes;
+backfill published history and verify local/hosted checks. Allowed scope:
+`.github/scripts/{release,changelog}.cjs`, their tests, `.github/workflows/ci.yml`,
+root `CHANGELOG.md`, Taskfile tasks, contributor guidance and PR template, this guide, the
+behavioral contract and development feature map. `docsImpact`: these references
+change together. Console README, CLI/API and engine/state references, application
+UI and the agent catalog are unaffected by repository release preparation.
+
 ### What CI establishes
 
 Workflow jobs use `ubuntu-24.04` so the operating-system version changes only in
@@ -113,7 +167,9 @@ failure remains tested.
 
 The implementation and safety tests live in
 [release.cjs](../../.github/scripts/release.cjs) and
-[release.test.cjs](../../.github/scripts/release.test.cjs). Run
+[release.test.cjs](../../.github/scripts/release.test.cjs), plus
+[changelog.cjs](../../.github/scripts/changelog.cjs) and
+[changelog.test.cjs](../../.github/scripts/changelog.test.cjs). Run
 `task test:release` to exercise them without a token or publication. Workflow
 files also need validation and an actual GitHub Actions run; local unit tests
 alone cannot prove hosted runner setup or repository permissions.

@@ -53,6 +53,10 @@ Explain the problem, the resulting behavior and how you verified it. Link the
 issue when there is one. Include screenshots for visible changes, using demo
 data. Call out behavior changes, migrations, limitations and documentation impact.
 
+Patch and minor PRs must include their next version and notes in root
+`CHANGELOG.md`. Run `task changelog -- patch /path/to/notes.md` (or `minor`)
+before committing; the [release guide](sociotechnic/docs/releasing.md#prepare-the-changelog-before-commit) explains validation and concurrent PRs.
+
 Apply exactly one label: `release:patch` for fixes/refinements, `release:minor`
 for capabilities or workflow changes, or `release:none` to explicitly skip
 publication. Use patch for maintenance changes that should receive a version.

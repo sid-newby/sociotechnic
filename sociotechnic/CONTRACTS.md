@@ -14,6 +14,25 @@ initialization seeds (`sociotechnic/seeds/agents.json`), the driver skill
 Sociotechnic is self-contained in this directory. It installs nothing into `~/.claude`
 and shares no names with the `/factory` skill or its agents.
 
+## Repository release changelog
+
+Release notes and the next version are committed in the feature PR before merge.
+A local changelog command adds an entry using the declared patch/minor bump.
+The existing Release label CI check validates the entry against current main,
+published stable releases and the PR label. It rejects missing entries, wrong
+bumps, duplicate versions, empty notes, unexpected unshipped history and changed
+historical entries. Published releases may be backfilled without inventing notes.
+A release:none PR cannot reserve an unpublished version.
+
+Publication reads the reserved version from CHANGELOG.md at the verified merge
+commit, validates its bump from the preceding entry, and creates the tag at that
+same commit. It does not write repository files afterward or require another
+credential. Existing tag collision, commit binding, release queue and retry rules
+remain in force. Prepared entries can precede publication; GitHub Releases is the
+source for which versions actually shipped. A failed earlier publication can
+leave a version gap; a later release's notes still cover changes since the last
+published tag. Dates on backfilled entries use America/Chicago.
+
 ## Optional Docker Sandbox execution (experimental)
 
 Execution is a run setting pinned at creation: local by default, or explicitly
