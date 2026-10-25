@@ -667,12 +667,21 @@ session. Ordinary planning can request `needs-design`. Continue through the
 console conversation; the native Impeccable skill owns its questions and preview
 page. Docker design is refused before designer inference.
 
+The chat is the interface to the existing native designer. It uses an anchored,
+independently scrolling thread with Return to latest, image sharing and native
+questions. Samples, prototypes and previews open in separate tabs; the composer
+uses Enter to send and Shift+Enter for a line break, with IME composition safety.
+No additional chat transport or provider authentication is introduced.
+
 The conversation routes under `/api/jobs/:id/design-session/` are `messages`,
 `answer`, `interrupt`, `resume`, `handoff`, `migrate` and `approve` (kept for
 compatibility; new clients use `handoff`). Messages support native
 image blocks and IDs that deduplicate retries. HANDOFF.md and its artifact
 snapshot return to the caller. Initial planning retains the normal `planned`
-hold; subsequent chat can continue without running builders. Artifacts are available
+hold; subsequent chat can continue without running builders. Planner and builder
+receive the same returned snapshot. A revised return
+whose digest differs from the reviewed plan parks before building or passing
+the review gate. Artifacts are served
 through `/api/jobs/:id/design-artifacts/<encoded-record-path>`, and conversation
 images through `/api/jobs/:id/design-images/<encoded-record-path>`.
 

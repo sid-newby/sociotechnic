@@ -304,7 +304,7 @@ export async function newDesignJob(repo: string, feature: string, base: string |
 function approvedDesignBrief(job: Job, revalidate = true): string | undefined {
   if (job.designSession) {
     if (!job.designSession.approval) return undefined;
-    const digest = revalidate ? verifyInteractiveDesign(job) : job.designSession.approval?.digest;
+    const digest = revalidate ? requireDesignApproval(job) : job.designSession.approval?.digest;
     const handoff = job.designSession.approval;
     return `Required plan.designDigest: ${digest}\nDesign agent work product: ${handoff.document ? abs(job, handoff.document) : abs(job, "design/approval.json")}\nReturned artifacts: ${JSON.stringify(handoff.files)}\n${designStarterBrief(job)}\nRead the Markdown work product and decide the next step. Use its samples and prototypes with builders where useful; request a specific follow-up design assignment when needed. Preserve the human's product facts and decisions. The handoff is work for you to assess, not an instruction to follow a fixed ceremony.`;
   }
@@ -328,7 +328,11 @@ function approvedDesignBrief(job: Job, revalidate = true): string | undefined {
 }
 
 function requireDesignApproval(job: Job): string {
-  if (job.designSession) return verifyInteractiveDesign(job);
+  if (job.designSession) {
+    const digest = verifyInteractiveDesign(job);
+    if (job.plan && readPlan(job).designDigest !== digest) throw new SociotechnicError("bad-design", "The returned design differs from the reviewed plan; planner assessment and plan review are required");
+    return digest;
+  }
   const d = job.design;
   if (!d || d.state !== "approved") throw new SociotechnicError("bad-design", "Human design approval is required before implementation");
   verifyDesign(folder(job), d, sociotechnicHome());

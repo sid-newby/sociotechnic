@@ -1,0 +1,26 @@
+.design-conversation {
+  height: max(34rem, calc(100dvh - 16rem));
+  min-height: min-content;
+  display: grid;
+  grid-template-rows: auto minmax(12rem, 1fr) auto;
+  font-size: 16px;
+}
+.design-chat-header { flex-shrink: 0; }
+.design-thread { min-height: 12rem; }
+.design-thread-viewport { scrollbar-gutter: stable; overflow-anchor: auto; }
+.design-thread-spacer { overflow-anchor: none; }
+.design-message { width: 100%; max-width: 75ch; overflow-wrap: anywhere; }
+.design-message > strong { font-size: 13px; font-weight: 600; color: var(--muted-foreground); }
+.design-message-user { align-self: flex-end; width: fit-content; max-width: 88%; border-radius: var(--radius); background: var(--muted); padding: 12px 16px; }
+.design-message .record-content { padding: 0; overflow: visible; font-size: 16px; }
+.design-message .record-code-block { max-width: 100%; }
+.design-chat-footer .design-image-composer { gap: 12px; }
+.design-chat-footer #design-message { font-size: 16px; }
+.design-chat-footer #design-message::placeholder { color: var(--foreground); opacity: .65; }
+.design-chat-footer .design-image-drafts { max-height: 8rem; overflow-y: auto; }
+.design-chat-footer .design-image-drafts img { width: 64px; height: 48px; }
+@media (max-width: 639px) {
+  .design-conversation { height: max(38rem, calc(100dvh - 12rem)); }
+  .design-chat-footer { gap: 8px; }
+  .design-chat-footer #design-message-help { font-size: 13px; }
+}

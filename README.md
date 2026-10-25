@@ -58,12 +58,15 @@ For [comment and docblock cleanup](sociotechnic/docs/comment-cleanup.md), choose
 Choose **Design conversation** in **New run** and use **Local** execution. This
 is a normal Claude Code agent with the installed `/impeccable` command. Talk back
 and forth, attach or paste images, and let Impeccable open its native preview
-windows. The conversation and its images remain in history.
+tabs. The conversation and its images remain in history. The thread follows the
+reply while you stay at the latest turn; scroll back to read without interruption,
+then use **Return to latest** to catch up. Enter sends and Shift+Enter adds a line.
 
 The design conversation replaces the dashboard cards while it waits for your input. Native questions, image attachments and **Open previews** stay with the conversation. The assignment may call for a plan, samples, prototypes, a page or a critique.
 The agent prepares Markdown in `HANDOFF.md`; **Return work** sends it and its
 artifacts to the caller. For initial design work, the planner reads that result
-and decides what comes next. The chat stays available for follow-up. Ordinary
+and decides what comes next. The chat stays available for follow-up, remediation,
+complex design work and QA. Ordinary
 feature planning can also request design, including another specific assignment.
 Docker design sessions are not yet supported.
 [Interactive design details](sociotechnic/docs/design-ceremony.md).

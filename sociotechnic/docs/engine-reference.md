@@ -629,6 +629,14 @@ without automatically advancing a build. Human waits suspend active deadlines.
 Historical `job.design` packets remain supported for reading and approved
 implementation integrity, not further packet generation.
 
+The designer also handles follow-up remediation, escalation, complex UI work and
+QA within its assignment. The console is an independently scrolling chat over
+the existing native session, with image sharing and separate-tab samples and
+prototypes. Initial returned work goes to the planner and remains held for plan
+review. Builder prompts receive that same snapshot and digest; if later returned
+work differs from the reviewed plan, building and review gates park for human
+attention. A continued conversation does not implicitly replan or build.
+
 See [interactive design](design-ceremony.md) for local installation, recovery,
 images, Markdown handoff, native windows and separate live verification evidence.
 

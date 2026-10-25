@@ -1732,6 +1732,22 @@ revision workflow. The console hosts conversation and native questions and links
 to the skill's own separate decision page. It imposes no packet phases or option
 counts. Human messages resume the exact SDK session ID.
 
+The designer's chat is a persistent back-and-forth thread. It owns its scrolling
+and keeps the composer reachable. A sent human turn anchors the response;
+updates follow the live edge without pulling a reader away from older messages.
+Return to latest restores following. Markdown, images and native questions stay
+in the conversation; samples, prototypes and native previews open in separate
+tabs. Enter sends, Shift+Enter adds a line, and IME composition never submits.
+Failed sends retain draft text, image bytes and the retry message ID. Lifecycle
+labels distinguish working, waiting, interrupted, failed and returned work;
+partial text and a stopped stream do not establish success. This presentation
+uses the existing session routes and provider adapters.
+
+A revised returned design does not silently update a reviewed implementation
+plan. Before building or passing a review gate, the plan's `designDigest` must
+match the current returned work. A mismatch parks the run for human attention;
+continuing the conversation never starts replanning or building implicitly.
+
 PostgreSQL stores opaque native transcripts, display messages, skill identity,
 artifact bytes and explicit artifact approval. Workspace files and SDK transcripts
 on disk are execution copies. Driver-lease guards reject stale writers. Missing

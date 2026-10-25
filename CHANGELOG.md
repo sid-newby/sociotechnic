@@ -5,16 +5,15 @@ Dates on backfilled entries use America/Chicago. See the [release guide](sociote
 
 ## Unreleased
 
-- Add History with bounded database cohorts, recorded token/cost/time coverage, role/round views, interrupted outcomes and exact dispatch/record drill-down. Add in-run Agent library filtering with pinned configurations and metric, feedback and cohort provenance.
-- Save browser-owned New run hold defaults and pin them per run; preserve mandatory plan review. Add guarded restore-only recovery that never starts agents, and retain evidence selections across reload.
+## v0.6.0
 
-- Rebuild the run console around an inbox sidebar, decision bar, evidence sheets, four live summary cards, recorded token chart and Dispatches/Records/Log/Decisions table. Add working column customization and CSV export, metric and dispatch drill-down, buffered live logs and record downloads.
-- Expose single-step execution, hold-after-transition, early bound overrides, dispatch interruption, local concurrency settings, Stop notes, explicit reopen discard and PR text without publishing. Preserve ownership gates and local-testing/merge confirmations, and move detailed explanations into sheets.
-
-- Preserve optional Stop notes from the CLI and HTTP API in the run's human decision history, and reject invalid notes before stopping a driver.
-
-- Move the web console onto the shadcn token contract with neutral colors, chart and sidebar tokens and the shared radius scale, and add the shadcn component set, Recharts and TanStack Table for the upcoming console layout. Existing views keep their layout. The Agent library history and dispatch filter now accept interrupted dispatches.
-- Add a theme switcher to the console header with the shadcn neutral theme and 42 TweakCN presets in light and dark. The console starts in neutral dark and remembers your choice in this browser.
+- Rebuild the run console around an inbox sidebar, decision bar, evidence sheets, live summary cards, recorded token chart and Dispatches/Records/Log/Decisions table, with column customization, CSV export and exact record drill-down.
+- Add History with bounded database cohorts, recorded token/cost/time coverage, role and round views and interrupted outcomes. Show pinned configurations and metric, feedback and cohort provenance in the in-run Agent library.
+- Save browser-owned New run hold defaults and pin them per run. Preserve mandatory plan review, add guarded restore-only recovery that never starts agents, and retain evidence selections across reload.
+- Give the designer conversation an anchored chat thread, a reachable composer, readable Markdown/code and image sharing. Preserve native /impeccable questions and separate-tab samples and prototypes, with streaming history navigation, retry, interruption and resume.
+- Keep the planner-to-builder handoff bound to the returned artifact snapshot and reviewed plan digest. Park revised designs that no longer match the reviewed plan, and improve chat and shared scroller accessibility.
+- Expose single-step execution, hold-after-transition, early bound overrides, dispatch interruption, local concurrency settings, Stop notes, explicit reopen discard and PR text without publishing. Preserve ownership gates and local-testing/merge confirmations.
+- Adopt shared shadcn tokens and components, local Geist, chart and sidebar colors and light/dark theme presets. Start in neutral dark and remember this browser's theme.
 
 ## v0.5.0
 

@@ -24,7 +24,7 @@ export const fixtureDesignQuery: DesignQuery = async function* ({ prompt, option
   }
   mkdirSync(join(options.cwd, "previews"), { recursive: true });
   writeFileSync(join(options.cwd, "DESIGN.md"), `# Design\nConfirmed audience: ${answer || "retained from our conversation"}.\n${text.includes("denser") ? "Use a denser reading layout." : "Use a calm reading workspace."}\n`);
-  writeFileSync(join(options.cwd, "HANDOFF.md"), "# Design work product\n\nUse the reading layout described in DESIGN.md. The caller decides the next assignment.\n");
+  writeFileSync(join(options.cwd, "HANDOFF.md"), "# Design work product\n\nUse a reading workspace for the confirmed audience. Preserve the human's decisions across revisions.\n\n## Artifacts\n\n- [Design notes](DESIGN.md) document the agreed direction.\n- [Research desk prototype](previews/desk.html) opens in a separate browser tab; no build command is needed.\n\n## Validation and remaining work\n\nThese artifacts are deterministic integration fixtures, not live model output. Responsive behavior and production implementation remain unverified. The planner should assess this work, plan implementation and hold for normal plan review before a builder starts.\n");
   writeFileSync(join(options.cwd, "previews/desk.html"), "<!doctype html><title>Fixture preview</title><h1>Research desk</h1><p>Deterministic integration fixture. No model generated this design.</p>");
   const content = `Integration fixture: ${options.resume ? "I retained our previous conversation and revised the design." : "Thank you. Here is the initial direction."} ${prior.length} prior transcript entries.`;
   const uuid = randomUUID();

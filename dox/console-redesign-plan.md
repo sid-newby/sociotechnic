@@ -179,6 +179,11 @@ Worktree branch `console/history`. After waves 2 and 3.
 
 ### Wave 5: finish
 
+The owner subsequently authorized releasing the completed console waves and
+designer chat as v0.6.0. That release does not mark this finish wave complete:
+the final design documents, finish review and coherent screenshot refresh below
+remain open. Prepare the next release from their actual completed scope.
+
 - Impeccable finish review against the direction contract; fixes.
 - `DESIGN.md` written by the Impeccable documenter from the shipped console.
 - Screenshot set refreshed; README, feature map, contracts and references

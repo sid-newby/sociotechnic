@@ -1,11 +1,15 @@
 # Follow-up brief: design chat
 
-Status: documentation only, pending a separate implementation pass. This brief
-records the owner's requested follow-up; it does not change the current chat,
-agent instructions, model table, catalog releases or existing run pins. Finish
-wave 4 and its verification before opening this slice. Wave 5 retains the
-console finish review, final design documentation, screenshots and release
-preparation unless its scope is explicitly amended.
+Status: the follow-up implementation adapts the chat presentation to the existing
+native designer, with its current agent definition and initial `/impeccable`
+invocation preserved. See [implementation scope](../../sociotechnic/docs/design-chat-implementation.md).
+The owner confirmed a back-and-forth chat with image sharing, separate-tab
+samples/prototypes, and initial handoff to the planner for normal plan review
+before the builder. The designer also remains a working teammate for remediation,
+escalation, complex UI work and QA. No model table, catalog release or run pin is
+changed. Requested-model verification/publication remains a separate slice.
+Wave 4 is merged. Wave 5 retains the console finish review, final design
+documentation, screenshots and release preparation.
 
 ## Requested outcome
 
@@ -212,6 +216,6 @@ broadening this scope.
   Impeccable and live provider evidence separate; any live model run needs its
   own agreed budget and verification scope.
 
-This brief and the preserved reference are the only deliverables of this pass.
-Implementation, dependency installation, catalog publication and live inference
-remain pending follow-up work.
+The original documentation pass delivered this brief and the preserved reference.
+The subsequent chat implementation is tracked in the linked implementation scope.
+It adds no dependencies, catalog publication or live inference.
