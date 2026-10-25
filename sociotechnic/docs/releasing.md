@@ -68,6 +68,15 @@ write changelog or package-version edits back to `main`. The Git tag and GitHub 
 shipped repository snapshot; the private package manifests are not the version
 authority.
 
+The React console embeds the newest root changelog version at Vite build or
+development-server startup and shows `sociotechnic vX.Y.Z` in its header. It uses
+the same parser as release validation and publication, so preparing the changelog
+also prepares the UI version. No package-version edits, generated source files,
+Git hooks or runtime GitHub calls are needed. A prepared version can appear before
+publication completes; GitHub Releases still confirms what shipped. Run `task ui`
+to rebuild the served console after pulling an update, or restart `task dev` after
+changing the changelog. An already-built console retains its embedded version.
+
 If a release fails, open its Actions run and read the failed step. After fixing
 the problem, use **Actions → Release → Run workflow**, select **main**, and enter
 the merged PR number. The workflow checks that commit again. A retry recognizes

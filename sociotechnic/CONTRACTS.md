@@ -1406,6 +1406,11 @@ establish model quality or account access.
 
 ## 14. Packaging, tasks and supply chain policy
 
+- The React console header displays `sociotechnic vX.Y.Z` in one shared title
+  style. Vite embeds the newest root changelog entry using the release parser;
+  malformed or unordered version history fails the build. The label identifies
+  the built checkout, including a prepared release awaiting publication. It never
+  fetches a newer version from GitHub at runtime.
 - Package manager: pnpm (`packageManager` pinned in `sociotechnic/package.json`, pnpm
   manages its own version, no corepack). Lockfile `sociotechnic/pnpm-lock.yaml` is
   committed; `npm` lockfiles are not.

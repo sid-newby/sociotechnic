@@ -3,6 +3,12 @@
 Release notes are committed before publication. [GitHub Releases](https://github.com/sid-newby/sociotechnic/releases) confirms which versions shipped.
 Dates on backfilled entries use America/Chicago. See the [release guide](sociotechnic/docs/releasing.md).
 
+## v0.1.5
+
+- Show the changelog's semantic version beside the application name in matching typography.
+- Embed the version when building the console, using the same parser as GitHub releases.
+- Keep the version visible on narrow screens without crowding header actions.
+
 ## v0.1.4
 
 - Require release notes and the next version in each patch or minor PR before merge.
