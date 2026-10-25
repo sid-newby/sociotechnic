@@ -1203,6 +1203,15 @@ present. It reuses the engine HTTP API and SSE stream. The CLI remains the
 complete command surface. The original single-file console remains available
 at `/legacy`, and at `/` before the React build exists.
 
+Background run/driver notifications revalidate loaded views without replacing
+them with loading placeholders. Agent library and History retain the current
+selection, mounted profiles, open disclosures/dialogs and drafts while the same
+resource refreshes. Failed refreshes keep the last loaded data with an explicit
+error and retry. Changing a run or evidence query still loads that new resource;
+old data must not be presented as its result. The library shares the console's
+run list and loads immutable pinned assignments on run selection or explicit
+retry, rather than on each activity event.
+
 The dashboard follows the approved shadcn dashboard-01 composition: inbox sidebar,
 site header, decision bar, four section cards, recorded token chart and activity
 table. The decision bar appears for a human decision or ownership/recovery state;

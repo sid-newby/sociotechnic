@@ -1,0 +1,151 @@
+import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { setTimeout as sleep } from 'node:timers/promises';
+import { createMemoryStore, setStore } from '../src/db/store.ts';
+import { initializeAgentVersions } from '../src/agent-versions.ts';
+import { createJobOperation } from '../src/job-store.ts';
+import { newJob } from '../src/engine.ts';
+import { startServer } from '../ui/server.ts';
+
+const { chromium } = await import(process.env.SOCIOTECHNIC_PLAYWRIGHT_MODULE ?? 'playwright');
+const root = mkdtempSync(join(tmpdir(), 'sociotechnic-refresh-'));
+const proof = process.env.SOCIOTECHNIC_BROWSER_PROOF ?? mkdtempSync(join(tmpdir(), 'sociotechnic-refresh-proof-'));
+mkdirSync(proof, { recursive: true });
+process.env.SOCIOTECHNIC_HOME = root;
+process.env.SOCIOTECHNIC_DATABASE_URL = 'off';
+const store = createMemoryStore();
+setStore(store);
+let server, browser;
+const checks = [], errors = [], requests = [];
+let delay = 0, failure = '', dispatches = 0;
+try {
+  await initializeAgentVersions(store, [], []);
+  const repo = join(root, 'repo'); mkdirSync(repo);
+  const git = (...args) => execFileSync('git', ['-c', 'user.name=Refresh fixture', '-c', 'user.email=test@example.invalid', '-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false', ...args], { cwd: repo, stdio: 'ignore' });
+  git('init', '-qb', 'main'); writeFileSync(join(repo, 'README.md'), 'Refresh fixture\n'); git('add', '.'); git('commit', '-qm', 'fixture');
+  const { job: id } = await createJobOperation(() => newJob(repo, 'First refresh fixture', null));
+  const { job: otherId } = await createJobOperation(() => newJob(repo, 'Second refresh fixture', null));
+  // Give the run real history while leaving Researcher pinned and undeployed.
+  const sample = JSON.parse(readFileSync(new URL('../ui/seed/demo-job/job.json', import.meta.url), 'utf8'));
+  const job = await store.storedJob(id);
+  job.dispatches = [sample.dispatches.find(entry => entry.agent === 'sociotechnic-planner')];
+  assert.ok(job.dispatches[0]);
+  await store.transaction(tx => tx.upsertJob(job));
+  server = await startServer({ port: 0, catalogBundles: [], runner: () => { dispatches++; throw new Error('Refresh verification forbids agent dispatch'); } });
+  browser = await chromium.launch({ channel: 'chrome', headless: true });
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+  page.on('pageerror', error => errors.push(error.message));
+  await page.route('**/api/**', async route => {
+    const path = new URL(route.request().url()).pathname;
+    requests.push(path);
+    assert.equal(route.request().method(), 'GET', 'Browser verification must remain read-only');
+    if (delay) await sleep(delay);
+    if (failure && path === failure) return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'Fixture refresh unavailable', code: 'fixture-unavailable' }) });
+    await route.continue();
+  });
+  const notify = () => store.transaction(tx => tx.notify(id));
+  const check = async (name, run) => { await run(); checks.push(name); console.log('PASS', name); };
+  const roster = page.getByRole('navigation', { name: 'Agent library roster', exact: true });
+  await page.goto(`${server.url}#job=${id}&view=agents&agentRun=${id}&agent=sociotechnic-researcher`);
+  await page.getByRole('article', { name: 'Researcher profile', exact: true }).waitFor();
+  await page.getByText('No deployments recorded yet.', { exact: false }).waitFor();
+  await sleep(500);
+  await check('Irregular SSE updates retain profile identity, roster, disclosure and focus', async () => {
+    const count = await roster.getByRole('button').count();
+    const profile = await page.getByRole('article', { name: 'Researcher profile', exact: true }).elementHandle();
+    const details = page.locator('article details').first();
+    await details.locator('summary').click();
+    await roster.getByRole('button', { name: /^Researcher / }).focus();
+    const selected = await roster.getByRole('button', { name: /^Researcher / }).elementHandle();
+    const before = requests.length;
+    delay = 600;
+    for (const ms of [180, 470, 290, 850, 130]) {
+      await notify(); await sleep(ms);
+      assert.equal(await roster.getByRole('button').count(), count);
+      assert.equal(await profile.evaluate(element => element.isConnected), true);
+      assert.equal(await details.getAttribute('open'), '');
+      assert.equal(await selected.evaluate(element => element === document.activeElement), true);
+    }
+    await sleep(1300); delay = 0;
+    const calls = requests.slice(before);
+    assert.ok(calls.filter(path => path === '/api/agents').length >= 2, 'SSE must actually refresh metrics');
+    assert.equal(calls.filter(path => path === '/api/meta').length, 0, 'Pins are immutable');
+    assert.equal(calls.filter(path => path === '/api/jobs').length, calls.filter(path => path === '/api/agents').length, 'Reuse one run list per revision');
+  });
+  await check('An open version draft survives a background update', async () => {
+    await page.getByRole('button', { name: 'Manage versions', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Agent versions', exact: true });
+    await dialog.getByLabel('What changed?', { exact: true }).fill('Keep this unsaved draft');
+    const field = await dialog.getByLabel('What changed?', { exact: true }).elementHandle();
+    const response = page.waitForResponse(response => new URL(response.url()).pathname === '/api/agents');
+    await notify(); await response;
+    assert.equal(await field.evaluate(element => element.isConnected), true);
+    assert.equal(await dialog.getByLabel('What changed?', { exact: true }).inputValue(), 'Keep this unsaved draft');
+    await page.screenshot({ path: join(proof, 'preserved-draft.png') });
+    await dialog.getByRole('button', { name: 'Close agent versions', exact: true }).click();
+    await page.getByRole('button', { name: 'Discard edits', exact: true }).click();
+  });
+  await check('A failed library refresh and explicit retry retain the selected profile', async () => {
+    failure = '/api/agents';
+    await notify();
+    await page.getByText(/Showing the last loaded library/).waitFor();
+    const profile = await page.getByRole('article', { name: 'Researcher profile', exact: true }).elementHandle();
+    failure = '/api/meta'; delay = 500;
+    await page.getByRole('button', { name: 'Retry library', exact: true }).click();
+    await sleep(150);
+    assert.equal(await profile.evaluate(element => element.isConnected), true);
+    await page.getByText(/Showing the last loaded library/).waitFor({ state: 'hidden' });
+    await page.getByText(/Showing the last loaded pinned assignments/).waitFor();
+    assert.equal(await profile.evaluate(element => element.isConnected), true);
+    failure = ''; delay = 0;
+    await page.getByRole('button', { name: 'Retry assignments', exact: true }).click();
+    await page.getByText(/Showing the last loaded pinned assignments/).waitFor({ state: 'hidden' });
+  });
+  await check('Changing runs loads the new scope instead of retaining the previous result', async () => {
+    delay = 500;
+    await page.getByRole('combobox', { name: 'In run', exact: true }).click();
+    await page.getByRole('option', { name: /^Second refresh fixture/ }).click();
+    await page.getByText('Loading agent library…', { exact: true }).waitFor();
+    await page.getByRole('article', { name: 'Researcher profile', exact: true }).waitFor();
+    assert.ok((await page.getByRole('combobox', { name: 'In run', exact: true }).textContent()).includes(otherId));
+    delay = 0;
+  });
+  await page.getByRole('button', { name: 'History', exact: true }).click();
+  await page.getByRole('table').last().waitFor();
+  await check('History stays mounted during a refresh and exposes failure with readable data', async () => {
+    const table = await page.getByRole('table').last().elementHandle();
+    delay = 700;
+    const response = page.waitForResponse(response => new URL(response.url()).pathname === '/api/history');
+    await notify(); await sleep(450);
+    assert.equal(await table.evaluate(element => element.isConnected), true);
+    assert.equal(await page.getByText('Loading history…', { exact: true }).count(), 0);
+    await response;
+    failure = '/api/history'; delay = 0;
+    await notify(); await page.getByText(/Showing the last loaded history/).waitFor();
+    assert.equal(await table.evaluate(element => element.isConnected), true);
+    failure = '';
+    await page.getByRole('button', { name: 'Retry history', exact: true }).click();
+    await page.getByText(/Showing the last loaded history/).waitFor({ state: 'hidden' });
+    await page.screenshot({ path: join(proof, 'preserved-history.png') });
+  });
+  await check('History filter changes load new evidence', async () => {
+    delay = 500;
+    await page.getByRole('combobox', { name: 'Run', exact: true }).click();
+    await page.getByRole('option', { name: 'Second refresh fixture', exact: true }).click();
+    await page.getByText('Loading history…', { exact: true }).waitFor();
+    await page.getByText('Loading history…', { exact: true }).waitFor({ state: 'hidden' });
+    assert.ok(page.url().includes(`historyJob=${otherId}`));
+    delay = 0;
+  });
+  assert.deepEqual(errors, []);
+  assert.equal(dispatches, 0);
+  const report = { passed: true, checks, dispatches, errors, proof };
+  writeFileSync(join(proof, 'report.json'), JSON.stringify(report, null, 2) + '\n');
+  console.log(JSON.stringify(report, null, 2));
+} finally {
+  await browser?.close(); await server?.close(); await store.close(); setStore(undefined);
+  rmSync(root, { recursive: true, force: true });
+}
