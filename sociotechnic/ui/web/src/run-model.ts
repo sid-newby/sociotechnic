@@ -92,7 +92,7 @@ export function decisionFor(detail: Detail): Decision | null {
     case "design-input": return null;
     case "planned": {
       const steps = detail.plan?.stages?.length ?? 0;
-      return { waiting: true, sentence: detail.plan ? `The planner pinned a ${plural(steps, "step")} plan${detail.plan.tier ? ` at tier ${detail.plan.tier}` : ""}.` : "The plan is pinned.", line: reason.kind === "text" ? sentence(reason.text) : "Read it, then continue the build, or stop and start again with a revised request. A pinned plan is never edited in place.", read: { kind: "plan", label: "Read the plan" } };
+      return { waiting: true, sentence: detail.plan ? `The planner pinned a plan with ${plural(steps, "step")}.` : "The plan is pinned.", line: reason.kind === "text" ? sentence(reason.text) : "Read the plan before building.", read: { kind: "plan", label: "Read the plan" } };
     }
     case "needs-human": return { waiting: true, ...parkedCopy(detail, reason), read: { kind: "evidence", label: "Read why it stopped" } };
     case "ready": return { waiting: true, sentence: reason.kind === "approver" ? `The approver approved the change at ${shortSha(reason.head)}.` : "The change is ready for you.", line: "Merge locally to test it in your own checkout, then accept or request rework. Nothing is pushed until you accept.", read: { kind: "approval", label: "Read the approval" } };
@@ -209,12 +209,22 @@ export function boundUsage(detail: Pick<Detail, "job" | "dispatches" | "override
 }
 
 export const isLive = (dispatch: Dispatch) => !dispatch.finishedAt && !dispatch.outcome;
+export type DispatchDriver = Pick<Detail["driver"], "running" | "ownership" | "active" | "queued">;
 
-export type Totals = { agentMs: number | null; live: Dispatch[]; tokens: number | null; tokensReported: number; cost: number | null; costReported: number; cacheRead: number | null; cacheShare: number | null; finished: number };
+export function isRunningDispatch(dispatch: Dispatch, driver: DispatchDriver): boolean {
+  return isLive(dispatch) && driver.running && !driver.queued.includes(dispatch.id)
+    && driver.active.some((entry) => entry.id === dispatch.id);
+}
 
-export function runTotals(dispatches: readonly Dispatch[], now: number): Totals {
+export function dispatchElapsed(dispatch: Dispatch, now: number, driver: DispatchDriver): number | null {
+  return !isLive(dispatch) || isRunningDispatch(dispatch, driver) ? elapsed(dispatch, now) : null;
+}
+
+export type Totals = { agentMs: number | null; timeReported: number; timeMissing: number; live: Dispatch[]; unfinished: Dispatch[]; tokens: number | null; tokensReported: number; cost: number | null; costReported: number; cacheRead: number | null; cacheReported: number; cacheShare: number | null; finished: number };
+
+export function runTotals(dispatches: readonly Dispatch[], now: number, driver: DispatchDriver): Totals {
   const finished = dispatches.filter((dispatch) => !isLive(dispatch));
-  const times = dispatches.flatMap((dispatch) => { const value = elapsed(dispatch, now); return value === null ? [] : [value]; });
+  const times = dispatches.flatMap((dispatch) => { const value = dispatchElapsed(dispatch, now, driver); return value === null ? [] : [value]; });
   const tokens = finished.map((dispatch) => dispatch.usage.tokens);
   const costs = finished.map((dispatch) => dispatch.usage.cost);
   const cached = finished.filter((dispatch) => dispatch.usage.breakdown?.cacheRead != null && dispatch.usage.tokens !== null);
@@ -222,13 +232,17 @@ export function runTotals(dispatches: readonly Dispatch[], now: number): Totals 
   const cachedTotal = sumTokens(cached.map((dispatch) => dispatch.usage.tokens));
   return {
     agentMs: times.length ? times.reduce((a, b) => a + b, 0) : null,
-    live: dispatches.filter(isLive),
+    timeReported: times.length,
+    timeMissing: dispatches.length - times.length,
+    live: dispatches.filter((dispatch) => isRunningDispatch(dispatch, driver)),
+    unfinished: dispatches.filter(isLive),
     tokens: sumTokens(tokens),
     tokensReported: tokens.filter((value) => value !== null).length,
     cost: costs.some((value) => value !== null) ? costs.reduce<number>((sum, value) => sum + (value ?? 0), 0) : null,
     costReported: costs.filter((value) => value !== null).length,
     cacheRead,
-    cacheShare: cacheRead !== null && cachedTotal ? cacheRead / cachedTotal : null,
+    cacheReported: cached.length,
+    cacheShare: cached.length === finished.length && cacheRead !== null && cachedTotal ? cacheRead / cachedTotal : null,
     finished: finished.length,
   };
 }
@@ -237,18 +251,22 @@ export type BurnRange = "dispatch" | "round" | "run";
 export type BurnKey = { key: string; dispatch: Dispatch; state: "reported" | "live" | "unreported" };
 export type BurnSeries = { points: Record<string, number>[]; keys: BurnKey[]; cache: boolean; span: number; start: number };
 
-export function burnDispatches(detail: Pick<Detail, "dispatches" | "job">, range: BurnRange, focus: string | null): Dispatch[] {
+export function burnDispatches(detail: Pick<Detail, "dispatches" | "job" | "driver">, range: BurnRange, focus: string | null): Dispatch[] {
   if (range === "run") return detail.dispatches;
   if (range === "round") return detail.dispatches.filter((dispatch) => dispatch.round === detail.job.round);
-  const chosen = detail.dispatches.find((dispatch) => dispatch.id === focus) ?? detail.dispatches.find(isLive) ?? detail.dispatches.at(-1);
+  const chosen = detail.dispatches.find((dispatch) => dispatch.id === focus) ?? detail.dispatches.find((dispatch) => isRunningDispatch(dispatch, detail.driver)) ?? detail.dispatches.at(-1);
   return chosen ? [chosen] : [];
 }
 
 export const seriesKey = (id: string) => `d_${id.replace(/[^a-zA-Z0-9]/g, "_")}`;
 
-export function burnSeries(dispatches: readonly Dispatch[], now: number): BurnSeries {
-  const timed = dispatches.flatMap((dispatch) => { const start = timestamp(dispatch.startedAt); return start === null ? [] : [{ dispatch, start, end: isLive(dispatch) ? null : timestamp(dispatch.finishedAt) }]; });
-  const keys: BurnKey[] = dispatches.map((dispatch) => ({ key: seriesKey(dispatch.id), dispatch, state: isLive(dispatch) ? "live" : dispatch.usage.tokens === null || !timed.some((t) => t.dispatch === dispatch && t.end !== null) ? "unreported" : "reported" }));
+export function burnSeries(dispatches: readonly Dispatch[], now: number, driver: DispatchDriver): BurnSeries {
+  const timed = dispatches.flatMap((dispatch) => {
+    const start = timestamp(dispatch.startedAt), end = timestamp(dispatch.finishedAt);
+    if (start === null || (!isRunningDispatch(dispatch, driver) && end === null)) return [];
+    return [{ dispatch, start, end }];
+  });
+  const keys: BurnKey[] = dispatches.map((dispatch) => ({ key: seriesKey(dispatch.id), dispatch, state: isRunningDispatch(dispatch, driver) ? "live" : dispatch.usage.tokens === null || !timed.some((t) => t.dispatch === dispatch && t.end !== null) ? "unreported" : "reported" }));
   if (!timed.length) return { points: [], keys, cache: false, span: 0, start: 0 };
   const start = Math.min(...timed.map((t) => t.start));
   const last = Math.max(...timed.map((t) => t.end ?? now), start);
@@ -280,11 +298,17 @@ export function momentFor(detail: Detail): Moment {
   const reason = parseReason(job.statusReason);
   if (["ready", "merged-local", "accepted"].includes(job.status) || (job.status === "merged" && hasRecord("decision.md"))) {
     const approver = reason.kind === "approver" ? reason : null;
-    const round = evidence(detail).round;
-    return { kind: "approval", label: "Approval", value: approver?.verdict === "APPROVED" || job.status !== "ready" ? "Approved" : "Ready", badge: round?.gate ? shortSha(round.gate.head) : null, line: approver ? `Approver ${approver.verdict.toLowerCase()} at ${shortSha(approver.head)}` : `Status: ${statusLabels[job.status]}`, muted: round?.gate ? `Gate ${round.gate.pass ? "passed" : "blocked"} · ${plural(round.gate.changedFiles, "changed file")}` : "Gate not computed", failing: false, open: hasRecord("decision.md") ? "decision.md" : null };
+    const { round, head } = evidence(detail);
+    const mismatch = approver !== null && head !== null && approver.head !== head;
+    const value = mismatch ? "Commit mismatch" : approver?.verdict === "APPROVED" ? "Approved" : approver?.verdict === "ESCALATED" ? "Escalated" : job.status === "accepted" ? "Accepted" : job.status === "merged-local" ? "Test locally" : hasRecord("decision.md") ? "Recorded" : "Not recorded";
+    return { kind: "approval", label: "Approval", value, badge: round?.gate ? shortSha(round.gate.head) : null, line: approver ? `Approver ${approver.verdict.toLowerCase()} at ${shortSha(approver.head)}` : `Status: ${statusLabels[job.status]}`, muted: round?.gate ? `Gate ${round.gate.pass ? "passed" : "blocked"} · ${plural(round.gate.changedFiles, "changed file")}` : "Gate not computed", failing: mismatch || approver?.verdict === "ESCALATED" || round?.gate?.pass === false, open: hasRecord("decision.md") ? "decision.md" : null };
   }
-  const { checksPath, checkLabel, checkGood, verificationLabel, round } = evidence(detail);
+  const { checksPath, checkLabel, checkGood, verificationRecorded, verificationLabel, round } = evidence(detail);
   const checks = detail.checks;
+  if (!checks?.configured && verificationRecorded && detail.verification && checksPath.endsWith("/build.md")) {
+    const { completed, outstanding } = detail.verification;
+    return { kind: "checks", label: "Acceptance", value: `${completed} / ${completed + outstanding}`, badge: "Builder reported", line: "Evidence recorded", muted: `${completed} checked · ${outstanding} unchecked`, failing: false, open: hasRecord(checksPath) ? checksPath : null };
+  }
   const results = checks?.results ?? [];
   const failing = results.filter((result) => !result.pass);
   const passed = results.length - failing.length;
@@ -294,7 +318,7 @@ export function momentFor(detail: Detail): Moment {
     value: checks?.configured && results.length ? `${passed} / ${results.length}` : "—",
     badge: detail.checksError ? "Unavailable" : !checks ? null : !checks.configured ? "Not configured" : failing.length ? `${failing[0].name} FAIL` : checkGood ? "PASS" : checkLabel,
     line: detail.checksError ? "Checks unavailable" : !checks ? round?.checks ? "Checks are loading" : "Not recorded yet" : !checks.configured ? "No checks configured" : failing.length ? `${plural(failing.length, "check")} failing` : checkGood ? "All checks passing" : checkLabel,
-    muted: detail.checksError ?? (checks && !checks.configured ? verificationLabel : checks ? `${checkLabel} at ${shortSha(checks.commit)}` : `Round ${job.round}`),
+    muted: detail.checksError ?? (!checks?.configured && round?.build ? verificationLabel : checks ? `${checkLabel} at ${shortSha(checks.commit)}` : `Round ${job.round}`),
     failing: failing.length > 0 || checkLabel === "Commit mismatch" || checkLabel === "Failed",
     open: hasRecord(checksPath) ? checksPath : null,
   };
