@@ -1,8 +1,8 @@
 import { returnFocus } from "../lib/focus";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import { jobUrl, request } from "../api";
-import { errorMessage, object, text } from "../model";
+import { errorMessage, object, statusLabels, text } from "../model";
 import { VersionOverrides } from "./version-overrides";
 import { Button } from "./ui/button";
 import { Dialog, DialogTrigger } from "./ui/dialog";
@@ -16,11 +16,15 @@ import { SandboxCapacity, SandboxManager } from "./sandboxes";
 import { RepositoryBrowser } from "./repository-browser";
 import { parseExecution } from "../../../../src/execution.ts";
 import { useRunEnvironment } from "../use-run-environment";
+import { readRunDefaults } from "../run-preferences";
+import { initialConsoleHolds } from "../../../../src/console-preferences.ts";
 
 export function NewRun({ onCreated, disabled = false, open: controlledOpen, onOpenChange, hideTrigger = false }: { onCreated: (id: string) => void; disabled?: boolean; open?: boolean; onOpenChange?: (open: boolean) => void; hideTrigger?: boolean }) {
   const [localOpen, setLocalOpen] = useState(false);
   const open = controlledOpen ?? localOpen;
   const setOpen = (value: boolean) => { setLocalOpen(value); onOpenChange?.(value); };
+  const [defaults, setDefaults] = useState(readRunDefaults);
+  useEffect(() => { if (open) setDefaults(readRunDefaults()); }, [open]);
   const opener = useRef<HTMLElement | null>(null);
   const [repo, setRepo] = useState("");
   const [browsing, setBrowsing] = useState(false);
@@ -63,11 +67,11 @@ export function NewRun({ onCreated, disabled = false, open: controlledOpen, onOp
     let created: string | null = null;
     try {
       const execution = parseExecution(executionKind === "local" ? { kind: "local" } : { kind: executionKind, cpus: Number(cpus), memoryGiB: Number(memoryGiB), parallelAgents: Number(parallelAgents) });
-      const response = object(await request("/api/jobs", undefined, { repo: repo.trim(), feature: feature.trim(), initialize: workflow === "repository" || initialize, ...(workflow === "repository" ? { githubRepository: githubRepository.trim() } : {}), agentVersions, agentAssignments, execution, ...(base.trim() ? { base: base.trim() } : {}), ...(workflow === "comments" ? { workflow, scope: scope.split("\n").map((s) => s.trim()).filter(Boolean) } : workflow === "design" ? { workflow } : {}) }));
+      const response = object(await request("/api/jobs", undefined, { repo: repo.trim(), feature: feature.trim(), initialize: workflow === "repository" || initialize, ...(workflow === "repository" ? { githubRepository: githubRepository.trim() } : {}), agentVersions, agentAssignments, execution, consoleHolds: defaults.holds, ...(base.trim() ? { base: base.trim() } : {}), ...(workflow === "comments" ? { workflow, scope: scope.split("\n").map((s) => s.trim()).filter(Boolean) } : workflow === "design" ? { workflow } : {}) }));
       created = text(response.job);
       if (!created) throw new Error("The server did not return a job ID. Refresh before creating another run.");
       onCreated(created);
-      if (workflow !== "comments") await request(`${jobUrl(created)}/run`, undefined, { mode: "run", hold: ["planned"] });
+      if (workflow !== "comments") await request(`${jobUrl(created)}/run`, undefined, { mode: "run", hold: initialConsoleHolds(defaults.holds) });
       setFeature(""); setAgentVersions({}); setOpen(false);
     } catch (error) {
       setError(created ? `Run ${created} was created, but the driver did not start. Close this dialog and use Continue run. ${errorMessage(error)}` : errorMessage(error));
@@ -100,6 +104,7 @@ export function NewRun({ onCreated, disabled = false, open: controlledOpen, onOp
           <div className="grid min-w-0 gap-2"><Label htmlFor="sandbox-memory">Memory (GiB)</Label><Input ref={memoryRef} id="sandbox-memory" type="number" min={1} max={64} step={1} value={memoryGiB} disabled={busy} onChange={(event) => { setMemoryGiB(event.target.value); setError(null); }} aria-invalid={!!error && (!Number.isInteger(Number(memoryGiB)) || Number(memoryGiB) < 1 || Number(memoryGiB) > 64)} aria-describedby={error ? "new-error" : undefined} /></div>
           <div className="grid min-w-0 gap-2"><Label htmlFor="sandbox-parallel">Agents running at once</Label><Input ref={parallelRef} id="sandbox-parallel" type="number" min={1} max={4} step={1} value={parallelAgents} disabled={busy} onChange={(event) => { setParallelAgents(event.target.value); setError(null); }} aria-invalid={!!error && (!Number.isInteger(Number(parallelAgents)) || Number(parallelAgents) < 1 || Number(parallelAgents) > 4)} aria-describedby={error ? "new-error" : "sandbox-retention"} /><p id="sandbox-retention" className="text-sm leading-relaxed text-muted-foreground">Choose 1 for serial work or allow parallel reviews. Nested workers share these resources.</p><SandboxManager refresh={() => {}} label="Manage sandboxes" disabled={busy} /></div><div className="rounded-xl border p-4"><SandboxCapacity disabled={busy} /></div>
         </div> : null}
+        <div className="space-y-2"><p className="text-sm text-muted-foreground">Hold after: {defaults.holds.map((status) => statusLabels[status]).join(", ")}. Set new run defaults in Settings.</p>{defaults.error ? <p role="status" className="text-sm text-muted-foreground">{defaults.error}</p> : null}</div>
         <VersionOverrides assignments={agentAssignments} onAssign={setAgentAssignments} value={agentVersions} onChange={setAgentVersions} disabled={busy} />
         {error ? <p id="new-error" role="alert" className="text-sm break-words text-destructive">{error}</p> : null}
         <div className="flex flex-wrap justify-end gap-2 border-t pt-4"><Button variant="outline" type="button" disabled={busy} onClick={() => { setOpen(false); setBrowsing(false); }}>Cancel</Button><Button type="submit" disabled={busy || browsing} aria-busy={busy}>{busy ? "Starting…" : workflow === "comments" ? "Prepare cleanup plan" : workflow === "design" ? "Start design conversation" : workflow === "repository" ? "Publish and start planning" : "Start planning"}</Button></div>

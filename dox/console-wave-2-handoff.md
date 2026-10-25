@@ -1,5 +1,9 @@
 # Console handoff after the run page
 
+Update: PR #28 merged after owner approval and passing checks. Continue from
+[the wave 4 handoff](console-wave-4-handoff.md); the delivery table below is the
+original pre-merge snapshot.
+
 The run page is implemented. The next work is the History page, completion of
 Agents and Settings, and the finish pass across the console. Start with
 [the next-wave brief](briefs/wave-4-history-agents-settings.md) and

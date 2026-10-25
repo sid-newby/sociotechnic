@@ -1,23 +1,19 @@
-![Sociotechnic: one request becomes a coordinated team of planning, building, review, security, and approval specialists.](assets/st5.png)
-
+![Sociotechnic: one request becomes a coordinated team of planning, building, review, security, and approval specialists.](assets/st4.png)
 Sociotechnical (or sociotechnic) refers to the interlinked relationship between people (social systems) and machines, tools, or software (technical systems) within organizations and society. The theory states that an organization or system works best when its social and technical parts are designed together to fit each other, rather than optimizing technology alone.
 
 Human behavior, culture, and values shape how technology is used, while technology simultaneously changes how people work and communicate. Speak like a human. Ship like a machine.
 
 We invite you to join us. Be Sociotechnic.
 
----
-
-
 Sociotechnic turns a development task into a safe, isolated branch you can test, review and merge with confidence. Start a run in the web console, review its plan, and follow the work through building, checks and independent reviews. The engine coordinates fresh coding agents and stops when it needs your decision.
 
 The console is the intended main interface. The engine and semantically versioned agent definitions live in this repository. PostgreSQL stores job records across projects and versions. The CLI and HTTP API support further automation and development against Sociotechnic itself.
 
-[Start a run](#start-a-run) · [Agent library](#agent-library) · [Follow the work](#follow-the-work) · [Review and decide](#review-and-decide) · [How it works](#how-it-works) · [Technical documentation](#technical-documentation)
+[Start a run](#start-a-run) · [Agent library](#agent-library) · [Follow the work](#follow-the-work) · [History](#history) · [Review and decide](#review-and-decide) · [How it works](#how-it-works) · [Technical documentation](#technical-documentation)
 
-![Run console overview with the run list, workflow stages, gate evidence and review summary.](assets/console/overview.png)
+![Run console with the run list, a pinned plan awaiting review, agent time, token totals and token burn chart.](assets/fog8.png)
 
-Console screenshots use demonstration data and predate the dashboard redesign.
+Screenshots show demonstration runs. The console is evolving, so some views show earlier layouts.
 
 ## Start a run
 
@@ -78,21 +74,43 @@ The inbox groups runs into **Needs you**, **Working** and **Done**. Search or fi
 
 The run dashboard puts the next decision above four cards: **Agent time**, **Tokens**, **Estimated cost**, and the current plan, checks or approval. Open a card for its recorded evidence. The token chart shows completed dispatch reports in role colors; select a dispatch to inspect its measurements, model, effort, deadline and log. Missing usage stays unreported, and provider cost is an estimate.
 
-![Activity view showing the demo run's completed dispatches, agent identities, verdicts and elapsed times.](assets/console/activity.png)
+![Dispatch history showing completed agents, rounds, token usage, elapsed time, models and linked records.](assets/fog7.png)
 
 Use **Dispatches**, **Records**, **Log** and **Decisions** below the chart. Customize dispatch columns or download the filtered visible columns as CSV. Records open in a right-hand sheet with Formatted, Raw and Download controls. Earlier rounds remain available through Records and the round selector in the evidence sheet.
 
-![Run records displaying the demo plan as formatted Markdown, with record navigation and a Raw view control.](assets/console/records.png)
+![Run record viewer displaying a highlighted diff, with Formatted, Raw and Download controls.](assets/fog1.png)
 
-**Controls** offers Pause, Step once, hold after a chosen transition and raise a bound before it trips. The dispatch sheet can **Interrupt dispatch** with a note while its siblings continue. **Settings** holds local concurrency, sandbox capacity and theme. **Commands** (⌘K or Ctrl+K) lists the actions legal now and their CLI equivalents; ⌘B or Ctrl+B toggles the sidebar.
+**Controls** offers Pause, Step once, hold after a chosen transition and raise a bound before it trips. The dispatch sheet can **Interrupt dispatch** with a note while its siblings continue. **Settings** holds local concurrency, sandbox capacity, theme and the default transition holds for new runs in this browser. **Commands** (⌘K or Ctrl+K) lists the actions legal now and their CLI equivalents; ⌘B or Ctrl+B toggles the sidebar.
 
-![Round evidence with build commit, checks, skipped lenses and passing review records.](assets/console/round.png)
+![Run evidence showing a blocked gate after a fixture test failure, the build commit, skipped UI and UX reviews, and passing code, security and conformance reviews.](assets/fog5.png)
 
 Checks and reviews retain their commit binding. Stale evidence never becomes a passing headline, skipped lenses remain **SKIPPED**, and missing measurements are never a reported zero.
 
-![Analysis view showing recorded token totals and unavailable category measurements from the demo fixtures.](assets/console/analysis-ov.png)
+![Run metrics showing agent time, reported tokens, unavailable cost, a failing check and token burn by dispatch.](assets/fog6.png)
 
-For an externally owned run, **Open owning console** takes you to its controls. Records stay readable here; **Refresh status** checks ownership again. Continue uses the normal recovery checks when a previous driver stopped or a runnable run lost its worktree.
+For an externally owned run, **Open owning console** takes you to its controls. Records stay readable here; **Refresh status** checks ownership again. Continue uses the normal recovery checks when a previous driver stopped or a runnable run lost its worktree. For an eligible missing worktree, **Controls → Restore worktree** recovers it and keeps the current run status without starting agents. **Recover worktree and continue** recovers it and starts the driver.
+
+In **Settings → New run defaults in this browser**, choose where future runs
+should hold after planning, building, checks or review, then choose **Save run
+defaults**. Plan review is always required. New runs keep the saved choices when
+you continue them; changing the defaults leaves existing runs unchanged. A
+one-run hold in Controls applies only to that start. Storage failures appear
+beside the setting and leave the previously saved defaults in place.
+
+## History
+
+Choose **History** in the sidebar for recorded work across projects, or **Run
+history** on a run for its own measurements. Filter by run, project and archive
+state. Open a total, completion day, feedback category or role/round to inspect
+the contributing dispatches. The page shows reported tokens, estimated cost,
+agent time, separate outcomes and checked builds, with measurement coverage.
+If the cohort is limited, narrow the filters to inspect a complete view.
+
+Open a dispatch or source record to read the evidence in the run's existing
+sheets. The selected run, dispatch and record survive reload through the page
+address. Missing data stays unknown; partial totals stay labelled. Provider
+cost reports are estimates, cache reads are part of total tokens, and human
+acceptance is context rather than an accuracy score.
 
 ## Agent library
 
@@ -100,18 +118,25 @@ For UI work that needs browser verification, choose the browser builder or brows
 builder-lite in New run's agent assignments. They use isolated browser sessions
 for rendered checks and diagnostics. [Setup and scope](sociotechnic/docs/browser-verification.md).
 
-Choose **Agents** in the sidebar, to browse the whole team across
+Choose **Agents** in the sidebar to browse the whole team across
 projects and runs. Each role has a distinct icon shared with run profiles,
 activity and analysis. Search by role, model or description, then inspect when
 it is called, its model and effort, allowed tools, limits and explicit skill
 access. Operator-installed skills are not automatically granted to agents.
+
+Choose a run in **In run**, or choose **Run agents** from its dashboard, to
+inspect its pinned assignments and releases. Tools, skill access, models,
+effort and budgets come from that run's configuration. Global profiles show
+the latest release. Counts open their contributing deployments; feedback and
+checked builds link to their exact source records. Configuration comparisons
+keep their workflow, tier, model, effort and release when you inspect a count.
 
 ![Agent library showing the planner, versioned specialist roster and deployment evidence from the committed demo fixture.](assets/console/agent-library.png)
 
 History reads database runs, including archived runs, counting each deployment
 once. Explicitly marked development cancellations remain in execution history
 and are excluded from performance metrics. Completed calls, execution errors,
-timeouts, malformed records and valid requests for changes stay separate. Feedback categories retain
+timeouts, interrupted calls, pending calls, malformed records and valid requests for changes stay separate. Feedback categories retain
 re-asks, type checks, tests, lint, build checks, review findings and human rework
 with their deployment, reporter and source. Check/review feedback identifies the
 builder at the matching round and commit; it does not prove who caused a defect.
@@ -123,7 +148,7 @@ effort and definition revision alongside timing and token coverage. New deployme
 capture a definition fingerprint; older ones remain **Version unrecorded**.
 All initial agents start at **v1.0.0**. Icons and names share meaningful colors
 that adapt to light and dark backgrounds. New agents inherit their role's icon
-and color, so the same identity follows them through run evidence..
+and color, so the same identity follows them through run evidence.
 
 To **add an agent**, open **Agent library → Add agent**. Give it a unique name,
 purpose and role template. Write instructions, import a Markdown/text file, or
@@ -205,6 +230,8 @@ The decision bar names the current hold and its primary action. Choose **Read** 
 | **Merged locally** | Test in your checkout, then accept or request rework. The job branch and worktree are kept |
 | **Accepted** | Choose **Push and open PR**, then separately **Merge PR on GitHub**; or finish the run locally |
 | **Stopped** | Choose **Reopen run** to continue with existing changes, or remove the worktree |
+
+![Command menu for a run needing attention, offering a retry increase, local merge, acceptance, rework and PR text preparation.](assets/fog2.png)
 
 Acceptance confirms that you tested the change. Publishing and GitHub merging have separate confirmation steps; a passing gate alone triggers neither. A remote merge checks the published PR identity and commit, follows GitHub's merge requirements, and records confirmed success.
 

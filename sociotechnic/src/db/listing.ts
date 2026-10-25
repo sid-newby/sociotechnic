@@ -38,9 +38,9 @@ export function entryFor(job: Job, worktreePresent: boolean) {
 }
 
 
-export async function loadJobHistory(): Promise<{source: "db"; jobs: Job[]; warnings: string[]}> {
+export async function loadJobHistory(filter: JobFilter = {}): Promise<{source: "db"; jobs: Job[]; warnings: string[]}> {
   await ensureJobAuthority();
-  return { source: "db", jobs: (await requireStore().listJobs({})).map((r) => r.job), warnings: [] };
+  return { source: "db", jobs: (await requireStore().listJobs(filter)).map((r) => r.job), warnings: [] };
 }
 export async function listJobs(q: ListQuery = {}) {
   await ensureJobAuthority();

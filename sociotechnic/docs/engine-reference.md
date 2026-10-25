@@ -588,9 +588,16 @@ PostgreSQL only. Missing staging does not hide a job. A database outage returns
 an error rather than an empty list or old file snapshot. Worktree availability
 is separate from record availability.
 
-`restore <job>` recreates a missing Git worktree when the repository and job
-branch still exist. It does not restore or overwrite job records, and has no
-record-overwrite `--force` mode. `resume` and `run` use the database job and
+`restore <job>` and `POST /api/jobs/:id/restore` recreate a missing Git worktree
+when the repository and job branch still exist. They use the same `restoreJob`
+operation, job-operation boundary and driver coordination locks. Active drivers,
+foreign owners and stored interrupted ownership refuse restoration until
+ownership is stopped or reconciled. They do not dispatch agents, change the human
+gate/status or overwrite job records; there is no force mode. The HTTP body is
+empty, success is `{ job, worktree: "restored" | "present" }`, and a missing
+repository/branch returns 409 `no-branch`. An already present worktree and repeated
+requests are safe. The React Restore worktree action stays separate from Recover
+worktree and continue. `resume` and `run` use the database job and
 prepare dispatch staging as needed. They cannot recreate a missing repository,
 branch or uncommitted edit from database records.
 
@@ -627,6 +634,16 @@ images, Markdown handoff, native windows and separate live verification evidence
 
 ## Agent library evidence and provenance
 
+History and Agent library share the deployment, observation and checked-build
+projections. History filters before paging inside a labelled cohort of at most
+100 database runs. The response reports scan completeness, measured coverage and
+exact source references; narrowing the filters can produce a complete cohort.
+[The API reference](cli-reference.md#history-api) defines the filters and limits.
+Daily series use actual completion dates; there is no usage interpolation or
+unfinished-dispatch agent timer. Cache reads are a subset of total tokens.
+Provider cost remains an estimate reported by completed calls, not subscription
+billing. Empty measurements remain null, and partial totals retain coverage.
+
 New engine dispatches include optional `configuration` metadata: SHA-256 revision
 of the role settings and definition bytes, plus observed provider/model/effort,
 tools, skills and limits. Old jobs remain valid with version unrecorded unless
@@ -649,10 +666,23 @@ New `round.checks` references retain `configured` and failed check names,
 categories and timeout flags. Categories derive from configured check names and
 commands (typecheck, test, lint, build, general checks). Historical failures without
 that metadata remain general checks. Library observations bind execution failures,
-timeouts, malformed records and re-asks directly to dispatches. Checks, review
+timeouts, interruptions, malformed records and re-asks directly to dispatches. Checks, review
 findings and human rework attach only to the latest builder in the same round
 with the same commit, explicitly as build context. They retain reporter and source
 record; attribution does not establish causation. Feedback counts are report counts.
+Interrupted calls have their own metric and observation category; they remain
+separate from failed, timed-out, pending and completed calls. Valid CHANGES,
+BLOCKED and ESCALATE results are not execution failures.
+
+Global library profiles describe latest releases. In-run inspection combines
+scoped deployment metrics with `/api/meta?job=<id>` pinned assignments and
+configuration. A shared identity can have different per-role budgets; those
+assignments remain visible. Missing pinned provenance does not substitute a
+latest-release profile. Configuration cohort filters match workflow, tier,
+model, effort, version and revision exactly before deployment paging. Metric
+and category counts open the contributing source list; individual dispatches,
+observations and feats link to their exact record. Superseded source paths remain
+bound to the historical attempt, even when a newer record occupies its old path.
 
 Comparisons group workflow, tier, actual model/effort and definition revision.
 Missing timing/tokens stay unavailable with coverage counts; p90 uses nearest rank.
@@ -661,6 +691,25 @@ counted. Feats recognize checked builds bound to an unflagged passing gate commi
 acceptance describes the run. No metric establishes accuracy or changes dispatch
 policy. See [library API](cli-reference.md#agent-library-api) and the
 [behavioral contract](../CONTRACTS.md#agent-library).
+
+### Browser defaults and pinned run holds
+
+Settings owns the browser preference `sociotechnic.new-run-holds.v1` through
+`ui/web/src/run-preferences.ts`. It stores the new-run transition holds;
+`planned`, `built`, `checked` and `reviewed` are the only accepted values.
+An absent preference defaults to initial plan review. Invalid or unavailable
+storage uses that fallback and displays a local message. Saving reports success only after browser storage accepts the value;
+a failure leaves the prior stored defaults in place.
+
+New run reads the preference on opening and sends optional `consoleHolds` to
+job creation. Validation precedes repository initialization/publication and
+job effects. The array is persisted in the canonical database job and remains
+pinned for that run. The console always includes initial plan review. Continue
+uses that run's holds except its current status, allowing the requested advance;
+a one-run Controls hold overrides them for that start. Changing browser defaults
+never edits existing jobs, CLI/global defaults or engine human gates. Jobs
+without the optional field keep their previous continuation behavior. No schema
+migration is required for this optional job-document field.
 
 ### Semantic agent releases
 

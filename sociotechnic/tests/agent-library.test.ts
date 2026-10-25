@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { initializeAgentVersions } from "../src/agent-versions.ts";
 import { agentCatalogEntry } from "../src/agent-catalog.ts";
-import { agentHistory, agentSummaries } from "../src/agent-library.ts";
+import { agentHistory, agentSummaries, parseAgentCohort } from "../src/agent-library.ts";
 import { createJob } from "../src/job.ts";
 import type { Dispatch, Job } from "../src/job.ts";
 import { roleOf, ROLES } from "../src/roles.ts";
@@ -159,4 +159,47 @@ test("library API uses canonical database history, ignores local poison and repo
     if (prior === undefined) delete process.env.SOCIOTECHNIC_HOME; else process.env.SOCIOTECHNIC_HOME = prior;
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+
+test("interrupted deployments remain distinct and metric/category drilldowns filter before paging", () => {
+  const job = fixture();
+  job.dispatches = [sample({ outcome: "interrupted", note: "Change the scope" }), sample({ id: "d-002", outcome: "failed" }), sample({ id: "d-003", outcome: "timeout" }), sample({ id: "d-004", finishedAt: null, outcome: null, usage: { total_tokens: 1000 } })];
+  const metrics = summary(job).metrics;
+  assert.deepEqual([metrics.deployments, metrics.interrupted, metrics.failed, metrics.timeout, metrics.pending, metrics.tokens], [4, 1, 1, 1, 1, null]);
+  assert.equal(metrics.observations.find((entry) => entry.category === "interrupted")?.count, 1);
+  assert.deepEqual(agentHistory([job], planner, 1, "recent", { metric: "errors" }).rows.map((row) => row.id), ["d-003", "d-002"]);
+  assert.equal(agentHistory([job], planner, 1, "recent", { metric: "interrupted" }).rows[0].observations[0].summary, "Change the scope");
+  assert.equal(agentHistory([job], planner, 1, "recent", { category: "interrupted" }).total, 1);
+  assert.equal(agentHistory([job], planner, 1, "recent", { metric: "tokens" }).total, 0);
+});
+
+test("deployment provenance preserves each superseded attempt and checked-build sources", () => {
+  const job = fixture(), build = job.dispatches.find((entry) => entry.step === "build"); assert.ok(build);
+  const feat = agentHistory([job], build.agent, 1, "recent").feats[0];
+  assert.equal(feat.dispatch, build.id); assert.equal(feat.record, build.record); assert.equal(feat.checksRecord, job.rounds[0].checks?.path);
+  job.dispatches = [sample({ id: "d-001", outcome: "interrupted" }), sample({ id: "d-002", attempt: 2 }), sample({ id: "d-003", attempt: 3 })];
+  const rows = agentHistory([job], planner, 1, "recent").rows;
+  assert.equal(rows.find((entry) => entry.id === "d-001")?.record, "plan.md.superseded-by-d-002");
+  assert.equal(rows.find((entry) => entry.id === "d-002")?.record, "plan.md.superseded-by-d-003");
+  assert.equal(rows.find((entry) => entry.id === "d-001")?.observations[0].record, "plan.md.superseded-by-d-002");
+});
+
+
+test("cohort drilldown preserves workflow, tier and unknown historical revisions", () => {
+  const job = fixture(); job.dispatches = [sample(), sample({ id: "d-002", model: "gpt-6.1-sol" })];
+  const cohort = parseAgentCohort(JSON.stringify(["feature", job.plan?.tier ?? null, "fable", "xhigh", null, null]));
+  const history = agentHistory([job], planner, 1, "recent", { cohort });
+  assert.equal(history.total, 1); assert.equal(history.rows[0].id, "d-001");
+  for (const raw of ["null", "{}", "[]", '["other",null,"fable","xhigh",null,null]', '["feature","invalid","fable","xhigh",null,null]', '["feature",null,2,"xhigh",null,null]']) assert.throws(() => parseAgentCohort(raw), { code: "bad-input" });
+});
+
+test("build-context observations retain a superseded review's actual evidence", () => {
+  const job = fixture(), round = job.rounds[0], build = job.dispatches.find((entry) => entry.step === "build"), reviewer = job.dispatches.find((entry) => entry.lens === "reviewer-code");
+  assert.ok(build?.parsed?.commit); assert.ok(reviewer?.parsed);
+  reviewer.parsed = { ...reviewer.parsed, kind: "ok", commit: build.parsed.commit, findings: [{ severity: "high", location: "a.ts:1", text: "Old review finding" }] };
+  round.reviews["reviewer-code"] = reviewer.parsed;
+  job.dispatches.push({ ...reviewer, id: "d-retry-review", parsed: null, outcome: "failed" });
+  const row = agentHistory([job], build.agent, 1, "issues").rows[0];
+  assert.equal(row.observations.find((observation) => observation.reporter === "reviewer-code")?.record, `${reviewer.record}.superseded-by-d-retry-review`);
 });

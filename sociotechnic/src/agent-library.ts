@@ -3,6 +3,8 @@ import type { Dispatch, Job } from "./job.ts";
 import type { CheckCategory } from "./checks.ts";
 import type { Tier } from "./roles.ts";
 import { sumTokens, tokenUsage } from "./token-usage.ts";
+import { dispatchRecord } from "./dispatch-record.ts";
+import { SociotechnicError } from "./errors.ts";
 
 export type Deployment = {
   workflow: "feature" | "design" | "comments"; tier: Tier | null; observations: Observation[];
@@ -12,12 +14,12 @@ export type Deployment = {
   result: string | null; malformed: boolean; note: string | null;
   durationMs: number | null; tokens: number | null; record: string;
 };
-export type ObservationCategory = CheckCategory | "execution" | "timeout" | "record" | "retry" | "review" | "rework";
+export type ObservationCategory = CheckCategory | "execution" | "timeout" | "interrupted" | "record" | "retry" | "review" | "rework";
 export type Observation = { category: ObservationCategory; attribution: "dispatch" | "build-context"; reporter: string; record: string; summary: string };
-export const OBSERVATION_CATEGORIES: readonly ObservationCategory[] = ["execution", "timeout", "record", "retry", "typecheck", "test", "lint", "build", "checks", "review", "rework"];
+export const OBSERVATION_CATEGORIES: readonly ObservationCategory[] = ["execution", "timeout", "interrupted", "record", "retry", "typecheck", "test", "lint", "build", "checks", "review", "rework"];
 export type AgentMetrics = {
   observations: { category: ObservationCategory; count: number }[];
-  deployments: number; runs: number; ok: number; failed: number; timeout: number;
+  deployments: number; runs: number; ok: number; failed: number; timeout: number; interrupted: number;
   pending: number; malformed: number; negative: number; retries: number;
   medianMs: number | null; p90Ms: number | null; cumulativeMs: number | null;
   measuredTimes: number; tokens: number | null; measuredTokens: number;
@@ -25,9 +27,27 @@ export type AgentMetrics = {
 export type AgentCohort = { workflow: Deployment["workflow"]; tier: Tier | null; model: string; effort: string; version: string | null; revision: string | null; metrics: AgentMetrics };
 export type AgentSummary = { name: string; profile: AgentCatalogEntry | null; metrics: AgentMetrics; cohorts: AgentCohort[] };
 export type AgentLibrary = { source: "db"; warnings: string[]; validation: { ok: boolean; problems: string[] }; runs: number; agents: AgentSummary[] };
-export type Feat = { job: string; feature: string; commit: string; round: number; accepted: boolean };
+export type Feat = { job: string; feature: string; commit: string; round: number; accepted: boolean; dispatch: string; record: string; checksRecord: string };
 export type AgentHistory = { name: string; page: number; pages: number; total: number; rows: Deployment[]; feats: Feat[] };
 export type HistorySort = "recent" | "longest" | "issues";
+export const AGENT_HISTORY_METRICS = ["deployments", "errors", "ok", "failed", "timeout", "interrupted", "pending", "malformed", "negative", "retries", "timing", "tokens"] as const;
+export type AgentHistoryMetric = typeof AGENT_HISTORY_METRICS[number];
+export type AgentCohortFilter = Pick<AgentCohort, "workflow" | "tier" | "model" | "effort" | "version" | "revision">;
+export type AgentHistoryFilter = { metric?: AgentHistoryMetric; category?: ObservationCategory; cohort?: AgentCohortFilter };
+export function parseAgentCohort(raw: string): AgentCohortFilter {
+  const invalid = (): never => { throw new SociotechnicError("bad-input", "Invalid agent cohort"); };
+  if (raw.length > 4096) return invalid();
+  let value: unknown;
+  try { value = JSON.parse(raw); } catch { return invalid(); }
+  if (!Array.isArray(value) || value.length !== 6) return invalid();
+  const [workflow, tier, model, effort, version, revision]: unknown[] = value;
+  if (workflow !== "feature" && workflow !== "design" && workflow !== "comments") return invalid();
+  if (tier !== null && tier !== "COMPLEX" && tier !== "EASY" && tier !== "BULK" && tier !== "COMMENTS") return invalid();
+  if (typeof model !== "string" || typeof effort !== "string" || model.length > 500 || effort.length > 500) return invalid();
+  if (version !== null && (typeof version !== "string" || version.length > 500)) return invalid();
+  if (revision !== null && (typeof revision !== "string" || revision.length > 500)) return invalid();
+  return { workflow, tier, model, effort, version, revision };
+}
 
 export function activeAgentCatalog(catalog: readonly AgentCatalogEntry[]): AgentCatalogEntry[] {
   const retired = new Set(catalog.flatMap((entry) => entry.supersedes ?? []).filter((name) => {
@@ -42,15 +62,15 @@ function duration(d: Dispatch): number | null {
   const start = Date.parse(d.startedAt), finish = Date.parse(d.finishedAt);
   return Number.isFinite(start) && Number.isFinite(finish) && finish >= start ? finish - start : null;
 }
-function sourceRecord(job: Job, d: Dispatch): string {
-  const next = job.dispatches.slice(job.dispatches.indexOf(d) + 1).find((other) => other.record === d.record);
-  return next ? `${d.record}.superseded-by-${next.id}` : d.record;
+export function sourceRecord(job: Job, d: Dispatch): string {
+  return dispatchRecord(job.dispatches, d);
 }
 function observations(job: Job, d: Dispatch): Observation[] {
   const out: Observation[] = [];
   const direct = { attribution: "dispatch", reporter: d.agent, record: sourceRecord(job, d) } as const;
   if (d.attempt > 1 && d.performanceAnnotation?.kind !== "retry-after-development-cancellation") out.push({ ...direct, category: "retry", summary: `Re-asked for ${d.step}${d.lens ? ` / ${d.lens}` : ""}, attempt ${d.attempt}. Inspect prior attempts for the triggering record or error.` });
   if (d.outcome === "failed" || d.outcome === "timeout") out.push({ ...direct, category: d.outcome === "timeout" ? "timeout" : "execution", summary: d.note ?? `Dispatch ${d.outcome}` });
+  if (d.outcome === "interrupted") out.push({ ...direct, category: "interrupted", summary: d.note ?? "Dispatch interrupted" });
   if (d.parsed?.kind === "malformed") out.push({ ...direct, category: "record", summary: d.parsed.reason ?? "Malformed result record" });
   const round = job.rounds.find((r) => r.n === d.round);
   if (!round || d.step !== "build" || d.parsed?.kind !== "ok" || !d.parsed.commit || [...job.dispatches].reverse().find((other) => other.round === d.round && other.step === "build")?.id !== d.id) return out;
@@ -63,19 +83,21 @@ function observations(job: Job, d: Dispatch): Observation[] {
   for (const [reporter, review] of Object.entries(round.reviews)) {
     if (review.kind !== "ok" || review.commit !== commit) continue;
     const human = reporter === "review-human";
-    const record = `round-${round.n}/${human ? "review-human" : reporter === "conformance" ? "conformance" : reporter.replace(/^reviewer-/, "review-")}.md`;
+    const path = `round-${round.n}/${human ? "review-human" : reporter === "conformance" ? "conformance" : reporter.replace(/^reviewer-/, "review-")}.md`;
+    const source = human ? undefined : [...job.dispatches].reverse().find((other) => other.round === round.n && other.record === path && other.parsed?.kind === "ok" && other.parsed.commit === commit);
+    const record = source ? sourceRecord(job, source) : path;
     for (const finding of review.findings) out.push({ category: human ? "rework" : "review", attribution: "build-context", reporter, record, summary: `[${finding.severity}] ${finding.location}: ${finding.text}` });
   }
   return out;
 }
-function deployments(jobs: readonly Job[], agent: string): Deployment[] {
-  return jobs.flatMap((job) => job.dispatches.filter((d) => d.agent === agent && d.performanceAnnotation?.kind !== "development-cancellation").map((d) => ({
+export function deployments(jobs: readonly Job[], agent?: string): Deployment[] {
+  return jobs.flatMap((job) => job.dispatches.filter((d) => (agent === undefined || d.agent === agent) && d.performanceAnnotation?.kind !== "development-cancellation").map((d) => ({
     workflow: job.commentCleanup ? "comments" : job.design ? "design" : "feature", tier: job.plan?.tier ?? null, observations: observations(job, d),
     job: job.id, feature: job.feature, repo: job.repo, accepted: job.human.some((h) => h.action === "accept"),
     id: d.id, round: d.round, attempt: d.performanceAnnotation?.kind === "retry-after-development-cancellation" ? 1 : d.attempt, model: d.model, effort: d.effort,
     version: d.configuration?.version ?? d.versionBackfill?.version ?? null, revision: d.configuration?.revision ?? null, startedAt: d.startedAt, outcome: d.outcome,
     result: d.parsed?.value ?? null, malformed: d.parsed?.kind === "malformed", note: d.note ?? d.parsed?.reason ?? null,
-    durationMs: duration(d), tokens: tokenUsage(d.usage).total, record: sourceRecord(job, d),
+    durationMs: duration(d), tokens: d.finishedAt || d.outcome ? tokenUsage(d.usage).total : null, record: sourceRecord(job, d),
   })));
 }
 export function deploymentMetrics(rows: readonly Deployment[]): AgentMetrics {
@@ -85,7 +107,7 @@ export function deploymentMetrics(rows: readonly Deployment[]): AgentMetrics {
     observations: OBSERVATION_CATEGORIES.map((category) => ({ category, count: rows.reduce((sum, row) => sum + row.observations.filter((o) => o.category === category).length, 0) })),
     deployments: rows.length, runs: new Set(rows.map((r) => r.job)).size,
     ok: rows.filter((r) => r.outcome === "ok").length, failed: rows.filter((r) => r.outcome === "failed").length,
-    timeout: rows.filter((r) => r.outcome === "timeout").length, pending: rows.filter((r) => r.outcome === null).length,
+    timeout: rows.filter((r) => r.outcome === "timeout").length, interrupted: rows.filter((r) => r.outcome === "interrupted").length, pending: rows.filter((r) => r.outcome === null).length,
     malformed: rows.filter((r) => r.malformed).length,
     negative: rows.filter((r) => !r.malformed && ["CHANGES", "BLOCKED", "ESCALATE"].includes(r.result ?? "")).length,
     retries: rows.filter((r) => r.attempt > 1).length,
@@ -110,20 +132,38 @@ export function agentSummaries(jobs: readonly Job[], catalog: readonly AgentCata
       cohorts: [...cohorts.values()].map(({ rows: cohortRows, ...identity }) => ({ ...identity, metrics: deploymentMetrics(cohortRows) })) };
   });
 }
-export function agentHistory(jobs: readonly Job[], name: string, page: number, sort: HistorySort): AgentHistory {
-  const issue = (r: Deployment) => r.observations.length > 0;
-  const rows = deployments(jobs, name).filter((r) => sort !== "issues" || issue(r));
-  rows.sort((a, b) => sort === "longest" && a.durationMs !== b.durationMs ? (b.durationMs ?? -1) - (a.durationMs ?? -1) : b.startedAt.localeCompare(a.startedAt) || b.job.localeCompare(a.job) || b.id.localeCompare(a.id));
-  const pages = Math.max(1, Math.ceil(rows.length / 10));
-  const current = Math.min(page, pages);
+export function matchesAgentHistory(row: Deployment, filter: AgentHistoryFilter): boolean {
+  const cohort = filter.cohort;
+  if (cohort && (row.workflow !== cohort.workflow || row.tier !== cohort.tier || row.model !== cohort.model || row.effort !== cohort.effort || row.version !== cohort.version || row.revision !== cohort.revision)) return false;
+  if (filter.category && !row.observations.some((observation) => observation.category === filter.category)) return false;
+  switch (filter.metric) {
+    case undefined: case "deployments": return true;
+    case "errors": return row.outcome === "failed" || row.outcome === "timeout";
+    case "ok": case "failed": case "timeout": case "interrupted": return row.outcome === filter.metric;
+    case "pending": return row.outcome === null;
+    case "malformed": return row.malformed;
+    case "negative": return !row.malformed && ["CHANGES", "BLOCKED", "ESCALATE"].includes(row.result ?? "");
+    case "retries": return row.attempt > 1;
+    case "timing": return row.durationMs !== null;
+    case "tokens": return row.tokens !== null;
+    default: { const exhaustive: never = filter.metric; return exhaustive; }
+  }
+}
+export function checkedBuildFeats(jobs: readonly Job[], name?: string): Feat[] {
   const feats: Feat[] = [];
   for (const job of jobs) for (const round of job.rounds) {
     const gate = round.gate;
     if (!gate?.pass || gate.flags.length || gate.blockers.length || !round.checks?.pass || round.checks.commit !== gate.head || round.buildCommit !== gate.head) continue;
     const build = [...job.dispatches].reverse().find((d) => d.step === "build" && d.round === round.n);
-    if (build?.agent !== name || build.outcome !== "ok" || build.parsed?.kind !== "ok" || build.parsed.effective !== "READY" || build.parsed.commit !== gate.head) continue;
-    feats.push({ job: job.id, feature: job.feature, commit: gate.head, round: round.n, accepted: job.human.some((h) => h.action === "accept") });
+    if (!build || (name !== undefined && build.agent !== name) || build.performanceAnnotation?.kind === "development-cancellation" || build.outcome !== "ok" || build.parsed?.kind !== "ok" || build.parsed.effective !== "READY" || build.parsed.commit !== gate.head) continue;
+    feats.push({ job: job.id, feature: job.feature, commit: gate.head, round: round.n, accepted: job.human.some((h) => h.action === "accept"), dispatch: build.id, record: sourceRecord(job, build), checksRecord: round.checks.path });
   }
-  feats.sort((a, b) => b.job.localeCompare(a.job) || b.round - a.round);
-  return { name, page: current, pages, total: rows.length, rows: rows.slice((current - 1) * 10, current * 10), feats: feats.slice(0, 3) };
+  return feats.sort((a, b) => b.job.localeCompare(a.job) || b.round - a.round);
+}
+export function agentHistory(jobs: readonly Job[], name: string, page: number, sort: HistorySort, filter: AgentHistoryFilter = {}): AgentHistory {
+  const rows = deployments(jobs, name).filter((row) => (sort !== "issues" || row.observations.length > 0) && matchesAgentHistory(row, filter));
+  rows.sort((a, b) => sort === "longest" && a.durationMs !== b.durationMs ? (b.durationMs ?? -1) - (a.durationMs ?? -1) : b.startedAt.localeCompare(a.startedAt) || b.job.localeCompare(a.job) || b.id.localeCompare(a.id));
+  const pages = Math.max(1, Math.ceil(rows.length / 10));
+  const current = Math.min(page, pages);
+  return { name, page: current, pages, total: rows.length, rows: rows.slice((current - 1) * 10, current * 10), feats: checkedBuildFeats(jobs, name).slice(0, 3) };
 }

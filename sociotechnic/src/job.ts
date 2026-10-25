@@ -1,3 +1,4 @@
+import type { ConsoleHold } from "./console-preferences.ts";
 import type { InteractiveDesign } from "./design-session.ts";
 import { join } from "node:path";
 import type { Execution } from "./execution.ts";
@@ -93,6 +94,7 @@ export type Dispatch = {
 };
 
 export type Job = {
+  consoleHolds?: ConsoleHold[];
   designReleaseMigration?: { session: string; from: string; to: string; at: string };
   execution?: Execution;
   performanceHistory?: PerformanceHistoryEntry[];

@@ -5,6 +5,9 @@ Dates on backfilled entries use America/Chicago. See the [release guide](sociote
 
 ## Unreleased
 
+- Add History with bounded database cohorts, recorded token/cost/time coverage, role/round views, interrupted outcomes and exact dispatch/record drill-down. Add in-run Agent library filtering with pinned configurations and metric, feedback and cohort provenance.
+- Save browser-owned New run hold defaults and pin them per run; preserve mandatory plan review. Add guarded restore-only recovery that never starts agents, and retain evidence selections across reload.
+
 - Rebuild the run console around an inbox sidebar, decision bar, evidence sheets, four live summary cards, recorded token chart and Dispatches/Records/Log/Decisions table. Add working column customization and CSV export, metric and dispatch drill-down, buffered live logs and record downloads.
 - Expose single-step execution, hold-after-transition, early bound overrides, dispatch interruption, local concurrency settings, Stop notes, explicit reopen discard and PR text without publishing. Preserve ownership gates and local-testing/merge confirmations, and move detailed explanations into sheets.
 
