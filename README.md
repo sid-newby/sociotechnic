@@ -1,12 +1,13 @@
-# Sociotechnic
-
-![Sociotechnic: one request becomes a coordinated team of planning, building, review, security, and approval specialists.](assets/sociotechnic-banner-v4.png)
+![Sociotechnic: one request becomes a coordinated team of planning, building, review, security, and approval specialists.](assets/st5.png)
 
 Sociotechnical (or sociotechnic) refers to the interlinked relationship between people (social systems) and machines, tools, or software (technical systems) within organizations and society. The theory states that an organization or system works best when its social and technical parts are designed together to fit each other, rather than optimizing technology alone.
 
 Human behavior, culture, and values shape how technology is used, while technology simultaneously changes how people work and communicate. Speak like a human. Ship like a machine.
 
 We invite you to join us. Be Sociotechnic.
+
+---
+
 
 Sociotechnic turns a development task into a safe, isolated branch you can test, review and merge with confidence. Start a run in the web console, review its plan, and follow the work through building, checks and independent reviews. The engine coordinates fresh coding agents and stops when it needs your decision.
 
