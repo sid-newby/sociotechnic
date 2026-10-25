@@ -188,6 +188,10 @@ components:
 
 ## Overview
 
+The header reads `sociotechnic vX.Y.Z` with one space and the existing brand
+typography throughout. The version remains visible on narrow screens; header
+actions wrap below it as needed. The release guide defines the build-time source.
+
 New run's optional Docker Sandbox environment uses the existing labeled native
 select and form fields. The browser owns the select popup. CPU, memory and
 concurrency fields appear only for that choice; drafts survive validation errors.

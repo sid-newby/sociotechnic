@@ -7,7 +7,7 @@ image shows an unpublished draft. No agents are dispatched and no live database
 or catalog is changed.
 
 The set was refreshed on October 24, 2026 against application commit `e831dea`.
-Every image is a lossless PNG at **1600 × 1000**, with dark color scheme, 1×
+Every image in that set is a lossless PNG at **1600 × 1000**, with dark color scheme, 1×
 device scale, reduced motion, local fonts, English labels and UTC timestamps.
 Captures use the app's real layout and native scrolling, without CSS overrides,
 stitched pages, retouched content or resized exports.
@@ -24,3 +24,13 @@ stitched pages, retouched content or resized exports.
 | [records.png](records.png) | Formatted Markdown plan and original-record navigation |
 
 For refresh instructions, see [Console screenshots](../../sociotechnic/docs/development.md#console-screenshots).
+
+## Version header
+
+The v0.1.5 header captures use the same isolated demo data and built console,
+captured directly from `.app-header` at desktop (1440 px) and narrow (390 px)
+viewport widths, dark theme and 1× device scale. They show the shared title
+typography and wrapping actions; the original full-console set above is retained.
+
+- [Desktop header](version-header-desktop-dark.png)
+- [Narrow header](version-header-mobile.png)
