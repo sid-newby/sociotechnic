@@ -10,7 +10,7 @@ The console is the main interface. The engine and semantically versioned agent d
 
 ![Run console overview with the run list, workflow stages, gate evidence and review summary.](assets/console/overview.png)
 
-Console screenshots use demonstration data.
+Console screenshots use demonstration data and a consistent 1600 × 1000 viewport.
 
 ## Start a run
 
@@ -58,7 +58,11 @@ The workflow strip shows Plan, Build, Checks, Review, Gate, Approve and Human fo
 | **Analysis** | Inspect each round's build, checks, findings, conformance, timing and recorded token usage |
 | **Agents** | See configured roles, models, effort, tools and each agent's history in the selected run |
 
+![Activity view showing the demo run's completed dispatches, agent identities, verdicts and elapsed times.](assets/console/activity.png)
+
 Filter runs by project or status, or search the run list. Use the archive button beside a run to hide it. Check **Show archived** above the list to see archived runs and restore them. Archiving keeps the run and its records, and active runs continue working. On desktop, the run list and selected run scroll independently; the run filters stay visible. Open the plan, diff, approval or complete record list for supporting detail. Run records format Markdown headings, lists, tables and fenced code, and highlight JSON and diffs. Code blocks use their language label or detect common languages when unlabeled. Raw view preserves the original text and layout; Formatted view returns to reading.
+
+![Run records displaying the demo plan as formatted Markdown, with record navigation and a Raw view control.](assets/console/records.png)
 
 Each round records the build commit, configured checks and review verdicts. A lens whose path rules match no changed files reads **SKIPPED**. Missing checks and missing usage remain visible; neither is treated as a passing result or a reported zero.
 
@@ -76,7 +80,7 @@ activity and analysis. Search by role, model or description, then inspect when
 it is called, its model and effort, allowed tools, limits and explicit skill
 access. Operator-installed skills are not automatically granted to agents.
 
-![Agent library showing the planner and deployment evidence from the committed demo fixture.](assets/console/agent-library.jpg)
+![Agent library showing the planner, versioned specialist roster and deployment evidence from the committed demo fixture.](assets/console/agent-library.png)
 
 History reads database runs, including archived runs, counting each deployment
 once. Explicitly marked development cancellations remain in execution history
@@ -113,7 +117,7 @@ the library. Choose its planner for a plan another builder can execute, its
 advisor for research and escalations, or its builder profiles for implementation
 and small fixes. Assignments retain the workflow's plan, check and human gates.
 
-![A demonstration agent created in an isolated test catalog, ready for explicit run assignment.](assets/console/agent-creation.jpg)
+![Add agent form with a demonstration release-planning purpose, role template and adapted instructions.](assets/console/agent-creation.png)
 
 To **modify an agent**, select it in the library and choose **Manage versions**.
 Copy an existing release, edit its purpose, instructions, model, effort, tools or budgets,
