@@ -146,8 +146,11 @@ The maintained React/Nest starter is supplied as a read-only reference when
 available. Its source revision and content digest are pinned in the design
 session and handoff; the human's choice belongs in the design conversation and
 work product. Planners and builders receive the same starter reference and refuse
-changed source bytes. Explicitly requested templates are preserved. A major UI
-request hands off before elaborating an implementation plan.
+changed source bytes. Explicitly requested templates are preserved. The planner
+judges whether design collaboration is useful; new HTML/UI alone does not force
+an interactive designer or interview. Explicit design-conversation requests and
+approved artifacts remain binding. Appropriate frontend-design skills remain
+subject to the selected agent's existing permissions.
 
 Local integration verification uses injected SDK streams and real Impeccable
 subprocesses, never a provider call. Live verification uses the real provider

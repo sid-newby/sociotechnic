@@ -38,10 +38,11 @@ explicit `githubRepository` setup creates a private GitHub remote and publishes
 the initial base before the engine cuts the job branch. Authentication or push
 failure prevents job creation; matching origins support retry without another
 remote creation. Ordinary `initialize` stays local. Publishing run changes still
-requires human acceptance and a separate push-and-PR action. UI
-work without an existing UI scaffold is routed through design so the interview
-can recommend the bundled React + NestJS house special; the human chooses the
-stack and approves the design before implementation. Non-UI projects need no
+requires human acceptance and a separate push-and-PR action. The planner judges
+whether design collaboration is needed; a new HTML page or absent UI scaffold
+does not require an interview. When design is requested, the conversation may
+offer the bundled React + NestJS starter; the human chooses the stack and approves
+the design before implementation. Non-UI projects need no
 scaffold. Explicitly requested scaffolds and existing UI foundations are respected.
 
 ## Browser verification
