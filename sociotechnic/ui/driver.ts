@@ -82,6 +82,7 @@ type Control = { abort: AbortController; interrupt: { note: string | null } | nu
 
 type Slot = {
   id: string;
+  workflow: boolean;
   state: Omit<DriverState, "log">;
   pauseRequested: boolean;
   token: string;
@@ -135,7 +136,7 @@ export function createDriverRegistry(options: DriverOptions): DriverRegistry {
   const slotOf = (id: string): Slot => {
     let slot = slots.get(id);
     if (slot === undefined) {
-      slot = { id, state: emptyState(), pauseRequested: false, token: "", abort: new AbortController(), loop: Promise.resolve(), activity: new Map(), controls: new Map(), log: [], logStart: 0, logBytes: 0, seq: 0 };
+      slot = { id, workflow: false, state: emptyState(), pauseRequested: false, token: "", abort: new AbortController(), loop: Promise.resolve(), activity: new Map(), controls: new Map(), log: [], logStart: 0, logBytes: 0, seq: 0 };
       slots.set(id, slot);
     }
     return slot;
@@ -161,7 +162,7 @@ export function createDriverRegistry(options: DriverOptions): DriverRegistry {
 
   const supervise = async (id: string, slot: Slot, result: StepResult): Promise<{ result: StepResult; groups?: string[][] }> => {
     const binding = options.orchestrator;
-    if (!binding || await readJob(id,job=>!!job.workflow)) return { result };
+    if (!binding || slot.workflow) return { result };
     const commitments: Commitments = { scope: "this-driver-process", active: [...slots.values()].flatMap(s => s.state.active.map(a => ({ job: s.id, dispatch: a.dispatchId, agent: a.agent }))), queued: pool.queue.length, limit: localDispatchLimit() };
     const request = await readJob(id, job => orchestratorRequest(job,result,commitments));
     if (!request || slot.abort.signal.aborted || slot.pauseRequested) return { result };
@@ -422,14 +423,14 @@ export function createDriverRegistry(options: DriverOptions): DriverRegistry {
           lifecycle(id, slot, "paused");
           return;
         }
-        if(await leadWorkflow(id,slot))return;
-        if(await readJob(id,job=>!!workflowPhase(job)))continue;
+        if(slot.workflow&&await leadWorkflow(id,slot))return;
+        if(slot.workflow&&await readJob(id,job=>!!workflowPhase(job)))continue;
         const stepResult = await mutateJob(id, async (job) => {
           (session().commitGuards ??= []).push(() => verifyDriverLease(id,slot.token));
           return preflightDriverStep(job, await step(job, { hold, signal: slot.abort.signal }));
         });
-        if(await readJob(id,job=>!!job.workflow&&(job.status==="planned"||job.status==="ready")&&!!workflowPhase(job))){
-          if(await leadWorkflow(id,slot))return;
+        if(slot.workflow&&await readJob(id,job=>(job.status==="planned"||job.status==="ready")&&!!workflowPhase(job))){
+          if(slot.workflow&&await leadWorkflow(id,slot))return;
         }
         const supervised = await supervise(id,slot,stepResult);
         const result = supervised.result;
@@ -484,7 +485,7 @@ export function createDriverRegistry(options: DriverOptions): DriverRegistry {
           continue;
         }
         if (result.action === "human") {
-          if(await readJob(id,job=>!!job.workflow&&job.status==="needs-human"))await leadWorkflow(id,slot);
+          if(slot.workflow&&await readJob(id,job=>job.status==="needs-human"))await leadWorkflow(id,slot);
           const design = await readJob(id, (job) => job.designSession);
           if (design?.state === "ready") await runInteractiveDesign({ id, token: slot.token, signal: slot.abort.signal, onActivity: (line) => activity(id, slot, design.id, line), query: options.designQuery });
         }
@@ -500,7 +501,7 @@ export function createDriverRegistry(options: DriverOptions): DriverRegistry {
             return rejectHandoffs(job, [{ entry: err.dispatch, issues: err.issues }]);
           });
           slot.state.lastStep = (await supervise(id,slot,slot.state.lastStep)).result;
-          if(await readJob(id,job=>!!job.workflow))await leadWorkflow(id,slot);
+          if(slot.workflow)await leadWorkflow(id,slot);
           lifecycle(id, slot, "step");
         } catch (reportError) { log(slot,"error",`Handoff escalation was not committed: ${String(reportError)}`); }
       }
@@ -546,6 +547,7 @@ export function createDriverRegistry(options: DriverOptions): DriverRegistry {
         else if(current.workflow.phase==="approval")approveWorkflow(current,startedAt);
       }); }
       catch(error) { await releaseDriver(id,process.pid); throw error; }
+      slot.workflow=!!job.workflow;
       slot.state = { ...emptyState(), running: true, mode, hold: [...hold], startedAt };
       slot.pauseRequested = false;
       slot.abort = new AbortController();

@@ -53,7 +53,7 @@ const conditional = (failure: string): string => `if test "$(cat src/feature.txt
 const checks = [
   { name: "feature", run: conditional("printf 'repair detail\\n' >&2; exit 7"), timeoutSeconds: 5 },
   { name: "signal", run: conditional("printf 'signal detail\\n'; kill -TERM $$"), timeoutSeconds: 5 },
-  { name: "deadline", run: conditional("printf 'timeout detail\\n'; sleep 2"), timeoutSeconds: 0.1 },
+  { name: "deadline", run: conditional("printf 'timeout detail\\n'; sleep 10"), timeoutSeconds: 1 },
   { name: "last check", run: "printf 'full suite completed'", timeoutSeconds: 5 },
 ];
 type Fixture = NewResult & { builder: DispatchOut };
