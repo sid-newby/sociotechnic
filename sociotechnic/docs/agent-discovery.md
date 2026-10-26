@@ -8,9 +8,12 @@ Adding a custom library agent automatically adds its card; there is no separate
 hardcoded Azure routing list to maintain. Give new agents precise purposes and
 skills so another agent can recognize when they would help.
 
-A new run freezes the available roster. The engine adds it and help guidance to
-every top-level dispatch, including validation and approval. Nested comment
-workers see the same roster but ask their coordinator for help. Existing runs
+A new run freezes the available roster. Planning, research, design and authorized
+build coordinators receive its directory and help guidance. Ordinary builders,
+review lenses, conformance and approvers receive help-return guidance without
+the directory: describe missing expertise and evidence; the assigner selects the
+resource. An expert already known from the assignment may still be named. Nested
+comment workers retain their coordinator context and ask it for help. Existing runs
 without a roster say it was not recorded rather than acquiring newer agents.
 `sociotechnic roster <job>` reads the frozen view. Cards are capability data,
 not permission grants or executable instructions; the actual role controls tools.
@@ -111,3 +114,14 @@ The [implementation plan](agent-discovery-plan.md) records scope and verificatio
 Tests cover real catalog and prompt paths, future-agent discovery, advisor
 identity/version preservation, assignment locks, rejected role expansion,
 recommendation handling, blocked builders, nested workers and PostgreSQL restart.
+
+### Generated-brief compatibility
+
+This changes newly generated briefs, including later eligible dispatches in an
+existing run after an engine upgrade. Saved pending/claimed envelopes remain exact
+and retries retain their immutable profile, model, tools and normal bounds. No
+published agent release, frozen roster, assignment or gate changes. This cut removes
+the inline directory only: legacy full job snapshots and explicitly relevant plan/
+retry records can still expose roster data or a known expert. Existing profile
+instructions remain binding; this is not a token-savings claim or a removal of
+necessary specialist skills. Coordinator/nested-worker context is unchanged.

@@ -5,6 +5,8 @@ Dates on backfilled entries use America/Chicago. See the [release guide](sociote
 
 ## Unreleased
 
+- Omit unused capability directories from ordinary builder/review/approval briefs while preserving discovery, coordinator context and concrete help-return paths.
+
 - Add an explicit local YAML workflow: Sol/high intake, eligible assignments, human plan approval and final intent review, retaining existing technical gates and immutable releases.
 
 - Add opt-in local GPT-6.1 Sol/high supervision for reader-wave distribution and blocked handoffs, with referenced contracts, bounded recipient-output repair, retained evidence and existing human approval gates. Preserve existing agent releases and run pins.

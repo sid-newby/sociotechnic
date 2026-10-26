@@ -119,7 +119,9 @@ test("planner consults the exact frozen advisor, retries that release, and regai
   const held = await mutateJob(id, (job) => step(job, { hold: ["planned"] })); assert.equal(held.action, "hold");
   const builder = dispatch(await mutateJob(id, (job) => step(job)));
   assert.equal(builder.agent, "sociotechnic-builder-lite");
-  assert.match(builder.prompt, /sociotechnic-azure-advisor/);
+  assert.doesNotMatch(builder.prompt, /## Team capabilities|"name":"sociotechnic-azure-advisor"/);
+  assert.match(builder.prompt, /The assigner selects resources/);
+  assert.match(builder.prompt, /STATUS: BLOCKED.*## Blocker/);
   assert.match(builder.prompt, /Keep ownership/);
   const worktree = await readJob(id, (job) => job.worktree);
   const head = execFileSync("git", ["rev-parse", "HEAD"], { cwd: worktree, encoding: "utf8" }).trim();

@@ -96,6 +96,9 @@ async function build(ctx: NewResult, dispatch: DispatchOut, content: string, ui 
 async function finishReviews(ctx: NewResult, reviews: DispatchOut[]): Promise<void> {
   const head = git(ctx.worktree, "rev-parse", "HEAD");
   for (const review of reviews) {
+    assert.doesNotMatch(review.prompt, /## Team capabilities/);
+    assert.match(review.prompt, /needed expertise in ## Findings/);
+    assert.match(review.prompt, /Do not spawn agents for help/);
     const stages = review.agent === "sociotechnic-conformance" ? "\n## Plan steps\n| stage | status | justification |\n| --- | --- | --- |\n| s1 | implemented | Feature exists. |\n" : "";
     await complete(ctx, review, `VERDICT: PASS\nCOMMIT: ${head}\n\n## Findings\nNone.\n${stages}\n## Notes\nInspected fixture.\n`);
   }
@@ -150,6 +153,8 @@ test("red canonical checks retain evidence without reviews, repair once, then pa
   assert.equal((await snapshot(ctx)).rounds[1].gate?.pass, true);
   const approval = dispatches(await advance(ctx))[0];
   assert.equal(approval.agent, "sociotechnic-approver");
+  assert.doesNotMatch(approval.prompt, /## Team capabilities/);
+  assert.match(approval.prompt, /ESCALATE.*needed expertise and missing evidence/);
   await complete(ctx, approval, `DECISION: APPROVE\nCOMMIT: ${repairedHead}\n\n## Reasons\nAcceptance is covered.\n`);
   assert.equal((await advance(ctx)).status, "ready");
   assert.equal(await record(ctx, "round-1/build.md"), buildText);

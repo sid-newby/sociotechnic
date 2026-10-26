@@ -158,7 +158,9 @@ function dispatchOne(job: Job, spec: DispatchSpec, now: string): DispatchOut {
     ? [job.workflow.briefRecord, job.workflow.assignmentRecord].filter((path): path is string => path !== undefined)
     : [];
   const context = workflowRecords.length ? `\n\n## Approved workflow context\nRead the retained workflow records before doing this assignment:\n${workflowRecords.map((path) => `- ${abs(job, path)}`).join("\n")}` : "";
-  const prompt = `${spec.prompt}${context}\n\n## Team capabilities\n${rosterBrief(job.agentRoster ?? [], job.agentAssignments, job.agentLocks)}\n\n${assistanceBrief(role.record)}`;
+  const hasRoster = !["build", "review", "conformance", "decision"].includes(role.record) || role.tools.includes("Agent");
+  const team = hasRoster ? `\n\n## Team capabilities\n${rosterBrief(job.agentRoster ?? [], job.agentAssignments, job.agentLocks)}` : "";
+  const prompt = `${spec.prompt}${context}${team}\n\n${assistanceBrief(role.record,hasRoster)}`;
   const requiredRecords = [...session().records.keys()].filter(path => !path.startsWith("migration/") && prompt.includes(abs(job,path)));
   const envelope: DispatchOut = { configuration, requiredRecords, ...(spec.agent === "sociotechnic-comment-cleaner" ? { workerConfiguration: job.agentConfigurations?.["sociotechnic-comment-sicko"] } : {}), id: d.id, agent: d.agent, model: d.model, effort: d.effort, deadlineAt: d.deadlineAt, record: d.record, prompt,
     ...(role.record === "design" && job.design ? { designScope: { record: abs(job, spec.record), artifacts: abs(job, `design/atelier/round-${job.design.iteration}`), referenceRoot: job.worktree, receipt: abs(job, `design/tool-${job.design.iteration}.json`) } } : {}),

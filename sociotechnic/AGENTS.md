@@ -55,8 +55,10 @@ builder through New run's existing assignments or CLI `--agent-assignments`;
 use `--agent-versions` only for an explicit version choice. These choices pin
 and lock those slots. Do not load the whole library's prompts or skills.
 
-The engine freezes a roster for the run and adds it to every dispatch, including
-the planner, builders, researchers, reviewers, conformance and approver. Nested
+The engine freezes a roster for the run. Planning, research, design and authorized
+build coordinators receive the directory. Ordinary builders, reviewers, conformance
+and approvers receive help-return guidance without the directory. They describe
+needed expertise; the assigner chooses resources. Already-known experts may be named. Nested
 workers receive the roster and send help requests to their coordinator. New
 agent publication is automatically discoverable in new rosters; it cannot
 change existing runs. `sociotechnic roster <job>` reads a run's recorded cards.

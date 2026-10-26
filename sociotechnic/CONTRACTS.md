@@ -1573,10 +1573,14 @@ retroactively in an existing run. Legacy jobs without a roster retain that fact.
 The CLI `roster [job]` and `GET /api/agent-roster` provide the same compact view
 to session orchestrators. Discovery alone cannot override assignments or gates.
 
-Every top-level dispatch receives the same compact team-awareness section.
-Agents retain ownership and attempt bounded work within their competence; when
-stuck they identify a specific expert, question, evidence already gathered and
-the result needed to continue. Builders use BLOCKED/Blocker, reviewers and
+Planners, researchers, designers and explicitly authorized build coordinators
+receive the compact team-awareness section. Ordinary builders, review lenses,
+conformance and approvers receive only the help-return instructions, without the
+capability directory. They describe needed expertise, the question, evidence
+already gathered and the result needed; the assigner resolves a suitable resource.
+An already-known expert may still be named. This does not change permissions or
+require an extra supervisor call. Agents retain ownership and attempt bounded
+work within their competence. Builders use BLOCKED/Blocker, reviewers and
 conformance use Findings, and approvers use ESCALATE/Escalation to send the
 request back to the assigner. These records never spawn agents or transfer work.
 Nested workers ask their coordinator. Recommendations cannot clear a failed gate.
