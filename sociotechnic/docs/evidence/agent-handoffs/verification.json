@@ -1,0 +1,43 @@
+{
+  "sourceCommit": "97ed85655c9f32e9a989c8c0560c7b752240c82b",
+  "scope": "Prompt instruction changes, immutable publication/restore coverage, read-only metrics and parser probes; no live model quality benchmark or new hook/context enforcement.",
+  "fullFixtureSuite": {
+    "command": "node --test --test-concurrency=4 sociotechnic/tests/*.test.ts",
+    "tests": 500,
+    "passed": 468,
+    "failed": 0,
+    "skipped": 32,
+    "logSha256": "197e75055552c9bf28fcc55fb37320b7e8103e8e7ac67bab0efbe59ec7717329"
+  },
+  "typecheck": {
+    "command": "task typecheck",
+    "status": "PASS",
+    "logSha256": "7b7e3507ad0f31bbd8a3b4ab1b6e32acc101641ee4823c4bbf71d0636a28ef0b"
+  },
+  "initialFullSuite": {
+    "tests": 499,
+    "passed": 456,
+    "failed": 11,
+    "skipped": 32,
+    "resolution": "Version-aware fixtures and historical-candidate predecessor isolation corrected stale catalog assumptions. The remaining short-deadline check-repair case passed unchanged in isolation and in the final bounded-concurrency full run."
+  },
+  "focusedCatalogFixtures": {
+    "tests": 37,
+    "passed": 37,
+    "failed": 0
+  },
+  "publication": {
+    "updatedAgents": 20,
+    "retainedAgents": 2,
+    "databaseReleases": 58,
+    "bundledReleases": 58,
+    "missing": [],
+    "absent": [],
+    "existingJobs": 28,
+    "existingDispatches": 140,
+    "existingPinsOnNewReleases": 0,
+    "definitionAndConfigurationReadback": "PASS"
+  },
+  "contractProbes": "PASS for documented current parser behavior; synthetic records only",
+  "links": "All 32 relative links in report/evidence README resolved at verification."
+}

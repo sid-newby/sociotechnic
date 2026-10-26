@@ -27,7 +27,25 @@ process.env.SOCIOTECHNIC_HOME = home;
 process.env.SOCIOTECHNIC_DATABASE_URL = "off";
 after(() => { setStore(null); rmSync(home, { recursive: true, force: true }); });
 const candidate = parseCatalogBundle(JSON.parse(readFileSync(new URL("../seeds/agent-release-candidates/20261025-focused-verification.json", import.meta.url), "utf8")));
-const historical = readCatalogBundles();
+const historicalFixtureHashes: Record<string, string> = {
+  "agent-release-candidates/20261025-focused-verification.json": "72f06df42e502e3c08c21194778ead5d87c48ccd2dea12d11c62c1ea222078ce",
+  "agents.json": "7b333513f1a2594a6ff81b2df84829cf9607f4b88f56dff24b12c0d8d14d5fb2",
+  "agent-releases/20261024-azure-builder-tiers.json": "7223e5d09cbc5c4ce140c4d35fb5e215a0dfa856928d3aff87d490c48d12151d",
+  "agent-releases/20261024-azure-onboarding.json": "9fea72266516570b64e968c30a98f952e63b206230494d699aa865d27e6dd0e9",
+  "agent-releases/20261024-azure.json": "a70624cd4516e0e143df69f0f39c2c97525701c46058a9b0aca4094ae7e83ee7",
+  "agent-releases/20261024-infrastructure.json": "ae4fc3e95054631ea95aa8cba157b029edddd9cef1ab52b566aee4358fb80c38",
+  "agent-releases/20261024-security-update.json": "d4df9dc0c1a79657e9355b5a466580f705beb35b733c958be39bb9c5c2966400",
+  "agent-releases/20261024.json": "9170f84ad62e0e32a4695a7229b1fc355c0bedb86a3a9b59f53569c5cdc9378c",
+  "agent-releases/20261025-browser-verification.json": "69cf82e888380ddf0dd99bea5ac18f49ac7852d3fea8f2c36ab9c2ea87247e61",
+  "agent-releases/20261025-interactive-design.json": "366668ff16bafe04c628350d4fc82c1858ef11a5ad1d97eaae7bb59ef0fb85d2",
+  "agent-releases/20261025-native-claude-design.json": "943b9887b5257cc9c14d075c56e985c0cf32a2411d6e45b1605ea43c7397f0dc",
+};
+// This unpublished candidate was authored against these immutable predecessors.
+const historical = Object.keys(historicalFixtureHashes).filter((file) => file.startsWith("agent-releases/"))
+  .map((file) => parseCatalogBundle(JSON.parse(readFileSync(new URL(`../seeds/${file}`, import.meta.url), "utf8"))));
+const committed = readCatalogBundles();
+const committedRows = [...new Map(committed.flatMap((bundle) => bundle.releases).map((release) => [`${release.agent}@${release.version}`, release])).values()];
+const committedLatest = new Map(committedRows.slice().sort((left, right) => compareAgentVersions(left.version, right.version)).map((release) => [release.agent, release]));
 const oldRows = [...new Map(historical.flatMap((bundle) => bundle.releases).map((row) => [`${row.agent}@${row.version}`, row])).values()];
 const oldLatest = new Map<string, AgentVersionRow>();
 for (const row of oldRows) if (!oldLatest.has(row.agent) || compareAgentVersions(row.version, oldLatest.get(row.agent)!.version) > 0) oldLatest.set(row.agent, row);
@@ -76,14 +94,18 @@ function pinnedJob(id: string, pins: PinnedAgents) {
 }
 
 test("console startup excludes unpublished candidates and preserves operator-published browser releases", async () => {
-  assert.equal(historical.some((bundle) => bundle.digest === candidate.digest), false);
-  const store = await fixture(); setStore(store);
+  assert.equal(committed.some((bundle) => bundle.digest === candidate.digest), false);
+  const store = createMemoryStore();
+  await store.transaction((tx) => applyCatalogBundles(tx, committed));
+  setStore(store);
   try {
     for (const agent of ["sociotechnic-browser-builder", "sociotechnic-browser-builder-lite"]) {
-      const source = decode(oldLatest.get(agent)!);
+      const latest = committedLatest.get(agent); assert.ok(latest);
+      const source = decode(latest);
+      const [major, minor, patch] = source.version.split(".").map(Number);
       const role = versionRole(source.role, { ...source.role, model: "gpt-6-luna", effort: "medium" });
       const definition = agentDefinition(role, "Browser verification using the operator's Luna settings.", source.definition, source.skillResources?.map((skill) => skill.name));
-      const release = row({ ...source, version: "1.0.1", role, definition, digest: releaseDigest(role, definition), label: "Operator Luna release" });
+      const release = row({ ...source, version: `${major}.${minor}.${patch + 1}`, role, definition, digest: releaseDigest(role, definition), label: "Operator Luna release" });
       await store.transaction((tx) => tx.insertAgentVersion(release));
     }
     const before = canonicalJson(await exportCatalogBundle(store));
@@ -194,6 +216,21 @@ test("bundle union imports into empty and existing catalogs, repeats idempotentl
   assert.equal(additionsOnly.ok, false); assert.equal(additionsOnly.missing.length, oldRows.length);
 });
 
+test("the current committed migration union preserves historical releases without importing the unpublished candidate", async () => {
+  const fresh = createMemoryStore(), existing = await fixture();
+  const prior = await exportCatalogBundle(existing);
+  const count = committedRows.length;
+  assert.deepEqual(await fresh.transaction((tx) => applyCatalogBundles(tx, committed)), { inserted: count, releases: count });
+  assert.deepEqual(await existing.transaction((tx) => applyCatalogBundles(tx, committed)), { inserted: count - prior.releases.length, releases: count });
+  assert.deepEqual(await existing.transaction((tx) => applyCatalogBundles(tx, committed)), { inserted: 0, releases: count });
+  const restored = await exportCatalogBundle(existing);
+  assert.equal(canonicalJson(restored), canonicalJson(await exportCatalogBundle(fresh)));
+  for (const source of prior.releases) assert.deepEqual(restored.releases.find((release) => release.agent === source.agent && release.version === source.version), source);
+  assert.deepEqual(await checkCatalogBundles(existing, committed), { ok: true, database: count, bundled: count, missing: [], absent: [] });
+  await assert.rejects(existing.transaction((tx) => applyCatalogBundles(tx, [candidate])), /Conflicting immutable release/);
+  assert.equal(canonicalJson(await exportCatalogBundle(existing)), canonicalJson(restored));
+});
+
 test("conflicts abort the whole candidate import before any unrelated additions survive", async () => {
   const store = await fixture(), source = decode(candidate.releases.at(-1)!);
   const definition = source.definition + "\nConflicting candidate instructions.\n";
@@ -285,18 +322,5 @@ test("new default and specialist pins change only after import; existing, legacy
 });
 
 test("baseline seed and every historical bundle remain byte-identical", () => {
-  const hashes: Record<string, string> = {
-    "agent-release-candidates/20261025-focused-verification.json": "72f06df42e502e3c08c21194778ead5d87c48ccd2dea12d11c62c1ea222078ce",
-    "agents.json": "7b333513f1a2594a6ff81b2df84829cf9607f4b88f56dff24b12c0d8d14d5fb2",
-    "agent-releases/20261024-azure-builder-tiers.json": "7223e5d09cbc5c4ce140c4d35fb5e215a0dfa856928d3aff87d490c48d12151d",
-    "agent-releases/20261024-azure-onboarding.json": "9fea72266516570b64e968c30a98f952e63b206230494d699aa865d27e6dd0e9",
-    "agent-releases/20261024-azure.json": "a70624cd4516e0e143df69f0f39c2c97525701c46058a9b0aca4094ae7e83ee7",
-    "agent-releases/20261024-infrastructure.json": "ae4fc3e95054631ea95aa8cba157b029edddd9cef1ab52b566aee4358fb80c38",
-    "agent-releases/20261024-security-update.json": "d4df9dc0c1a79657e9355b5a466580f705beb35b733c958be39bb9c5c2966400",
-    "agent-releases/20261024.json": "9170f84ad62e0e32a4695a7229b1fc355c0bedb86a3a9b59f53569c5cdc9378c",
-    "agent-releases/20261025-browser-verification.json": "69cf82e888380ddf0dd99bea5ac18f49ac7852d3fea8f2c36ab9c2ea87247e61",
-    "agent-releases/20261025-interactive-design.json": "366668ff16bafe04c628350d4fc82c1858ef11a5ad1d97eaae7bb59ef0fb85d2",
-    "agent-releases/20261025-native-claude-design.json": "943b9887b5257cc9c14d075c56e985c0cf32a2411d6e45b1605ea43c7397f0dc",
-  };
-  for (const [file, expected] of Object.entries(hashes)) assert.equal(createHash("sha256").update(readFileSync(new URL(`../seeds/${file}`, import.meta.url))).digest("hex"), expected, file);
+  for (const [file, expected] of Object.entries(historicalFixtureHashes)) assert.equal(createHash("sha256").update(readFileSync(new URL(`../seeds/${file}`, import.meta.url))).digest("hex"), expected, file);
 });

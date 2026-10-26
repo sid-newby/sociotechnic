@@ -7,6 +7,7 @@ import { assistanceBrief, rosterBrief } from "./agent-roster.ts";
 import type { PinnedAgents } from "./agent-versions.ts";
 import { designDigest, designFingerprint, verifyDesign } from "./design.ts";
 import { newInteractiveDesign, verifyInteractiveDesign, designStarterBrief } from "./design-session.ts";
+import type { HandoffEscalation } from "./handoff-routing.ts";
 import { approveBrief, buildBrief, planBrief, researchBrief, reviewBrief } from "./brief.ts";
 import type { FailingCheck, LensChanges } from "./brief.ts";
 import { commentInventory, cleanupPlan, digest, INVENTORY_FILE, verifyCommentChanges } from "./comment-inventory.ts";
@@ -73,14 +74,16 @@ import { ROLES } from "./roles.ts";
 import type { RoleUsage } from "./usage.ts";
 import type { Parsed } from "./verdict.ts";
 import { parseRecord } from "./verdict.ts";
+import { RECIPIENT_CONTRACT_VERSION, validateRecipientOutput } from "./recipient-contract.ts";
+import { workflowBarrier } from "./workflow-runtime.ts";
 
-export type DispatchOut = { configuration?: AgentConfiguration; workerConfiguration?: AgentConfiguration; id: string; agent: string; model: string; effort: string; deadlineAt: string; record: string; prompt: string; designScope?: { record: string; artifacts: string; receipt: string; referenceRoot?: string } };
+export type DispatchOut = { configuration?: AgentConfiguration; workerConfiguration?: AgentConfiguration; requiredRecords?: string[]; id: string; agent: string; model: string; effort: string; deadlineAt: string; record: string; prompt: string; designScope?: { record: string; artifacts: string; receipt: string; referenceRoot?: string } };
 
 export type StepResult =
   | { job: string; status: Status; action: "dispatch"; dispatches: DispatchOut[] }
   | { job: string; status: Status; action: "wait"; pending: string[]; overdue: string[] }
   | { job: string; status: Status; action: "stop"; overdue: { id: string; agent: string; deadlineAt: string }[] }
-  | { job: string; status: Status; action: "human"; reason: string }
+  | { job: string; status: Status; action: "human"; reason: string; handoff?: HandoffEscalation }
   | { job: string; status: Status; action: "hold"; reason: string }
   | { job: string; status: Status; action: "done" };
 
@@ -129,7 +132,7 @@ type DispatchSpec = { step: Step; lens: Lens | null; agent: string; record: stri
 
 function dispatchOne(job: Job, spec: DispatchSpec, now: string): DispatchOut {
   const baseRole = roleOf(spec.agent);
-  const configuration = spec.configuration ?? job.agentConfigurations?.[spec.agent];
+  const configuration = spec.configuration ?? job.workflow?.selections[spec.agent] ?? job.agentConfigurations?.[spec.agent];
   if (!configuration) throw new SociotechnicError("agent-catalog-missing", `No resolved release for ${spec.agent}`);
   const role = versionRole({ ...baseRole, name: configuration.agentName ?? baseRole.name }, configuration);
   const id = jobfns.nextDispatchId(job);
@@ -151,8 +154,15 @@ function dispatchOne(job: Job, spec: DispatchSpec, now: string): DispatchOut {
     now,
   );
   d.configuration = configuration;
-  const prompt = `${spec.prompt}\n\n## Team capabilities\n${rosterBrief(job.agentRoster ?? [], job.agentAssignments, job.agentLocks)}\n\n${assistanceBrief(role.record)}`;
-  const envelope: DispatchOut = { configuration, ...(spec.agent === "sociotechnic-comment-cleaner" ? { workerConfiguration: job.agentConfigurations?.["sociotechnic-comment-sicko"] } : {}), id: d.id, agent: d.agent, model: d.model, effort: d.effort, deadlineAt: d.deadlineAt, record: d.record, prompt,
+  const workflowRecords = job.workflow && ["plan", "build", "review", "conformance", "decision"].includes(role.record)
+    ? [job.workflow.briefRecord, job.workflow.assignmentRecord].filter((path): path is string => path !== undefined)
+    : [];
+  const context = workflowRecords.length ? `\n\n## Approved workflow context\nRead the retained workflow records before doing this assignment:\n${workflowRecords.map((path) => `- ${abs(job, path)}`).join("\n")}` : "";
+  const hasRoster = !["build", "review", "conformance", "decision"].includes(role.record) || role.tools.includes("Agent");
+  const team = hasRoster ? `\n\n## Team capabilities\n${rosterBrief(job.agentRoster ?? [], job.agentAssignments, job.agentLocks)}` : "";
+  const prompt = `${spec.prompt}${context}${team}\n\n${assistanceBrief(role.record,hasRoster)}`;
+  const requiredRecords = [...session().records.keys()].filter(path => !path.startsWith("migration/") && prompt.includes(abs(job,path)));
+  const envelope: DispatchOut = { configuration, requiredRecords, ...(spec.agent === "sociotechnic-comment-cleaner" ? { workerConfiguration: job.agentConfigurations?.["sociotechnic-comment-sicko"] } : {}), id: d.id, agent: d.agent, model: d.model, effort: d.effort, deadlineAt: d.deadlineAt, record: d.record, prompt,
     ...(role.record === "design" && job.design ? { designScope: { record: abs(job, spec.record), artifacts: abs(job, `design/atelier/round-${job.design.iteration}`), referenceRoot: job.worktree, receipt: abs(job, `design/tool-${job.design.iteration}.json`) } } : {}),
   };
   d.execution = { envelope, launch: "pending" };
@@ -160,7 +170,7 @@ function dispatchOne(job: Job, spec: DispatchSpec, now: string): DispatchOut {
 }
 
 function human(job: Job): StepResult {
-  return { job: job.id, status: job.status, action: "human", reason: job.statusReason };
+  return { job: job.id, status: job.status, action: "human", reason: job.statusReason, ...(job.handoffEscalation ? { handoff: job.handoffEscalation } : {}) };
 }
 
 function parkWith(job: Job, reason: string, now: string): StepResult {
@@ -169,7 +179,7 @@ function parkWith(job: Job, reason: string, now: string): StepResult {
 }
 
 function overDispatchCap(job: Job, round: number, adding: number): boolean {
-  return roundDispatchCount(job, round) + adding > effectiveCap(job, "dispatchesPerRound");
+  return roundDispatchCount(job, round) + (job.workflow?.calls.filter(call=>call.round===round).length??0) + adding > effectiveCap(job, "dispatchesPerRound");
 }
 
 function dispatchCapReason(job: Job): string {
@@ -549,7 +559,7 @@ function stepReviewing(job: Job, now: string): StepResult | null {
     const latest = latestDispatch(job, (d) => d.step === "review" && d.round === job.round && d.lens === lens);
     if (latest === null) throw new SociotechnicError("corrupt-job", `no dispatch for lens ${lens}`);
     const p = latest.parsed;
-    const failure = failureOf(latest) ?? (p === null ? "record unparsed" : p.kind === "malformed" && RETRYABLE_REVIEW_REASONS.has(p.reason ?? "") ? `record malformed: ${p.reason ?? ""}` : null);
+    const failure = failureOf(latest) ?? (p === null ? "record unparsed" : p.kind === "malformed" && (RETRYABLE_REVIEW_REASONS.has(p.reason ?? "") || p.reason?.startsWith("recipient-contract:")) ? `record malformed: ${p.reason ?? ""}` : null);
     if (failure !== null) {
       retries.push({ latest, reason: failure, prompt: (r) => reviewPrompt(job, lens, head, changed, r) });
     } else if (p !== null) {
@@ -654,6 +664,8 @@ export async function step(job: Job, options: StepOptions = {}): Promise<StepRes
   const hold = options.hold ?? [];
   let resolved = false;
   for (let guard = 0; guard < 50; guard += 1) {
+    const barrier = workflowBarrier(job);
+    if (barrier) return { job: job.id, status: job.status, action: "human", reason: barrier };
     if (job.commentCleanup && job.status === "planned" && hold.includes("planned")) return { job: job.id, status: job.status, action: "hold", reason: "held at planned" };
     if (isHumanGate(job.status)) return human(job);
     if (job.status === "accepted" || isTerminal(job.status)) return { job: job.id, status: job.status, action: "done" };
@@ -727,7 +739,16 @@ export function parseDispatchRecord(job: Job, d: Dispatch): Parsed {
     try { designFingerprint(folder(job), d.record); return { kind: "ok", value: "design", commit: null, findings: [], blocking: 0, reason: null, effective: "DONE" }; }
     catch (error) { return { kind: "malformed", value: null, commit: null, findings: [], blocking: 0, reason: error instanceof Error ? error.message : String(error), effective: "BLOCKED" }; }
   }
-  return parseRecord(text, role.record);
+  const parsed = parseRecord(text, role.record);
+  if ((job.orchestrator?.contractVersion === RECIPIENT_CONTRACT_VERSION || !!job.workflow) && text !== null && parsed.kind === "ok") {
+    const errors = validateRecipientOutput(role.record,text,job.plan ? readPlan(job).stages.map(stage => stage.id) : []);
+    if (errors.length) {
+      const record = `handoff/validation/${d.id}.json`;
+      writeJsonAtomic(abs(job,record),{ contractVersion: RECIPIENT_CONTRACT_VERSION, dispatch: d.id, record: d.record, errors: errors.slice(0,32), errorCount: errors.length });
+      return { ...parsed, kind: "malformed", effective: role.record === "build" || role.record === "research" ? "BLOCKED" : role.record === "decision" ? "ESCALATE" : "CHANGES", reason: `recipient-contract: ${errors.slice(0,8).map(error => `${error.field}: ${error.code}: ${error.message}`).join("; ")}; evidence ${record}` };
+    }
+  }
+  return parsed;
 }
 
 export function finish(job: Job, id: string, outcome: Outcome, usage: unknown, note: string | null, now = nowIso()): { dispatch: string; outcome: Outcome; parsed: Parsed } {
@@ -902,6 +923,9 @@ export function rework(job: Job, note: string, now = nowIso()): { job: string; r
 }
 
 export function accept(job: Job, note: string, now = nowIso()): { job: string; status: Status } {
+  const barrier = workflowBarrier(job);
+  if (barrier) throw new IllegalTransition(barrier);
+  if (job.workflow && job.workflow.intent?.commit !== git.headCommit(job.worktree)) throw new IllegalTransition("The workflow intent review must match the current implementation commit");
   if (currentRound(job) === null) throw new IllegalTransition("There is no implemented build round to accept");
   jobfns.accept(job, note.trim(), now);
   return { job: job.id, status: job.status };
@@ -939,6 +963,8 @@ function mergeTitle(job: Job): string {
 }
 
 export function merge(job: Job, now = nowIso()): MergeResult {
+  const barrier = workflowBarrier(job);
+  if (barrier) throw new IllegalTransition(barrier);
   if ((job.design || job.designSession) && job.round === 0) throw new IllegalTransition("A design ceremony has no implemented build to merge");
   jobfns.assertStatus(job, ["ready", "needs-human", "accepted"], "merge");
   requireBaseCheckout(job);
@@ -946,6 +972,7 @@ export function merge(job: Job, now = nowIso()): MergeResult {
   const branchExists = git.branchExists(job.repo, job.branch);
   if (!branchExists && !(job.status === "accepted" && intent?.head)) throw new SociotechnicError("no-branch", `branch ${job.branch} is gone from ${job.repo}; nothing to merge`);
   const head = branchExists ? git.resolveCommit(job.repo, job.branch) : intent!.head!;
+  if (job.workflow && job.workflow.intent?.commit !== head) throw new IllegalTransition("The workflow intent review must match the current implementation commit");
   if (intent?.head && head !== intent.head) throw new SociotechnicError("operation-head-changed", "The branch changed after the merge intent; reconcile before retrying");
   const contained = git.isAncestor(job.repo, head, "HEAD");
   let recoveredMerge: string | null = null;
@@ -1074,7 +1101,17 @@ export function pr(job: Job, options: PrOptions = {}): PrResult {
   if (remote === null || !isGithubRemote(remote)) {
     throw new SociotechnicError("no-github-remote", `origin of ${job.repo} is ${remote ?? "not set"}; pr --push needs a GitHub remote`);
   }
+  const identity = (value: string): string => {
+    if (value.startsWith("/")) return value.replace(/\.git$/, "").toLowerCase();
+    try {
+      const parsed = new URL(value.replace(/^([^@/:]+)@([^:]+):/, "ssh://$1@$2/"));
+      return `${parsed.host}${parsed.pathname.replace(/\.git$/, "")}`.toLowerCase();
+    } catch { return ""; }
+  };
+  const pushUrls = git.git(job.repo, ["remote", "get-url", "--push", "--all", "origin"]).trim().split(/\r?\n/);
+  if (pushUrls.some(url => identity(url) !== identity(remote))) throw new SociotechnicError("pr-repository-mismatch", "Origin push destinations differ from its GitHub repository. Nothing was pushed.");
   if (!git.ghReady(job.repo)) throw new SociotechnicError("gh-unavailable", "gh is not on PATH or not authenticated (gh auth status failed)");
+  if (!git.git(job.repo, ["ls-remote", "--heads", "origin", `refs/heads/${job.base.branch}`]).trim()) throw new SociotechnicError("github-base-missing", "The GitHub base branch is missing. Confirm the repository and visibility to publish the recorded base before the work branch.");
   if (restoreWorktree(job) === "no-branch") throw new SociotechnicError("no-branch", `branch ${job.branch} is gone from ${job.repo}; nothing to push`);
   const plan = readPlan(job);
   const path = writePrText(job, plan);

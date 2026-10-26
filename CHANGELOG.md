@@ -3,6 +3,15 @@
 Release notes are committed before publication. [GitHub Releases](https://github.com/sid-newby/sociotechnic/releases) confirms which versions shipped.
 Dates on backfilled entries use America/Chicago. See the [release guide](sociotechnic/docs/releasing.md).
 
+## v0.9.0
+
+- Add an opt-in local YAML workflow with GPT-6.1 Sol/high intake, eligible agent assignments, reader concurrency, human plan approval, and final intent review. Keep one builder for the shared worktree and retain existing technical gates.
+- Validate workspace identity, required artifacts, and role-specific handoff records before dispatch or ingestion. Retain failed responses, usage, bounded repair, and stale or uncertain-call evidence.
+- Remove unused capability directories from ordinary builder, review, conformance, and approval briefs while preserving planning discovery, coordinator context, and concrete help requests.
+- Include additive concise agent releases and referenced planner output contracts. Preserve published release history, existing run pins, operator customizations, and explicit catalog publication. Keep unpublished orchestrator candidates outside automatic imports.
+- Recover an accepted run's missing GitHub origin or base from its recorded starter commit without overwriting conflicting remote state. Keep repository setup separate from work-branch publication.
+- Restore the run view after designer handoff and missing-worktree recovery, preserve saved design conversations, and fix evidence-sheet key collisions. Let planners request design collaboration for UI work while retaining human approval.
+
 ## v0.8.0
 
 - Remove eight redundant comments from the chart and sidebar components while retaining useful context and preserving executable behavior.

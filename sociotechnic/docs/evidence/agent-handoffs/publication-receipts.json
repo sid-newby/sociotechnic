@@ -1,0 +1,189 @@
+{
+  "publishedAt": "2026-10-26T00:43:07.348Z",
+  "sourceConsole": {
+    "home": "/Users/sidnewby/Prog/sociotechnic",
+    "pid": 95453
+  },
+  "releases": [
+    {
+      "agent": "sociotechnic-approver",
+      "previousVersion": "1.0.0",
+      "version": "1.0.1",
+      "sourceContentDigest": "5f03de17a92a77a30062ebe08e5ffe58cb8770bda13e89594f88e2a3ad52cce5",
+      "contentDigest": "67eb6a2408227ee85837c2292a58fec2ec78f8367d4a757f344607c7725a08df",
+      "definitionSha256": "dbb8ff1bc9b9e9124c132b37c7e2c7577c4e0f203aeab1151997cd1c7d68bab9",
+      "configurationAndSkillsPreserved": true
+    },
+    {
+      "agent": "sociotechnic-azure-advisor",
+      "previousVersion": "1.0.1",
+      "version": "1.0.2",
+      "sourceContentDigest": "604b613caa14958b3736764e2b7f3125feceded2c02c39a1ef5294d084d19959",
+      "contentDigest": "3ce0512b026f178ff49855bedd831796389b8aa1d9ae5df1478d30703398d75b",
+      "definitionSha256": "2f85884ce3fddbd8d89134b84daa1b6e381690ff3280aa16d20e11dd6d25f300",
+      "configurationAndSkillsPreserved": true
+    },
+    {
+      "agent": "sociotechnic-azure-builder",
+      "previousVersion": "1.1.0",
+      "version": "1.1.2",
+      "sourceContentDigest": "287dad477947c1263bf22d6a1f4a9ed5d6660a476cb7e1cb81d99af1e748d350",
+      "contentDigest": "8c1ac358aeada997ac6247350e59ad16eb5eebddcc54bded61903512ccacd39c",
+      "definitionSha256": "de698b09ae7700959e61758b7578d2af38930096f4526ad4d070ad407ae0c682",
+      "configurationAndSkillsPreserved": true
+    },
+    {
+      "agent": "sociotechnic-azure-builder-lite",
+      "previousVersion": "1.0.1",
+      "version": "1.0.2",
+      "sourceContentDigest": "ad4cbea044ec4cc217aa5ce2a31f73afe942b8d3d16aaa5a5d3b89ed540680ed",
+      "contentDigest": "ebdbbd6ac08e2e23383b89e247b825baa2fdb2b99b58e2f7589f9e2eb961fcd1",
+      "definitionSha256": "72186f4f5af6e0c43743356bb72c21557834a987a8b12acd01d352d53f1f9c2c",
+      "configurationAndSkillsPreserved": true
+    },
+    {
+      "agent": "sociotechnic-azure-planner",
+      "previousVersion": "1.0.1",
+      "version": "1.0.3",
+      "sourceContentDigest": "0e595fab9aefacd329a9a0a42d0b9311f1b1b64c3f84e845cc739b227e442f17",
+      "contentDigest": "abf7724f3cb5a1db9e1f643b0b9e8fdb6b4dc9097d551ff0fb685c36ebec3ec9",
+      "definitionSha256": "3daba60a1b5e814581e547161cbfe0364b2fa47d5934e1f6e8578f3baa53684e",
+      "configurationAndSkillsPreserved": true
+    },
+    {
+      "agent": "sociotechnic-browser-builder",
+      "previousVersion": "1.0.1",
+      "version": "1.0.2",
+      "sourceContentDigest": "88afebba68edd83c1554cc9209ad5bfed31a9f7afca76990f11c869c425812ac",
+      "contentDigest": "4ca53396fcbc17fdefe890adcde542752eb045f2c4d17722ca599d7d848b6fdc",
+      "definitionSha256": "034c112cb023c15c3949ffb48e8cdeb4cb15252123f16359d0dd17a6e6b4d23f",
+      "configurationAndSkillsPreserved": true
+    },
+    {
+      "agent": "sociotechnic-browser-builder-lite",
+      "previousVersion": "1.0.1",
+      "version": "1.0.2",
+      "sourceContentDigest": "40e9c53184a0a72672229a95a18f94c87523229eb7ad8c88b9e7d321a26efb89",
+      "contentDigest": "8ff90980333593fc9545ffa05793bd972e722871b4b6c8b358d31f06fa7a1ec3",
+      "definitionSha256": "93ec76bb86258b99a5e7cf8b01b102135715c7068fbccc6f767f47c5b001b801",
+      "configurationAndSkillsPreserved": true
+    },
+    {
+      "agent": "sociotechnic-builder",
+      "previousVersion": "1.0.0",
+      "version": "1.0.2",
+      "sourceContentDigest": "888f4591b2e04376f8a84eabf3a3b4a001d93d48e99d8f7ab63e6de57462ce0a",
+      "contentDigest": "4ebc55cae2b9bede3ac78bcc5957518a8a02790ac7f0052726ddd56aedbdd843",
+      "definitionSha256": "7f1feb120c004c74d14a58de78107f6823fb4ede2955ccf01d431cdae159b16a",
+      "configurationAndSkillsPreserved": true
+    },
+    {
+      "agent": "sociotechnic-builder-lite",
+      "previousVersion": "1.0.0",
+      "version": "1.0.2",
+      "sourceContentDigest": "05d941489e60b1611390ba83e28c79f27816d6255bc5c3e7fa2eb548d916943d",
+      "contentDigest": "d3805e53a6fe79ecd6f59a13478eb811548c549c2ec15a97beb7e84abc2ec275",
+      "definitionSha256": "3db9cde9c7856ce9c979ad2da13281ab27ec9102507334e5bcc253ebc6d8a31d",
+      "configurationAndSkillsPreserved": true
+    },
+    {
+      "agent": "sociotechnic-comment-cleaner",
+      "previousVersion": "1.0.0",
+      "version": "1.0.2",
+      "sourceContentDigest": "7119b2f7422ae3286902ff8f76278ee60ab10769829192fed59cd275b648e3fa",
+      "contentDigest": "225bf51f2b913cb9ea46222f988487384223bef619f52e96e193362beaf76641",
+      "definitionSha256": "3fb73481f24e1459352193b7d9db48efc1c9340d83effcfe215c6a65a9aac683",
+      "configurationAndSkillsPreserved": true
+    },
+    {
+      "agent": "sociotechnic-conformance",
+      "previousVersion": "1.0.0",
+      "version": "1.0.1",
+      "sourceContentDigest": "21d86576e3261e5e6a2437d881bd1a7a7ff1d0e66822f95fa5862aa423fa4a6f",
+      "contentDigest": "4de5f6d52672c1c2f8c1e6dd9deb26cb9ec0575f2d59b30a968dfd90d1ad7e5c",
+      "definitionSha256": "74945ef794f73d6199c02bf66a25984e26aa8d9b895082aab83b361aef544003",
+      "configurationAndSkillsPreserved": true
+    },
+    {
+      "agent": "sociotechnic-infrastructure-builder",
+      "previousVersion": "1.0.0",
+      "version": "1.0.2",
+      "sourceContentDigest": "1979a439a0ae31c9d243fcc4b249064d4eb81d3d89e4f75a2893947a435fa726",
+      "contentDigest": "21807b4647b98e10f8bf20da3045f1f62b1dd0e5b5dd0f5a9f653778fd824ccc",
+      "definitionSha256": "2e567a55bc0e1509a969c0ca5604989584d584675fe9a086959073782e0889a1",
+      "configurationAndSkillsPreserved": true
+    },
+    {
+      "agent": "sociotechnic-infrastructure-planner",
+      "previousVersion": "1.0.0",
+      "version": "1.0.2",
+      "sourceContentDigest": "08bdc7b98babce648d014db8bfdc3c41a27e90cf057b0aca1d6271f7cf0dc700",
+      "contentDigest": "87c583032df954c88676d048894a984152f581d2b7e48207e6d9103a67f7d1dd",
+      "definitionSha256": "1d1f5277f0f1d73bf8ca1dd84781265660158b8d6241bffae2583ff1a19c2a5d",
+      "configurationAndSkillsPreserved": true
+    },
+    {
+      "agent": "sociotechnic-planner",
+      "previousVersion": "1.0.6",
+      "version": "1.0.7",
+      "sourceContentDigest": "2dc69adf2b093f0ea9aa2cb213f218bd51e81bcc05260993a838347fa75b920d",
+      "contentDigest": "227cad8f3cbff39057e5d78c7078eef01212d1cf47d0df93426d257f4124f106",
+      "definitionSha256": "2556f32f4d1580d765e213145c65dc73f2e860ef83250e8776e89302b9ee8445",
+      "configurationAndSkillsPreserved": true
+    },
+    {
+      "agent": "sociotechnic-researcher",
+      "previousVersion": "1.0.0",
+      "version": "1.0.1",
+      "sourceContentDigest": "083e5552a60a0745e234e56fcb6ae593d80761fe0b683c54123f457425dc0947",
+      "contentDigest": "b34ac5c3c1708e54e5532429f875bc478ef2150ab3e96d652dfb823fd123b48a",
+      "definitionSha256": "c4aadf76019fee04e137744a82c9640d9aa5f92b1fbd8720638b6d29b68549de",
+      "configurationAndSkillsPreserved": true
+    },
+    {
+      "agent": "sociotechnic-reviewer-code",
+      "previousVersion": "1.0.0",
+      "version": "1.0.1",
+      "sourceContentDigest": "e064d018070790ac6b530f21c82e93a6c77eb2f09d7e652b7cf1d941450188d4",
+      "contentDigest": "9e3d254980976b0474b9df9cfa9e96f24d6b603f1541bcb2d53671f55e6a6ece",
+      "definitionSha256": "a54b79e601f5a390fb21dce218f35eb22a6c6f7cc5cf6b601e36771893c67a30",
+      "configurationAndSkillsPreserved": true
+    },
+    {
+      "agent": "sociotechnic-reviewer-security",
+      "previousVersion": "1.0.2",
+      "version": "1.0.3",
+      "sourceContentDigest": "c9620868ae2f3192ade7821372cdf76588a3c4a5aa78b5e6a9bd4db975a6fbf8",
+      "contentDigest": "935e54a41f61748024910c613ddbfbefe67c00ae47d6b4b102f3df457e75859e",
+      "definitionSha256": "40149f904398f82a9f916c3b62f6f0cca3e22c1adcc9b13986989568e1e189ad",
+      "configurationAndSkillsPreserved": true
+    },
+    {
+      "agent": "sociotechnic-reviewer-ui",
+      "previousVersion": "1.0.0",
+      "version": "1.0.1",
+      "sourceContentDigest": "53f9713d74ddf7be7c04296df305b30df3796a2383ee3a1cc8b39e31a9bf0f21",
+      "contentDigest": "53ff4cddfc071d192f9e0b6c7c2df07d25ebf86b4b6fe003b49e00089b6f7353",
+      "definitionSha256": "02315f8cdc35a745af223ca2868a9b8dc346101563aae900cbef24986796acc7",
+      "configurationAndSkillsPreserved": true
+    },
+    {
+      "agent": "sociotechnic-reviewer-ux",
+      "previousVersion": "1.0.0",
+      "version": "1.0.1",
+      "sourceContentDigest": "b98191763c516fd0ae7da643c1d019964cc7addb2858bfeb84e5ede70933e6e8",
+      "contentDigest": "de1f9106463ec13ffcc134d8ead9fc425c30f690fe9e7640d9a4abf0d38628b3",
+      "definitionSha256": "424dd6b1c89ce71f1f7bc42a673a5698e3a37ad801d81ebfc94ef5ad4fcde44a",
+      "configurationAndSkillsPreserved": true
+    },
+    {
+      "agent": "sociotechnic-sweeper",
+      "previousVersion": "1.0.0",
+      "version": "1.0.2",
+      "sourceContentDigest": "e15938081a5238fe10724b4658fbd072cfa92482967a42fd0d3b5b345a3b519b",
+      "contentDigest": "9e7bac5497ff8cd7c5fcb6f89f96020623a20396ea77a62621471613628a7e63",
+      "definitionSha256": "5117ea655beaa43e82f6c83c0863144ce6f801ad3bdc93211febfb6ab5404ad8",
+      "configurationAndSkillsPreserved": true
+    }
+  ]
+}

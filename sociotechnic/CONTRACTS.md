@@ -1,5 +1,110 @@
 # Sociotechnic contracts
 
+## Dispatch handoff contracts
+
+### Opt-in executable workflow default
+
+A new Local run may bind a parsed YAML workflow. The engine snapshots its
+validated definition, digest and compact lead guide; later edits never reinterpret
+that run. The first executable topology is the default intake/planning/assignment/
+approval/build/check/review/gate/technical-approval/intent-review/acceptance chain.
+Unsupported owners, routes or topology fail explicitly before agent work. This
+does not execute arbitrary graphs or independent builder stages.
+
+Sol/high leads client clarification and supplies a factual brief to the selected
+planner. It then selects compatible resources and reader concurrency from the
+returned plan, before the existing human plan/assignment approval. Selections
+resolve against the frozen allowed catalog, actual immutable versions and explicit
+assignment locks. Existing baseline pins and completed dispatch configurations
+are never rewritten; selected dispatches retain their own verified release links.
+The planner owns executable task design; the lead does not duplicate that work.
+
+Missing decisions produce a recorded question and human hold, not guessed fields.
+Answers bind to the exact pending request; stale/duplicate answers cannot advance.
+Lead calls, raw replies, actual usage and errors are retained under the driver lease.
+Unknown launches require reconciliation; provider/format retries and repair rounds
+use existing bounds. No model call runs while holding the job-operation lock.
+
+Node ceilings constrain independent readers inside existing admission/deadline
+limits; one builder owns the worktree. Failed deterministic checks route through
+existing bounded repair before reviews. All applicable independent reviews,
+commit/digest evidence and human gates remain mandatory. The lead also compares
+the returned work with original intent before final acceptance. It receives concise
+canonical evidence and pulls details as needed; no tool-transcript broadcast or
+context-rollover machinery is added. Restore/reset requests remain proposals,
+with existing preservation and explicit destructive-action approval constraints.
+
+### Optional supervising orchestrator v1
+
+The explicitly selected local binding is `gpt-6.1-sol` with high effort.
+`SOCIOTECHNIC_ORCHESTRATOR=sol-high-v1` opts the console driver into the prepared
+candidate through the existing provider runner. Reading the candidate does not
+import it into PostgreSQL. The candidate lives outside automatic release bundles;
+its configuration is snapshotted and pinned before a local run's first dispatch.
+It inherits the read-only code-reviewer transport's 60-operation/20-minute caps.
+No existing published release, worker pin or configured budget changes.
+Already-started unbound runs keep their prior policy. Bound runs require the
+same configuration on resume. Sandbox runs are rejected before provider launch:
+v1 does not execute a sandbox run's supervisor on the host.
+
+The supervisor receives proposed assignments, the approved plan when one exists,
+work volume, tier/risk, frozen capability cards and process-local active/queued
+commitments. Time estimates and commitments outside this driver process are
+unknown. Its referenced `schemas/orchestrator-decision.schema.json` response
+chooses ordered groups: groups run serially and independent readers within a
+group may overlap, within existing admission/deadline limits. Shared-worktree
+builders remain single-owner. Alternative decomposition proposals name distinct
+approved stages, owners, deliverables and rationale. They are retained proposals,
+not new dispatches or a stage scheduler. Worker identity, scope, tools, models,
+human approval and independent evidence gates cannot be changed by this response.
+
+The same connection receives engine exceptions, original BLOCKED questions and
+canonical evidence. Continue on an exception only acknowledges it; the human
+hold remains. Escalate records a responsible owner and concrete questions. The
+driver executes these typed decisions; it does not infer authority from prose.
+Native interactive designer sessions retain their existing conversation path.
+
+Requests are persisted before calls. Exact responses, captured usage and failures
+are retained under the driver lease. Stale responses are archived without applying
+them. Abort waits for the existing runner's transport to settle. An interrupted
+or unresolved review is not repurchased because capacity changed; a human
+resolution/override must establish a new decision context. There is no automatic
+supervisor retry loop. Completed decisions are reused only for the exact request
+and binding. Already started siblings settle before exception routing.
+
+### Typed delivery and recipient contracts
+
+Fresh dispatches receive an engine-owned handoff JSON file with identity,
+role context, exact artifact links, workspace/output identity, effective limits
+and escalation ownership. Schema and examples are files, not repeated prompt
+text. Missing required data or unavailable host artifacts fail before launch
+with field paths and evidence. Mapping records intended guest paths; host
+inspection never claims guest availability. Historical unversioned dispatches
+require explicit provenance rather than invented release identities.
+
+Planner output references `contracts/plan.schema.json`; the current plan parser
+remains authoritative for semantic/runtime checks. Opted-in orchestrator v1 runs
+also reference `contracts/recipient-contract.v1.json` for Markdown output.
+Required sections, finding syntax/severity and exact conformance stage coverage
+are checked by code. Each pinned stage appears exactly once; explicitly added
+path rows retain the existing scope/gate policy. Precise contract errors and raw
+outputs survive bounded retries. Legacy/in-flight unbound runs retain their
+existing parser behavior; no record is rewritten into PASS or engine SKIPPED.
+
+Opted-in inputs contain required role artifacts plus every input frozen from the
+generated brief, including inventory/proof/worker evidence. Their versioned job
+context retains relevant pointer positions and the current profile, rather than
+broadcasting every historical dispatch prompt and agent definition. Full dispatch
+payloads and supervisor receipts remain inspectable canonical records. The
+handoff archive preserves its envelope and manifest hashes; it does not promise
+a durable copy of every staged byte or a readable guest filesystem after cleanup.
+Existing immutable manifests, ownership, digest claims and replay guards apply.
+
+Codex receives its actual completed-operation cap, deadline and bounded tool
+limits. Controller activity reports remaining completed operations; no separate
+model-side live counter or increased cap is claimed. The operator's planner
+rewrite and twenty-release prompt audit remain separately owned and untouched.
+
 ## Interactive design sessions
 
 New design work uses one resumable local Claude session and the installed
@@ -41,8 +146,11 @@ The maintained React/Nest starter is supplied as a read-only reference when
 available. Its source revision and content digest are pinned in the design
 session and handoff; the human's choice belongs in the design conversation and
 work product. Planners and builders receive the same starter reference and refuse
-changed source bytes. Explicitly requested templates are preserved. A major UI
-request hands off before elaborating an implementation plan.
+changed source bytes. Explicitly requested templates are preserved. The planner
+judges whether design collaboration is useful; new HTML/UI alone does not force
+an interactive designer or interview. Explicit design-conversation requests and
+approved artifacts remain binding. Appropriate frontend-design skills remain
+subject to the selected agent's existing permissions.
 
 Local integration verification uses injected SDK streams and real Impeccable
 subprocesses, never a provider call. Live verification uses the real provider
@@ -1056,7 +1164,7 @@ owner uses the authenticated GitHub user. Auth, creation or push failure prevent
 job creation and preserves local files for retry. An existing matching origin is
 reused on retry; a different origin or a remote base at another commit is refused.
 Only the selected base branch is pushed, without force; untracked files and run
-branches are excluded. Ordinary Git initialization remains local. No scaffold or
+branches are excluded. Ordinary Git initialization remains local. Missing-origin recovery on an accepted run requires an explicit GitHub destination and public/private visibility in the PR request. It publishes the recorded job.base.commit to the remote base branch, never the current locally merged base HEAD, then pushes the existing work branch and opens its PR. It verifies the published base, refuses destination/visibility conflicts and divergent remote bases, does not reset local history, and never merges the PR. Failed creation/push leaves no success claim; retry reuses a matching origin. No scaffold or
 engine gate changes. This explicit setup action is the sole pre-accept publication
 exception: agents still never push, and publishing run changes still requires accept.
 For UI work without an existing UI scaffold, planning routes to the design ceremony
@@ -1468,10 +1576,14 @@ retroactively in an existing run. Legacy jobs without a roster retain that fact.
 The CLI `roster [job]` and `GET /api/agent-roster` provide the same compact view
 to session orchestrators. Discovery alone cannot override assignments or gates.
 
-Every top-level dispatch receives the same compact team-awareness section.
-Agents retain ownership and attempt bounded work within their competence; when
-stuck they identify a specific expert, question, evidence already gathered and
-the result needed to continue. Builders use BLOCKED/Blocker, reviewers and
+Planners, researchers, designers and explicitly authorized build coordinators
+receive the compact team-awareness section. Ordinary builders, review lenses,
+conformance and approvers receive only the help-return instructions, without the
+capability directory. They describe needed expertise, the question, evidence
+already gathered and the result needed; the assigner resolves a suitable resource.
+An already-known expert may still be named. This does not change permissions or
+require an extra supervisor call. Agents retain ownership and attempt bounded
+work within their competence. Builders use BLOCKED/Blocker, reviewers and
 conformance use Findings, and approvers use ESCALATE/Escalation to send the
 request back to the assigner. These records never spawn agents or transfer work.
 Nested workers ask their coordinator. Recommendations cannot clear a failed gate.
@@ -2330,3 +2442,7 @@ measured zero; model names do not establish provenance. Image-token detail has
 no verified retained mapping and remains unreported. The History `cacheRead`
 filter includes measured zero and excludes unavailable values. Raw records
 retain their original values, including incompatible historical semantics.
+
+Recovery preflight reads the explicit GitHub identity/visibility, every resolved origin push URL and the remote base before reserving an external publication operation. Side-effect-free refusals do not fence ordinary run actions. Partial creation with no origin reuses only the exact approved existing repository and visibility, using GitHub CLI’s configured Git protocol. Both base and work-branch pushes reject a mismatching push destination. An uncertain actual publication still retains its normal reconciliation fence.
+
+An existing origin with no remote base returns `github-base-missing` before pushing work. The same confirmation form reopens after a dialog close/reload; a failed base push therefore cannot skip bootstrap on retry. This known side-effect-free refusal clears the PR operation fence.

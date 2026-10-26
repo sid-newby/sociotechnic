@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { approveBrief, buildBrief, planBrief, researchBrief, reviewBrief } from "../src/brief.ts";
 import type { BuildBriefInput, PlanBriefInput, ReviewBriefInput } from "../src/brief.ts";
@@ -23,15 +24,17 @@ const reviewer: ReviewBriefInput = {
 };
 
 function generatedPlan() {
-  const examples = [...planBrief(planner).matchAll(/^```json\n([\s\S]*?)\n```$/gm)];
-  assert.equal(examples.length, 1, "planner gets one concrete generated schema example");
-  const parsed = parsePlanText(examples[0][1], false);
+  const schema = JSON.parse(readFileSync(new URL("../schemas/plan.schema.json", import.meta.url), "utf8"));
+  assert.match(planBrief(planner), /\/job\/contracts\/plan.schema.json/);
+  assert.doesNotMatch(planBrief(planner), /```json/);
+  assert.equal(schema.examples.length, 1, "one implementation example lives in the referenced contract");
+  const parsed = parsePlanText(JSON.stringify(schema.examples[0]), false);
   assert.equal(parsed.kind, "plan");
   if (parsed.kind !== "plan") throw new Error("Generated example is malformed");
   return parsed.plan;
 }
 
-test("the generated schema is strict JSON accepted by the real plan parser for every tier", () => {
+test("the referenced contract example is strict JSON accepted by the real plan parser for every tier", () => {
   const plan = generatedPlan();
   assert.deepEqual(plan.docsImpact, { required: false, files: [], note: "Explain the documentation impact." });
   assert.ok(plan.testing.strategy);
@@ -73,31 +76,31 @@ test("generated plan examples do not weaken required fields, bounds or comment o
   assert.equal(parsePlanText(JSON.stringify({ ...plan, stages: [{ ...plan.stages[0], files: [], risks: [] }], testing: { strategy: "Documented checks", cases: [] } }), false).kind, "plan");
 });
 
-test("lean planner guidance keeps tier, docs/testing and bounded research/design contracts", () => {
+test("referenced planner guidance keeps tier, docs/testing and bounded research/design contracts", () => {
   const brief = planBrief(planner);
-  assert.match(brief, /Every shown key is required, including docsImpact and testing/);
+  const schema = JSON.parse(readFileSync(new URL("../schemas/plan.schema.json", import.meta.url), "utf8"));
+  assert.ok(schema.$defs.plan.required.includes("docsImpact"));
+  assert.ok(schema.$defs.plan.required.includes("testing"));
   assert.match(brief, /Pick the cheapest tier that honestly fits/);
   assert.match(brief, /at most 8 files/);
-  assert.match(brief, /non-overlapping repository-relative source file lists, nonempty per stage/);
-  assert.match(brief, /preserve executable directives, and prove no behavior changed/);
+  assert.match(schema.$defs.stage.properties.files.description, /nonempty, exact, disjoint/);
+  assert.match(schema.$defs.plan["x-engine-checks"].join(" "), /Preserve executable directives/);
   assert.doesNotMatch(brief, /fans out|worker packets|bounded waves/);
-  assert.match(brief, /Use only research-template agents from the frozen team roster/);
+  assert.match(brief, /research-template agents from the frozen team roster/);
   assert.match(brief, /Respect an explicitly locked researcher/);
   assert.match(brief, /cannot delegate onward/);
   assert.match(brief, /they do not reassign the run/);
-  const research = brief.match(/`(\{"status": "needs-research",[^`]+\})`/);
-  assert.ok(research);
-  assert.equal(parsePlanText(research[1], false).kind, "needs-research");
-  assert.equal(parsePlanText(research[1], true).kind, "malformed");
+  const research = JSON.stringify(schema.$defs.researchRequest.examples[0]);
+  assert.equal(parsePlanText(research, false).kind, "needs-research");
+  assert.equal(parsePlanText(research, true).kind, "malformed");
   assert.equal(parsePlanText(JSON.stringify({ status: "needs-research", questions: [] }), false).kind, "malformed");
   assert.equal(parsePlanText(JSON.stringify({ status: "needs-research", questions: ["Evidence?"], advisors: [] }), false).kind, "malformed");
-  const design = brief.match(/(\{"status":"needs-design",[^}]+\})/);
-  assert.ok(design);
-  assert.equal(parsePlanText(design[1], false).kind, "needs-design");
+  assert.equal(parsePlanText(JSON.stringify(schema.$defs.designRequest.examples[0]), false).kind, "needs-design");
+  assert.equal(parsePlanText(JSON.stringify(schema.$defs.inputRequest.examples[0]), true).kind, "needs-input");
   assert.equal(parsePlanText(JSON.stringify({ status: "needs-design", reason: "" }), false).kind, "malformed");
   const resumed = planBrief({ ...planner, allowResearch: false, design: "Approved composition", researchFiles: ["/job/research-1.md"] });
   assert.match(resumed, /research-1.md/);
-  assert.match(resumed, /The research escape has been used. Write an actionable plan, or use needs-input/);
+  assert.match(resumed, /research escape has been used.*needs-input/);
   assert.match(resumed, /Do not restart design just because this is UI work/);
   assert.doesNotMatch(resumed, /## Research escape/);
 });

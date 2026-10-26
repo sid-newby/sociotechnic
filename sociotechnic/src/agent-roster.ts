@@ -37,13 +37,13 @@ export function rosterBrief(cards: readonly AgentCard[], assignments: Readonly<R
   ].join("\n");
 }
 
-export function assistanceBrief(record: RecordKind): string {
+export function assistanceBrief(record: RecordKind, hasRoster = true): string {
   const channel = record === "plan" ? "Use needs-research for a bounded question, or agentRecommendations in the plan for a handoff recommendation."
     : record === "build" ? "Return STATUS: BLOCKED with the concrete request in ## Blocker if you cannot safely complete the assignment."
-    : record === "review" || record === "conformance" ? "Describe the concrete problem and recommended specialist in ## Findings; retain the correct verdict and severity."
-    : record === "decision" ? "Use DECISION: ESCALATE and ## Escalation when the approval rules require it; name the expert and missing evidence."
+    : record === "review" || record === "conformance" ? hasRoster ? "Describe the concrete problem and recommended specialist in ## Findings; retain the correct verdict and severity." : "Describe the concrete problem and needed expertise in ## Findings; retain the correct verdict and severity."
+    : record === "decision" ? hasRoster ? "Use DECISION: ESCALATE and ## Escalation when the approval rules require it; name the expert and missing evidence." : "Use DECISION: ESCALATE and ## Escalation when the approval rules require it; describe the needed expertise and missing evidence."
     : record === "research" ? "Answer the bounded question yourself. If it remains blocked, return STATUS: BLOCKED with evidence and the missing decision; do not request another advisor."
     : "Use the existing design packet and human decision channel for missing expertise; do not invent a new output format.";
-  return ["## Asking for help", "Keep ownership. Do the work you can within scope; ask for specific help when evidence or expertise is missing rather than guessing. Name one suitable expert, the narrow question, what you tried, relevant evidence and the result needed to continue.",
+  return ["## Asking for help", hasRoster ? "Keep ownership. Do the work you can within scope; ask for specific help when evidence or expertise is missing rather than guessing. Name one suitable expert, the narrow question, what you tried, relevant evidence and the result needed to continue." : "Keep ownership. Describe the needed expertise, narrow question, what you tried, relevant evidence and result needed. The assigner selects resources; name an expert only if already known from the assignment.",
     channel, "Send the request back to the assigner in the existing record. Do not spawn agents for help, recursively consult, hand off the whole task, change role assignments or bypass a gate. Existing explicitly assigned coordinator worker waves still follow their own contract. Nested workers ask their coordinator. A recommendation is not evidence of completed work."].join("\n");
 }

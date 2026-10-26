@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sociotechnic.local/schemas/recipient-contract.v1.json",
+  "title": "Sociotechnic recipient Markdown output contract v1",
+  "description": "Explicit opt-in body contract. Write only the Markdown record shown by the applicable example, not a JSON wrapper. The dispatch chooses the record kind and pinned stage IDs. src/recipient-contract.ts#validateRecipientOutput enforces body rules; JSON Schema alone does not validate Markdown structure. Existing src/verdict.ts#parseRecord remains authoritative for markers, commits, provider errors and verdict consistency. This contract never changes scope, touches, commit binding or gate policy.",
+  "type": "string",
+  "minLength": 1,
+  "x-contractVersion": 1,
+  "x-validator": "src/recipient-contract.ts#validateRecipientOutput",
+  "x-commonRules": [
+    "Each required ## heading must occur exactly once with nonempty content outside fenced code.",
+    "Required headings are case-insensitive and use exactly the documented heading text.",
+    "Extra sections do not replace required sections. Fenced headings do not count.",
+    "Marker lines and COMMIT lines follow the existing engine record contract. COMMIT must name the real committed HEAD. Example SHAs are illustrative only."
+  ],
+  "$defs": {
+    "research": {
+      "type": "string",
+      "x-markers": ["STATUS: DONE", "STATUS: BLOCKED"],
+      "x-requiredSections": ["Answer", "Evidence"],
+      "description": "Answer the bounded question directly and give repository evidence with file paths and line numbers. BLOCKED research retains Answer and Evidence; no separate Blocker heading is required by the research brief.",
+      "examples": ["STATUS: DONE\n\n## Answer\n\nThe handler validates the input before saving.\n\n## Evidence\n\n- src/handler.ts:12 validates the input.\n"]
+    },
+    "build": {
+      "type": "string",
+      "x-markers": ["STATUS: READY", "STATUS: BLOCKED"],
+      "x-requiredSections": ["Summary", "Acceptance", "Deviations", "Notes for reviewers"],
+      "x-conditionalSections": { "BLOCKED": ["Blocker"] },
+      "description": "Acceptance has - [x] or - [ ] bullets describing actual verification, one per plan acceptance criterion. Deviations has bullets explaining departures, or - none. BLOCKED adds a nonempty Blocker explaining the human decision needed. This structural validator cannot establish whether acceptance evidence is true or complete.",
+      "examples": [
+        "STATUS: READY\nCOMMIT: 0123456789abcdef0123456789abcdef01234567\n\n## Summary\n\nImplemented the approved input validation.\n\n## Acceptance\n\n- [x] Invalid input is rejected; verified by the handler unit test.\n\n## Deviations\n\n- none\n\n## Notes for reviewers\n\nThe focused handler tests passed at the recorded commit.\n",
+        "STATUS: BLOCKED\nCOMMIT: 0123456789abcdef0123456789abcdef01234567\n\n## Summary\n\nImplementation awaits a human scope decision.\n\n## Acceptance\n\n- [ ] Validation is incomplete; the required schema choice is unresolved.\n\n## Deviations\n\n- none\n\n## Notes for reviewers\n\nNo passing verification is claimed.\n\n## Blocker\n\nChoose which of the incompatible input schemas must be supported.\n"
+      ]
+    },
+    "review": {
+      "type": "string",
+      "x-markers": ["VERDICT: PASS", "VERDICT: CHANGES"],
+      "x-requiredSections": ["Findings", "Notes"],
+      "x-findingRules": [
+        "Each nonblank Findings line is one bullet: - [severity] <path[:line] or general> — <text>.",
+        "Severity is critical, high, medium or low, case-insensitive. Unknown severities and malformed bullets are rejected.",
+        "Location and finding text must be nonempty. The existing parser also accepts * bullets and separators – or -- or spaced -.",
+        "With no findings, write the single line None. Do not mix None. with other content.",
+        "PASS with blocking findings and agent-authored SKIPPED remain governed by the existing parser."
+      ],
+      "examples": ["VERDICT: PASS\nCOMMIT: 0123456789abcdef0123456789abcdef01234567\n\n## Findings\n\nNone.\n\n## Notes\n\nThe changed handler follows the existing validation pattern.\n", "VERDICT: CHANGES\nCOMMIT: 0123456789abcdef0123456789abcdef01234567\n\n## Findings\n\n- [high] src/handler.ts:12 — Empty input bypasses validation.\n\n## Notes\n\nAdd coverage for empty input before approval.\n"]
+    },
+    "conformance": {
+      "type": "string",
+      "x-markers": ["VERDICT: PASS", "VERDICT: CHANGES"],
+      "x-requiredSections": ["Findings", "Notes", "Plan steps"],
+      "description": "Apply the review Findings rules. Plan steps is a Markdown table with exactly stage | status | justification columns and a separator row. Every pinned stage ID must occur exactly once; use its exact ID, not a title or a position. Status is implemented, partial or missing for pinned stages. Additional rows must use a unique added:<path> ID and status added. Reject duplicate, missing and unrelated IDs and unknown statuses. Partial, missing and added rows require a nonempty justification. Added rows do not grant scope permission: existing touches, deviations, semantic review and gate policy still apply.",
+      "examples": ["VERDICT: PASS\nCOMMIT: 0123456789abcdef0123456789abcdef01234567\n\n## Findings\n\nNone.\n\n## Notes\n\nThe implementation and build evidence cover the pinned stages.\n\n## Plan steps\n\n| stage | status | justification |\n| --- | --- | --- |\n| s1 | implemented | Handler validation and its acceptance test are present. |\n| s2 | implemented | The documented request shape matches the handler. |\n"]
+    },
+    "decision": {
+      "type": "string",
+      "x-markers": ["DECISION: APPROVE", "DECISION: ESCALATE"],
+      "x-requiredSections": ["Reasons"],
+      "x-conditionalSections": { "ESCALATE": ["Escalation"] },
+      "description": "Reasons contains nonempty bullets. ESCALATE adds a nonempty Escalation naming the hard rule (a), (b), (c) or (d) that fired: missing acceptance evidence, unexplained plan deviation, build/conformance disagreement, or an unverifiable record claim. The structural validator does not decide whether approval or escalation is warranted.",
+      "examples": ["DECISION: APPROVE\nCOMMIT: 0123456789abcdef0123456789abcdef01234567\n\n## Reasons\n\n- The recorded acceptance evidence and passing reviews support approval.\n", "DECISION: ESCALATE\nCOMMIT: 0123456789abcdef0123456789abcdef01234567\n\n## Reasons\n\n- The build does not provide evidence for the invalid-input criterion.\n\n## Escalation\n\nRule (a): acceptance evidence is missing.\n"]
+    }
+  }
+}

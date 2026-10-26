@@ -1,0 +1,1519 @@
+{
+  "snapshotAt": "2026-10-26T00:42:37.076Z",
+  "percentileMethod": "linear interpolation at p*(n-1), matching PostgreSQL percentile_cont; timestamps include all outcomes",
+  "method": "single PostgreSQL REPEATABLE READ READ ONLY snapshot; no full prompt, feature, record or release definition text emitted",
+  "counts": {
+    "jobs": 28,
+    "dispatches": 140,
+    "immutableReleases": 38,
+    "records": 418
+  },
+  "jobJsonBytes": {
+    "storedJsonbText": {
+      "n": 28,
+      "p50": 147317.5,
+      "p95": 274681.39999999997,
+      "max": 616821
+    },
+    "currentPrettyJavascriptSerialization": {
+      "n": 28,
+      "p50": 153177.5,
+      "p95": 285408.3,
+      "max": 645204
+    }
+  },
+  "jobCurrentState": {
+    "jobJsonBytesSum": 4484960,
+    "recordBytesSum": 44109436,
+    "stageEligibleRecordBytesSum": 44061399,
+    "estimatedCurrentRecordCopyPerDispatchBytes": 164070620,
+    "byJob": [
+      {
+        "id": "1e60e896b278",
+        "dispatchCount": 6,
+        "recordsBytes": 19349,
+        "jobJsonbTextBytes": 7005,
+        "currentPrettyJsonBytes": 9342
+      },
+      {
+        "id": "bab6d780e101",
+        "dispatchCount": 6,
+        "recordsBytes": 23955,
+        "jobJsonbTextBytes": 15705,
+        "currentPrettyJsonBytes": 22710
+      },
+      {
+        "id": "d4345b498acd",
+        "dispatchCount": 1,
+        "recordsBytes": 7257,
+        "jobJsonbTextBytes": 2897,
+        "currentPrettyJsonBytes": 3896
+      },
+      {
+        "id": "7701f78fdbda",
+        "dispatchCount": 14,
+        "recordsBytes": 773441,
+        "jobJsonbTextBytes": 65419,
+        "currentPrettyJsonBytes": 85078
+      },
+      {
+        "id": "1a2e65ad97c8",
+        "dispatchCount": 5,
+        "recordsBytes": 41032,
+        "jobJsonbTextBytes": 15645,
+        "currentPrettyJsonBytes": 21498
+      },
+      {
+        "id": "0f7509c0a4d6",
+        "dispatchCount": 3,
+        "recordsBytes": 0,
+        "jobJsonbTextBytes": 213607,
+        "currentPrettyJsonBytes": 219636
+      },
+      {
+        "id": "6f25d0489456",
+        "dispatchCount": 2,
+        "recordsBytes": 0,
+        "jobJsonbTextBytes": 177020,
+        "currentPrettyJsonBytes": 182109
+      },
+      {
+        "id": "626c93bd4df5",
+        "dispatchCount": 19,
+        "recordsBytes": 4633536,
+        "jobJsonbTextBytes": 114757,
+        "currentPrettyJsonBytes": 145250
+      },
+      {
+        "id": "afbabb44fb11",
+        "dispatchCount": 2,
+        "recordsBytes": 0,
+        "jobJsonbTextBytes": 176764,
+        "currentPrettyJsonBytes": 181917
+      },
+      {
+        "id": "4d126f60a25f",
+        "dispatchCount": 17,
+        "recordsBytes": 90045,
+        "jobJsonbTextBytes": 616821,
+        "currentPrettyJsonBytes": 645204
+      },
+      {
+        "id": "6ad2d34b6e57",
+        "dispatchCount": 2,
+        "recordsBytes": 0,
+        "jobJsonbTextBytes": 176921,
+        "currentPrettyJsonBytes": 182042
+      },
+      {
+        "id": "dc30e80fa8c9",
+        "dispatchCount": 8,
+        "recordsBytes": 115420,
+        "jobJsonbTextBytes": 25291,
+        "currentPrettyJsonBytes": 34596
+      },
+      {
+        "id": "3823a54a027b",
+        "dispatchCount": 5,
+        "recordsBytes": 36113,
+        "jobJsonbTextBytes": 15971,
+        "currentPrettyJsonBytes": 21836
+      },
+      {
+        "id": "ad5a14a3912c",
+        "dispatchCount": 19,
+        "recordsBytes": 1396104,
+        "jobJsonbTextBytes": 82296,
+        "currentPrettyJsonBytes": 107883
+      },
+      {
+        "id": "e9d602e6a600",
+        "dispatchCount": 1,
+        "recordsBytes": 13807,
+        "jobJsonbTextBytes": 142079,
+        "currentPrettyJsonBytes": 147254
+      },
+      {
+        "id": "cc6f9afcae90",
+        "dispatchCount": 1,
+        "recordsBytes": 0,
+        "jobJsonbTextBytes": 140553,
+        "currentPrettyJsonBytes": 145144
+      },
+      {
+        "id": "96de73b60f83",
+        "dispatchCount": 1,
+        "recordsBytes": 13629324,
+        "jobJsonbTextBytes": 147460,
+        "currentPrettyJsonBytes": 153569
+      },
+      {
+        "id": "a13193306d46",
+        "dispatchCount": 6,
+        "recordsBytes": 26137,
+        "jobJsonbTextBytes": 280742,
+        "currentPrettyJsonBytes": 292437
+      },
+      {
+        "id": "88c39b3d2bcd",
+        "dispatchCount": 1,
+        "recordsBytes": 1334722,
+        "jobJsonbTextBytes": 140584,
+        "currentPrettyJsonBytes": 145437
+      },
+      {
+        "id": "f288a8026e38",
+        "dispatchCount": 5,
+        "recordsBytes": 6325,
+        "jobJsonbTextBytes": 263426,
+        "currentPrettyJsonBytes": 272355
+      },
+      {
+        "id": "c9f8942d9889",
+        "dispatchCount": 1,
+        "recordsBytes": 19045073,
+        "jobJsonbTextBytes": 153115,
+        "currentPrettyJsonBytes": 159448
+      },
+      {
+        "id": "d9952a08c594",
+        "dispatchCount": 3,
+        "recordsBytes": 31207,
+        "jobJsonbTextBytes": 203964,
+        "currentPrettyJsonBytes": 213501
+      },
+      {
+        "id": "4b318ea9b658",
+        "dispatchCount": 3,
+        "recordsBytes": 26323,
+        "jobJsonbTextBytes": 204232,
+        "currentPrettyJsonBytes": 213859
+      },
+      {
+        "id": "f7946a6958ee",
+        "dispatchCount": 3,
+        "recordsBytes": 21483,
+        "jobJsonbTextBytes": 203142,
+        "currentPrettyJsonBytes": 212815
+      },
+      {
+        "id": "91688e30605f",
+        "dispatchCount": 1,
+        "recordsBytes": 1123943,
+        "jobJsonbTextBytes": 147175,
+        "currentPrettyJsonBytes": 152786
+      },
+      {
+        "id": "ec541a288ea4",
+        "dispatchCount": 0,
+        "recordsBytes": 1666803,
+        "jobJsonbTextBytes": 106778,
+        "currentPrettyJsonBytes": 110899
+      },
+      {
+        "id": "68e2c2501eb1",
+        "dispatchCount": 3,
+        "recordsBytes": 0,
+        "jobJsonbTextBytes": 213862,
+        "currentPrettyJsonBytes": 220145
+      },
+      {
+        "id": "1ef2a69f1d87",
+        "dispatchCount": 2,
+        "recordsBytes": 0,
+        "jobJsonbTextBytes": 176931,
+        "currentPrettyJsonBytes": 182314
+      }
+    ]
+  },
+  "dispatchMetricsByStep": {
+    "plan": {
+      "dispatches": 39,
+      "finishedWithTimestamps": 39,
+      "outcomes": {
+        "ok": 22,
+        "failed": 16,
+        "timeout": 1
+      },
+      "wallMs": {
+        "n": 39,
+        "p50": 54870,
+        "p95": 577661.4,
+        "max": 637884
+      },
+      "generatedEnvelopePromptUtf8Bytes": {
+        "n": 29,
+        "p50": 13412,
+        "p95": 14525.8,
+        "max": 14876
+      },
+      "measuredTokenCoverage": {
+        "total": 22,
+        "input": 21,
+        "output": 21,
+        "cacheRead": 21,
+        "cacheWrite": 16
+      },
+      "successfulDispatches": 22
+    },
+    "research": {
+      "dispatches": 1,
+      "finishedWithTimestamps": 1,
+      "outcomes": {
+        "ok": 1
+      },
+      "wallMs": {
+        "n": 1,
+        "p50": 23484,
+        "p95": 23484,
+        "max": 23484
+      },
+      "generatedEnvelopePromptUtf8Bytes": {
+        "n": 1,
+        "p50": 9695,
+        "p95": 9695,
+        "max": 9695
+      },
+      "measuredTokenCoverage": {
+        "total": 1,
+        "input": 1,
+        "output": 1,
+        "cacheRead": 1,
+        "cacheWrite": 0
+      },
+      "successfulDispatches": 1
+    },
+    "design": {
+      "dispatches": 6,
+      "finishedWithTimestamps": 6,
+      "outcomes": {
+        "ok": 6
+      },
+      "wallMs": {
+        "n": 6,
+        "p50": 540135,
+        "p95": 579939.75,
+        "max": 581097
+      },
+      "generatedEnvelopePromptUtf8Bytes": {
+        "n": 6,
+        "p50": 17887,
+        "p95": 18175,
+        "max": 18221
+      },
+      "measuredTokenCoverage": {
+        "total": 6,
+        "input": 6,
+        "output": 6,
+        "cacheRead": 6,
+        "cacheWrite": 6
+      },
+      "successfulDispatches": 6
+    },
+    "build": {
+      "dispatches": 20,
+      "finishedWithTimestamps": 20,
+      "outcomes": {
+        "ok": 19,
+        "failed": 1
+      },
+      "wallMs": {
+        "n": 20,
+        "p50": 190642.5,
+        "p95": 1268486.3000000012,
+        "max": 2964337
+      },
+      "generatedEnvelopePromptUtf8Bytes": {
+        "n": 6,
+        "p50": 11230.5,
+        "p95": 11882.5,
+        "max": 11974
+      },
+      "measuredTokenCoverage": {
+        "total": 19,
+        "input": 18,
+        "output": 18,
+        "cacheRead": 18,
+        "cacheWrite": 18
+      },
+      "successfulDispatches": 19
+    },
+    "review": {
+      "dispatches": 72,
+      "finishedWithTimestamps": 72,
+      "outcomes": {
+        "ok": 72
+      },
+      "wallMs": {
+        "n": 72,
+        "p50": 43982,
+        "p95": 129787.80000000008,
+        "max": 169436
+      },
+      "generatedEnvelopePromptUtf8Bytes": {
+        "n": 15,
+        "p50": 10995,
+        "p95": 11739.8,
+        "max": 11954
+      },
+      "measuredTokenCoverage": {
+        "total": 72,
+        "input": 69,
+        "output": 69,
+        "cacheRead": 69,
+        "cacheWrite": 59
+      },
+      "successfulDispatches": 72
+    },
+    "approve": {
+      "dispatches": 2,
+      "finishedWithTimestamps": 2,
+      "outcomes": {
+        "ok": 2
+      },
+      "wallMs": {
+        "n": 2,
+        "p50": 86445.5,
+        "p95": 129031.25,
+        "max": 133763
+      },
+      "generatedEnvelopePromptUtf8Bytes": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "max": null
+      },
+      "measuredTokenCoverage": {
+        "total": 2,
+        "input": 1,
+        "output": 1,
+        "cacheRead": 1,
+        "cacheWrite": 1
+      },
+      "successfulDispatches": 2
+    }
+  },
+  "recordsByClass": {
+    "decision": {
+      "files": 2,
+      "bytes": 3855,
+      "maxFileBytes": 2086,
+      "bytesDistribution": {
+        "n": 2,
+        "p50": 1927.5,
+        "p95": 2070.15,
+        "max": 2086
+      }
+    },
+    "plan": {
+      "files": 20,
+      "bytes": 180086,
+      "maxFileBytes": 29401,
+      "bytesDistribution": {
+        "n": 20,
+        "p50": 5482,
+        "p95": 26621.300000000003,
+        "max": 29401
+      }
+    },
+    "plan-prose": {
+      "files": 11,
+      "bytes": 47280,
+      "maxFileBytes": 7391,
+      "bytesDistribution": {
+        "n": 11,
+        "p50": 4048,
+        "p95": 7028,
+        "max": 7391
+      }
+    },
+    "other": {
+      "files": 10,
+      "bytes": 66912,
+      "maxFileBytes": 12111,
+      "bytesDistribution": {
+        "n": 10,
+        "p50": 6969.5,
+        "p95": 11875.65,
+        "max": 12111
+      }
+    },
+    "build": {
+      "files": 19,
+      "bytes": 120384,
+      "maxFileBytes": 12531,
+      "bytesDistribution": {
+        "n": 19,
+        "p50": 3814,
+        "p95": 12486,
+        "max": 12531
+      }
+    },
+    "round-other": {
+      "files": 85,
+      "bytes": 6537858,
+      "maxFileBytes": 1524846,
+      "bytesDistribution": {
+        "n": 85,
+        "p50": 1301,
+        "p95": 410808.6,
+        "max": 1524846
+      }
+    },
+    "conformance": {
+      "files": 18,
+      "bytes": 95964,
+      "maxFileBytes": 8564,
+      "bytesDistribution": {
+        "n": 18,
+        "p50": 4965.5,
+        "p95": 8329.4,
+        "max": 8564
+      }
+    },
+    "review": {
+      "files": 73,
+      "bytes": 137476,
+      "maxFileBytes": 6732,
+      "bytesDistribution": {
+        "n": 73,
+        "p50": 1749,
+        "p95": 4922.7999999999965,
+        "max": 6732
+      }
+    },
+    "migration": {
+      "files": 8,
+      "bytes": 48037,
+      "maxFileBytes": 26496,
+      "bytesDistribution": {
+        "n": 8,
+        "p50": 2793.5,
+        "p95": 20461.29999999999,
+        "max": 26496
+      }
+    },
+    "pr-notes": {
+      "files": 1,
+      "bytes": 902,
+      "maxFileBytes": 902,
+      "bytesDistribution": {
+        "n": 1,
+        "p50": 902,
+        "p95": 902,
+        "max": 902
+      }
+    },
+    "design": {
+      "files": 170,
+      "bytes": 36870177,
+      "maxFileBytes": 14283183,
+      "bytesDistribution": {
+        "n": 170,
+        "p50": 1104,
+        "p95": 1171031.8999999983,
+        "max": 14283183
+      }
+    },
+    "research": {
+      "files": 1,
+      "bytes": 505,
+      "maxFileBytes": 505,
+      "bytesDistribution": {
+        "n": 1,
+        "p50": 505,
+        "p95": 505,
+        "max": 505
+      }
+    }
+  },
+  "largestDispatchesByWallMs": [
+    {
+      "jobId": "626c93bd4df5",
+      "step": "build",
+      "agent": "sociotechnic-builder",
+      "model": "opus",
+      "effort": "high",
+      "outcome": "ok",
+      "wallMs": 2964337,
+      "providerDurationMs": 6756,
+      "envelopePromptUtf8Bytes": null,
+      "tokenCoverage": {
+        "input": true,
+        "output": true,
+        "cacheRead": true,
+        "cacheWrite": true,
+        "total": true
+      },
+      "pinVersion": null,
+      "pinDigest": null,
+      "versionBackfill": "operator-confirmed"
+    },
+    {
+      "jobId": "626c93bd4df5",
+      "step": "build",
+      "agent": "sociotechnic-builder",
+      "model": "opus",
+      "effort": "high",
+      "outcome": "ok",
+      "wallMs": 1179231,
+      "providerDurationMs": 1175912,
+      "envelopePromptUtf8Bytes": null,
+      "tokenCoverage": {
+        "input": true,
+        "output": true,
+        "cacheRead": true,
+        "cacheWrite": true,
+        "total": true
+      },
+      "pinVersion": null,
+      "pinDigest": null,
+      "versionBackfill": "operator-confirmed"
+    },
+    {
+      "jobId": "dc30e80fa8c9",
+      "step": "build",
+      "agent": "sociotechnic-comment-cleaner",
+      "model": "sonnet",
+      "effort": "high",
+      "outcome": "ok",
+      "wallMs": 1001721,
+      "providerDurationMs": 995714,
+      "envelopePromptUtf8Bytes": null,
+      "tokenCoverage": {
+        "input": true,
+        "output": true,
+        "cacheRead": true,
+        "cacheWrite": true,
+        "total": true
+      },
+      "pinVersion": null,
+      "pinDigest": null,
+      "versionBackfill": "operator-confirmed"
+    },
+    {
+      "jobId": "ad5a14a3912c",
+      "step": "build",
+      "agent": "sociotechnic-builder",
+      "model": "opus",
+      "effort": "high",
+      "outcome": "ok",
+      "wallMs": 821381,
+      "providerDurationMs": 817895,
+      "envelopePromptUtf8Bytes": null,
+      "tokenCoverage": {
+        "input": true,
+        "output": true,
+        "cacheRead": true,
+        "cacheWrite": true,
+        "total": true
+      },
+      "pinVersion": null,
+      "pinDigest": null,
+      "versionBackfill": "operator-confirmed"
+    },
+    {
+      "jobId": "dc30e80fa8c9",
+      "step": "plan",
+      "agent": "sociotechnic-planner",
+      "model": "fable",
+      "effort": "xhigh",
+      "outcome": "ok",
+      "wallMs": 637884,
+      "providerDurationMs": 634802,
+      "envelopePromptUtf8Bytes": null,
+      "tokenCoverage": {
+        "input": true,
+        "output": true,
+        "cacheRead": true,
+        "cacheWrite": true,
+        "total": true
+      },
+      "pinVersion": null,
+      "pinDigest": null,
+      "versionBackfill": "operator-confirmed"
+    },
+    {
+      "jobId": "1a2e65ad97c8",
+      "step": "plan",
+      "agent": "sociotechnic-planner",
+      "model": "fable",
+      "effort": "xhigh",
+      "outcome": "ok",
+      "wallMs": 590229,
+      "providerDurationMs": 586711,
+      "envelopePromptUtf8Bytes": null,
+      "tokenCoverage": {
+        "input": true,
+        "output": true,
+        "cacheRead": true,
+        "cacheWrite": true,
+        "total": true
+      },
+      "pinVersion": null,
+      "pinDigest": null,
+      "versionBackfill": "operator-confirmed"
+    },
+    {
+      "jobId": "4b318ea9b658",
+      "step": "design",
+      "agent": "sociotechnic-designer",
+      "model": "claude-fable-5-1",
+      "effort": "xhigh",
+      "outcome": "ok",
+      "wallMs": 581097,
+      "providerDurationMs": 577811,
+      "envelopePromptUtf8Bytes": 17795,
+      "tokenCoverage": {
+        "input": true,
+        "output": true,
+        "cacheRead": true,
+        "cacheWrite": true,
+        "total": true
+      },
+      "pinVersion": "1.0.0",
+      "pinDigest": "a1c6a4c3e414be72eff925223f0c8fc26e19997f9e4afec5e9641589971b2e5e",
+      "versionBackfill": null
+    },
+    {
+      "jobId": "d9952a08c594",
+      "step": "design",
+      "agent": "sociotechnic-designer",
+      "model": "claude-fable-5-1",
+      "effort": "xhigh",
+      "outcome": "ok",
+      "wallMs": 576468,
+      "providerDurationMs": 568632,
+      "envelopePromptUtf8Bytes": 18037,
+      "tokenCoverage": {
+        "input": true,
+        "output": true,
+        "cacheRead": true,
+        "cacheWrite": true,
+        "total": true
+      },
+      "pinVersion": "1.0.0",
+      "pinDigest": "a1c6a4c3e414be72eff925223f0c8fc26e19997f9e4afec5e9641589971b2e5e",
+      "versionBackfill": null
+    },
+    {
+      "jobId": "626c93bd4df5",
+      "step": "plan",
+      "agent": "sociotechnic-planner",
+      "model": "fable",
+      "effort": "xhigh",
+      "outcome": "ok",
+      "wallMs": 576265,
+      "providerDurationMs": 572667,
+      "envelopePromptUtf8Bytes": null,
+      "tokenCoverage": {
+        "input": true,
+        "output": true,
+        "cacheRead": true,
+        "cacheWrite": true,
+        "total": true
+      },
+      "pinVersion": null,
+      "pinDigest": null,
+      "versionBackfill": "operator-confirmed"
+    },
+    {
+      "jobId": "ad5a14a3912c",
+      "step": "plan",
+      "agent": "sociotechnic-planner",
+      "model": "fable",
+      "effort": "xhigh",
+      "outcome": "ok",
+      "wallMs": 574915,
+      "providerDurationMs": 571247,
+      "envelopePromptUtf8Bytes": null,
+      "tokenCoverage": {
+        "input": true,
+        "output": true,
+        "cacheRead": true,
+        "cacheWrite": true,
+        "total": true
+      },
+      "pinVersion": null,
+      "pinDigest": null,
+      "versionBackfill": "operator-confirmed"
+    }
+  ],
+  "largestPlannerDispatchesByWallMs": [
+    {
+      "jobId": "dc30e80fa8c9",
+      "step": "plan",
+      "agent": "sociotechnic-planner",
+      "model": "fable",
+      "effort": "xhigh",
+      "outcome": "ok",
+      "wallMs": 637884,
+      "providerDurationMs": 634802,
+      "envelopePromptUtf8Bytes": null,
+      "tokenCoverage": {
+        "input": true,
+        "output": true,
+        "cacheRead": true,
+        "cacheWrite": true,
+        "total": true
+      },
+      "pinVersion": null,
+      "pinDigest": null,
+      "versionBackfill": "operator-confirmed"
+    },
+    {
+      "jobId": "1a2e65ad97c8",
+      "step": "plan",
+      "agent": "sociotechnic-planner",
+      "model": "fable",
+      "effort": "xhigh",
+      "outcome": "ok",
+      "wallMs": 590229,
+      "providerDurationMs": 586711,
+      "envelopePromptUtf8Bytes": null,
+      "tokenCoverage": {
+        "input": true,
+        "output": true,
+        "cacheRead": true,
+        "cacheWrite": true,
+        "total": true
+      },
+      "pinVersion": null,
+      "pinDigest": null,
+      "versionBackfill": "operator-confirmed"
+    },
+    {
+      "jobId": "626c93bd4df5",
+      "step": "plan",
+      "agent": "sociotechnic-planner",
+      "model": "fable",
+      "effort": "xhigh",
+      "outcome": "ok",
+      "wallMs": 576265,
+      "providerDurationMs": 572667,
+      "envelopePromptUtf8Bytes": null,
+      "tokenCoverage": {
+        "input": true,
+        "output": true,
+        "cacheRead": true,
+        "cacheWrite": true,
+        "total": true
+      },
+      "pinVersion": null,
+      "pinDigest": null,
+      "versionBackfill": "operator-confirmed"
+    },
+    {
+      "jobId": "ad5a14a3912c",
+      "step": "plan",
+      "agent": "sociotechnic-planner",
+      "model": "fable",
+      "effort": "xhigh",
+      "outcome": "ok",
+      "wallMs": 574915,
+      "providerDurationMs": 571247,
+      "envelopePromptUtf8Bytes": null,
+      "tokenCoverage": {
+        "input": true,
+        "output": true,
+        "cacheRead": true,
+        "cacheWrite": true,
+        "total": true
+      },
+      "pinVersion": null,
+      "pinDigest": null,
+      "versionBackfill": "operator-confirmed"
+    },
+    {
+      "jobId": "7701f78fdbda",
+      "step": "plan",
+      "agent": "sociotechnic-planner",
+      "model": "fable",
+      "effort": "xhigh",
+      "outcome": "ok",
+      "wallMs": 559951,
+      "providerDurationMs": 558790,
+      "envelopePromptUtf8Bytes": null,
+      "tokenCoverage": {
+        "input": true,
+        "output": true,
+        "cacheRead": true,
+        "cacheWrite": true,
+        "total": true
+      },
+      "pinVersion": null,
+      "pinDigest": null,
+      "versionBackfill": "operator-confirmed"
+    },
+    {
+      "jobId": "dc30e80fa8c9",
+      "step": "plan",
+      "agent": "sociotechnic-planner",
+      "model": "fable",
+      "effort": "xhigh",
+      "outcome": "failed",
+      "wallMs": 405000,
+      "providerDurationMs": 404907,
+      "envelopePromptUtf8Bytes": null,
+      "tokenCoverage": {
+        "total": false,
+        "input": false,
+        "output": false,
+        "cacheRead": false,
+        "cacheWrite": false
+      },
+      "pinVersion": null,
+      "pinDigest": null,
+      "versionBackfill": "operator-confirmed"
+    },
+    {
+      "jobId": "3823a54a027b",
+      "step": "plan",
+      "agent": "sociotechnic-planner",
+      "model": "fable",
+      "effort": "xhigh",
+      "outcome": "ok",
+      "wallMs": 268201,
+      "providerDurationMs": 264804,
+      "envelopePromptUtf8Bytes": null,
+      "tokenCoverage": {
+        "input": true,
+        "output": true,
+        "cacheRead": true,
+        "cacheWrite": true,
+        "total": true
+      },
+      "pinVersion": null,
+      "pinDigest": null,
+      "versionBackfill": "operator-confirmed"
+    },
+    {
+      "jobId": "1e60e896b278",
+      "step": "plan",
+      "agent": "sociotechnic-planner",
+      "model": "fable",
+      "effort": "xhigh",
+      "outcome": "ok",
+      "wallMs": 223122,
+      "providerDurationMs": 122961,
+      "envelopePromptUtf8Bytes": null,
+      "tokenCoverage": {
+        "input": false,
+        "output": false,
+        "cacheRead": false,
+        "cacheWrite": false,
+        "total": true
+      },
+      "pinVersion": null,
+      "pinDigest": null,
+      "versionBackfill": "operator-confirmed"
+    },
+    {
+      "jobId": "e9d602e6a600",
+      "step": "plan",
+      "agent": "sociotechnic-planner",
+      "model": "claude-fable-5-1",
+      "effort": "high",
+      "outcome": "ok",
+      "wallMs": 220758,
+      "providerDurationMs": 172237,
+      "envelopePromptUtf8Bytes": 13074,
+      "tokenCoverage": {
+        "input": true,
+        "output": true,
+        "cacheRead": true,
+        "cacheWrite": true,
+        "total": true
+      },
+      "pinVersion": "1.0.2",
+      "pinDigest": "caf8d1faf3f6bb9a58819e04e38fd7dd8419901db080007a7b589a1f293ceb32",
+      "versionBackfill": null
+    },
+    {
+      "jobId": "4d126f60a25f",
+      "step": "plan",
+      "agent": "sociotechnic-planner",
+      "model": "claude-fable-5-1",
+      "effort": "high",
+      "outcome": "ok",
+      "wallMs": 212240,
+      "providerDurationMs": 168676,
+      "envelopePromptUtf8Bytes": 13102,
+      "tokenCoverage": {
+        "input": true,
+        "output": true,
+        "cacheRead": true,
+        "cacheWrite": true,
+        "total": true
+      },
+      "pinVersion": "1.0.2",
+      "pinDigest": "caf8d1faf3f6bb9a58819e04e38fd7dd8419901db080007a7b589a1f293ceb32",
+      "versionBackfill": null
+    }
+  ],
+  "largestPlannerGeneratedBriefsByBytes": [
+    {
+      "jobId": "a13193306d46",
+      "step": "plan",
+      "agent": "sociotechnic-planner",
+      "model": "gpt-6.1-sol",
+      "effort": "high",
+      "outcome": "ok",
+      "wallMs": 60033,
+      "providerDurationMs": 59589,
+      "envelopePromptUtf8Bytes": 14876,
+      "tokenCoverage": {
+        "input": true,
+        "output": true,
+        "cacheRead": true,
+        "cacheWrite": false,
+        "total": true
+      },
+      "pinVersion": "1.0.5",
+      "pinDigest": "5f4fad58d9c8ecec66feca2ca8fdeaed5350b69d3fc68b510d8040374bc91d31",
+      "versionBackfill": null
+    },
+    {
+      "jobId": "91688e30605f",
+      "step": "plan",
+      "agent": "sociotechnic-planner",
+      "model": "claude-fable-5-1",
+      "effort": "high",
+      "outcome": "ok",
+      "wallMs": 75287,
+      "providerDurationMs": 51156,
+      "envelopePromptUtf8Bytes": 14653,
+      "tokenCoverage": {
+        "input": true,
+        "output": true,
+        "cacheRead": true,
+        "cacheWrite": true,
+        "total": true
+      },
+      "pinVersion": "1.0.2",
+      "pinDigest": "caf8d1faf3f6bb9a58819e04e38fd7dd8419901db080007a7b589a1f293ceb32",
+      "versionBackfill": null
+    },
+    {
+      "jobId": "4b318ea9b658",
+      "step": "plan",
+      "agent": "sociotechnic-planner",
+      "model": "claude-fable-5-1",
+      "effort": "high",
+      "outcome": "ok",
+      "wallMs": 54870,
+      "providerDurationMs": 50847,
+      "envelopePromptUtf8Bytes": 14335,
+      "tokenCoverage": {
+        "input": true,
+        "output": true,
+        "cacheRead": true,
+        "cacheWrite": true,
+        "total": true
+      },
+      "pinVersion": "1.0.2",
+      "pinDigest": "caf8d1faf3f6bb9a58819e04e38fd7dd8419901db080007a7b589a1f293ceb32",
+      "versionBackfill": null
+    },
+    {
+      "jobId": "f7946a6958ee",
+      "step": "plan",
+      "agent": "sociotechnic-planner",
+      "model": "claude-fable-5-1",
+      "effort": "high",
+      "outcome": "ok",
+      "wallMs": 48422,
+      "providerDurationMs": 45255,
+      "envelopePromptUtf8Bytes": 14335,
+      "tokenCoverage": {
+        "input": true,
+        "output": true,
+        "cacheRead": true,
+        "cacheWrite": true,
+        "total": true
+      },
+      "pinVersion": "1.0.2",
+      "pinDigest": "caf8d1faf3f6bb9a58819e04e38fd7dd8419901db080007a7b589a1f293ceb32",
+      "versionBackfill": null
+    },
+    {
+      "jobId": "d9952a08c594",
+      "step": "plan",
+      "agent": "sociotechnic-planner",
+      "model": "claude-fable-5-1",
+      "effort": "high",
+      "outcome": "ok",
+      "wallMs": 90179,
+      "providerDurationMs": 43337,
+      "envelopePromptUtf8Bytes": 14334,
+      "tokenCoverage": {
+        "input": true,
+        "output": true,
+        "cacheRead": true,
+        "cacheWrite": true,
+        "total": true
+      },
+      "pinVersion": "1.0.2",
+      "pinDigest": "caf8d1faf3f6bb9a58819e04e38fd7dd8419901db080007a7b589a1f293ceb32",
+      "versionBackfill": null
+    },
+    {
+      "jobId": "a13193306d46",
+      "step": "plan",
+      "agent": "sociotechnic-planner",
+      "model": "gpt-6.1-sol",
+      "effort": "high",
+      "outcome": "ok",
+      "wallMs": 26939,
+      "providerDurationMs": 26561,
+      "envelopePromptUtf8Bytes": 14230,
+      "tokenCoverage": {
+        "input": true,
+        "output": true,
+        "cacheRead": true,
+        "cacheWrite": false,
+        "total": true
+      },
+      "pinVersion": "1.0.5",
+      "pinDigest": "5f4fad58d9c8ecec66feca2ca8fdeaed5350b69d3fc68b510d8040374bc91d31",
+      "versionBackfill": null
+    },
+    {
+      "jobId": "68e2c2501eb1",
+      "step": "plan",
+      "agent": "sociotechnic-planner",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "outcome": "failed",
+      "wallMs": 9192,
+      "providerDurationMs": 8736,
+      "envelopePromptUtf8Bytes": 13829,
+      "tokenCoverage": {
+        "total": false,
+        "input": false,
+        "output": false,
+        "cacheRead": false,
+        "cacheWrite": false
+      },
+      "pinVersion": "1.0.3",
+      "pinDigest": "ac6ea7f81e58414110c5440dd8556419406234dc00b56d1fa716ded8f5da8fd6",
+      "versionBackfill": null
+    },
+    {
+      "jobId": "1ef2a69f1d87",
+      "step": "plan",
+      "agent": "sociotechnic-planner",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "outcome": "failed",
+      "wallMs": 9180,
+      "providerDurationMs": 8847,
+      "envelopePromptUtf8Bytes": 13703,
+      "tokenCoverage": {
+        "total": false,
+        "input": false,
+        "output": false,
+        "cacheRead": false,
+        "cacheWrite": false
+      },
+      "pinVersion": "1.0.3",
+      "pinDigest": "ac6ea7f81e58414110c5440dd8556419406234dc00b56d1fa716ded8f5da8fd6",
+      "versionBackfill": null
+    },
+    {
+      "jobId": "96de73b60f83",
+      "step": "plan",
+      "agent": "sociotechnic-planner",
+      "model": "claude-fable-5-1",
+      "effort": "high",
+      "outcome": "ok",
+      "wallMs": 64875,
+      "providerDurationMs": 61133,
+      "envelopePromptUtf8Bytes": 13694,
+      "tokenCoverage": {
+        "input": true,
+        "output": true,
+        "cacheRead": true,
+        "cacheWrite": true,
+        "total": true
+      },
+      "pinVersion": "1.0.2",
+      "pinDigest": "caf8d1faf3f6bb9a58819e04e38fd7dd8419901db080007a7b589a1f293ceb32",
+      "versionBackfill": null
+    },
+    {
+      "jobId": "c9f8942d9889",
+      "step": "plan",
+      "agent": "sociotechnic-planner",
+      "model": "claude-fable-5-1",
+      "effort": "high",
+      "outcome": "ok",
+      "wallMs": 24529,
+      "providerDurationMs": 22662,
+      "envelopePromptUtf8Bytes": 13684,
+      "tokenCoverage": {
+        "input": true,
+        "output": true,
+        "cacheRead": true,
+        "cacheWrite": true,
+        "total": true
+      },
+      "pinVersion": "1.0.2",
+      "pinDigest": "caf8d1faf3f6bb9a58819e04e38fd7dd8419901db080007a7b589a1f293ceb32",
+      "versionBackfill": null
+    }
+  ],
+  "currentImmutableReleases": [
+    {
+      "agent": "sociotechnic-approver",
+      "version": "1.0.0",
+      "digest": "5f03de17a92a77a30062ebe08e5ffe58cb8770bda13e89594f88e2a3ad52cce5",
+      "releaseJsonUtf8Bytes": 5055,
+      "definitionUtf8Bytes": 4624,
+      "definitionCharacters": 4624,
+      "skillResourceCount": 0
+    },
+    {
+      "agent": "sociotechnic-azure-advisor",
+      "version": "1.0.0",
+      "digest": "fe0e17d386e312694870f3d5ea2098987ab5bb53493d79603b710e5554beac99",
+      "releaseJsonUtf8Bytes": 1349771,
+      "definitionUtf8Bytes": 4816,
+      "definitionCharacters": 4808,
+      "skillResourceCount": 1
+    },
+    {
+      "agent": "sociotechnic-azure-advisor",
+      "version": "1.0.1",
+      "digest": "604b613caa14958b3736764e2b7f3125feceded2c02c39a1ef5294d084d19959",
+      "releaseJsonUtf8Bytes": 1448338,
+      "definitionUtf8Bytes": 5201,
+      "definitionCharacters": 5193,
+      "skillResourceCount": 1
+    },
+    {
+      "agent": "sociotechnic-azure-builder",
+      "version": "1.0.0",
+      "digest": "91ba710fc4c8c4cabb7364936d3c226b4077f032a6668c3f6bbcda0a7e38e5e0",
+      "releaseJsonUtf8Bytes": 1353406,
+      "definitionUtf8Bytes": 8427,
+      "definitionCharacters": 8421,
+      "skillResourceCount": 1
+    },
+    {
+      "agent": "sociotechnic-azure-builder",
+      "version": "1.0.1",
+      "digest": "d3af217d4f95075aed97d32a388c7b5210b39ca16eb7d2621384b0b095f9a8b5",
+      "releaseJsonUtf8Bytes": 1451973,
+      "definitionUtf8Bytes": 8812,
+      "definitionCharacters": 8806,
+      "skillResourceCount": 1
+    },
+    {
+      "agent": "sociotechnic-azure-builder",
+      "version": "1.1.0",
+      "digest": "287dad477947c1263bf22d6a1f4a9ed5d6660a476cb7e1cb81d99af1e748d350",
+      "releaseJsonUtf8Bytes": 1452363,
+      "definitionUtf8Bytes": 9043,
+      "definitionCharacters": 9037,
+      "skillResourceCount": 1
+    },
+    {
+      "agent": "sociotechnic-azure-builder-lite",
+      "version": "1.0.0",
+      "digest": "b52d5794aac950705d2686e06d9c29d8a8bb12f3be55e942354d6ff5b802809e",
+      "releaseJsonUtf8Bytes": 1353524,
+      "definitionUtf8Bytes": 8528,
+      "definitionCharacters": 8522,
+      "skillResourceCount": 1
+    },
+    {
+      "agent": "sociotechnic-azure-builder-lite",
+      "version": "1.0.1",
+      "digest": "ad4cbea044ec4cc217aa5ce2a31f73afe942b8d3d16aaa5a5d3b89ed540680ed",
+      "releaseJsonUtf8Bytes": 1452091,
+      "definitionUtf8Bytes": 8913,
+      "definitionCharacters": 8907,
+      "skillResourceCount": 1
+    },
+    {
+      "agent": "sociotechnic-azure-planner",
+      "version": "1.0.0",
+      "digest": "19af804d1c25f9e1ecc2985c7b1cfca97ba608a31614b345aa1d0a68e58b1c30",
+      "releaseJsonUtf8Bytes": 1355453,
+      "definitionUtf8Bytes": 10347,
+      "definitionCharacters": 10347,
+      "skillResourceCount": 1
+    },
+    {
+      "agent": "sociotechnic-azure-planner",
+      "version": "1.0.1",
+      "digest": "0e595fab9aefacd329a9a0a42d0b9311f1b1b64c3f84e845cc739b227e442f17",
+      "releaseJsonUtf8Bytes": 1454020,
+      "definitionUtf8Bytes": 10732,
+      "definitionCharacters": 10732,
+      "skillResourceCount": 1
+    },
+    {
+      "agent": "sociotechnic-browser-builder",
+      "version": "1.0.0",
+      "digest": "522b93deaed9b171e34c7369b1141fd334c0a38355e08a008a59a44adc4149d8",
+      "releaseJsonUtf8Bytes": 15314,
+      "definitionUtf8Bytes": 8296,
+      "definitionCharacters": 8290,
+      "skillResourceCount": 1
+    },
+    {
+      "agent": "sociotechnic-browser-builder",
+      "version": "1.0.1",
+      "digest": "88afebba68edd83c1554cc9209ad5bfed31a9f7afca76990f11c869c425812ac",
+      "releaseJsonUtf8Bytes": 15331,
+      "definitionUtf8Bytes": 8296,
+      "definitionCharacters": 8290,
+      "skillResourceCount": 1
+    },
+    {
+      "agent": "sociotechnic-browser-builder-lite",
+      "version": "1.0.0",
+      "digest": "525c7540400ed6a17a04489986b664fcea9875841ae9b6d4d9b62704b95f96a8",
+      "releaseJsonUtf8Bytes": 15426,
+      "definitionUtf8Bytes": 8399,
+      "definitionCharacters": 8393,
+      "skillResourceCount": 1
+    },
+    {
+      "agent": "sociotechnic-browser-builder-lite",
+      "version": "1.0.1",
+      "digest": "40e9c53184a0a72672229a95a18f94c87523229eb7ad8c88b9e7d321a26efb89",
+      "releaseJsonUtf8Bytes": 15449,
+      "definitionUtf8Bytes": 8401,
+      "definitionCharacters": 8395,
+      "skillResourceCount": 1
+    },
+    {
+      "agent": "sociotechnic-builder",
+      "version": "1.0.0",
+      "digest": "888f4591b2e04376f8a84eabf3a3b4a001d93d48e99d8f7ab63e6de57462ce0a",
+      "releaseJsonUtf8Bytes": 8358,
+      "definitionUtf8Bytes": 7821,
+      "definitionCharacters": 7815,
+      "skillResourceCount": 0
+    },
+    {
+      "agent": "sociotechnic-builder-lite",
+      "version": "1.0.0",
+      "digest": "05d941489e60b1611390ba83e28c79f27816d6255bc5c3e7fa2eb548d916943d",
+      "releaseJsonUtf8Bytes": 8473,
+      "definitionUtf8Bytes": 7929,
+      "definitionCharacters": 7923,
+      "skillResourceCount": 0
+    },
+    {
+      "agent": "sociotechnic-comment-cleaner",
+      "version": "1.0.0",
+      "digest": "7119b2f7422ae3286902ff8f76278ee60ab10769829192fed59cd275b648e3fa",
+      "releaseJsonUtf8Bytes": 5238,
+      "definitionUtf8Bytes": 4810,
+      "definitionCharacters": 4806,
+      "skillResourceCount": 0
+    },
+    {
+      "agent": "sociotechnic-comment-sicko",
+      "version": "1.0.0",
+      "digest": "49ed10ba0a4d5315125a8e9c0b6f61720def02bfb10c6879394968cdbb8def57",
+      "releaseJsonUtf8Bytes": 4459,
+      "definitionUtf8Bytes": 4013,
+      "definitionCharacters": 4013,
+      "skillResourceCount": 0
+    },
+    {
+      "agent": "sociotechnic-conformance",
+      "version": "1.0.0",
+      "digest": "21d86576e3261e5e6a2437d881bd1a7a7ff1d0e66822f95fa5862aa423fa4a6f",
+      "releaseJsonUtf8Bytes": 6477,
+      "definitionUtf8Bytes": 6022,
+      "definitionCharacters": 6016,
+      "skillResourceCount": 0
+    },
+    {
+      "agent": "sociotechnic-designer",
+      "version": "1.0.0",
+      "digest": "a1c6a4c3e414be72eff925223f0c8fc26e19997f9e4afec5e9641589971b2e5e",
+      "releaseJsonUtf8Bytes": 3032,
+      "definitionUtf8Bytes": 2520,
+      "definitionCharacters": 2520,
+      "skillResourceCount": 0
+    },
+    {
+      "agent": "sociotechnic-designer",
+      "version": "1.1.0",
+      "digest": "538cdd2d706866d8acac43bea81ef27d89014f19e5bcc4deeff471b1f748a0f1",
+      "releaseJsonUtf8Bytes": 1758,
+      "definitionUtf8Bytes": 1201,
+      "definitionCharacters": 1201,
+      "skillResourceCount": 0
+    },
+    {
+      "agent": "sociotechnic-designer",
+      "version": "1.2.0",
+      "digest": "01b6225600fdc6e0942ced794ad6e119371c58bdfe9f7ba57b53485b7ea4b223",
+      "releaseJsonUtf8Bytes": 1629,
+      "definitionUtf8Bytes": 991,
+      "definitionCharacters": 991,
+      "skillResourceCount": 0
+    },
+    {
+      "agent": "sociotechnic-infrastructure-builder",
+      "version": "1.0.0",
+      "digest": "1979a439a0ae31c9d243fcc4b249064d4eb81d3d89e4f75a2893947a435fa726",
+      "releaseJsonUtf8Bytes": 235621,
+      "definitionUtf8Bytes": 7886,
+      "definitionCharacters": 7880,
+      "skillResourceCount": 2
+    },
+    {
+      "agent": "sociotechnic-infrastructure-planner",
+      "version": "1.0.0",
+      "digest": "08bdc7b98babce648d014db8bfdc3c41a27e90cf057b0aca1d6271f7cf0dc700",
+      "releaseJsonUtf8Bytes": 237675,
+      "definitionUtf8Bytes": 9818,
+      "definitionCharacters": 9818,
+      "skillResourceCount": 2
+    },
+    {
+      "agent": "sociotechnic-planner",
+      "version": "1.0.0",
+      "digest": "a020a18aafe518b518faa0853ccc9de21c14e4e10f5bcd6bfb8b47e4d1783da9",
+      "releaseJsonUtf8Bytes": 10426,
+      "definitionUtf8Bytes": 9758,
+      "definitionCharacters": 9758,
+      "skillResourceCount": 0
+    },
+    {
+      "agent": "sociotechnic-planner",
+      "version": "1.0.1",
+      "digest": "367cd8bf529af759e5fb86a8f12bacbfb67a1be330879dc23371665297f508c3",
+      "releaseJsonUtf8Bytes": 10540,
+      "definitionUtf8Bytes": 9776,
+      "definitionCharacters": 9776,
+      "skillResourceCount": 0
+    },
+    {
+      "agent": "sociotechnic-planner",
+      "version": "1.0.2",
+      "digest": "caf8d1faf3f6bb9a58819e04e38fd7dd8419901db080007a7b589a1f293ceb32",
+      "releaseJsonUtf8Bytes": 10504,
+      "definitionUtf8Bytes": 9777,
+      "definitionCharacters": 9777,
+      "skillResourceCount": 0
+    },
+    {
+      "agent": "sociotechnic-planner",
+      "version": "1.0.3",
+      "digest": "ac6ea7f81e58414110c5440dd8556419406234dc00b56d1fa716ded8f5da8fd6",
+      "releaseJsonUtf8Bytes": 10503,
+      "definitionUtf8Bytes": 9764,
+      "definitionCharacters": 9764,
+      "skillResourceCount": 0
+    },
+    {
+      "agent": "sociotechnic-planner",
+      "version": "1.0.4",
+      "digest": "69956a26f58a65bdefe8f6cd9effc7f0098508761482986fe2e500d8e415e622",
+      "releaseJsonUtf8Bytes": 10296,
+      "definitionUtf8Bytes": 9555,
+      "definitionCharacters": 9555,
+      "skillResourceCount": 0
+    },
+    {
+      "agent": "sociotechnic-planner",
+      "version": "1.0.5",
+      "digest": "5f4fad58d9c8ecec66feca2ca8fdeaed5350b69d3fc68b510d8040374bc91d31",
+      "releaseJsonUtf8Bytes": 6532,
+      "definitionUtf8Bytes": 5841,
+      "definitionCharacters": 5841,
+      "skillResourceCount": 0
+    },
+    {
+      "agent": "sociotechnic-planner",
+      "version": "1.0.6",
+      "digest": "2dc69adf2b093f0ea9aa2cb213f218bd51e81bcc05260993a838347fa75b920d",
+      "releaseJsonUtf8Bytes": 6636,
+      "definitionUtf8Bytes": 5904,
+      "definitionCharacters": 5904,
+      "skillResourceCount": 0
+    },
+    {
+      "agent": "sociotechnic-researcher",
+      "version": "1.0.0",
+      "digest": "083e5552a60a0745e234e56fcb6ae593d80761fe0b683c54123f457425dc0947",
+      "releaseJsonUtf8Bytes": 4740,
+      "definitionUtf8Bytes": 4200,
+      "definitionCharacters": 4192,
+      "skillResourceCount": 0
+    },
+    {
+      "agent": "sociotechnic-reviewer-code",
+      "version": "1.0.0",
+      "digest": "e064d018070790ac6b530f21c82e93a6c77eb2f09d7e652b7cf1d941450188d4",
+      "releaseJsonUtf8Bytes": 7042,
+      "definitionUtf8Bytes": 6558,
+      "definitionCharacters": 6550,
+      "skillResourceCount": 0
+    },
+    {
+      "agent": "sociotechnic-reviewer-security",
+      "version": "1.0.0",
+      "digest": "f6b9fc1d428db139868a6bfb91d107bf8b11a714a432baa1785064a3d1fcc58e",
+      "releaseJsonUtf8Bytes": 7918,
+      "definitionUtf8Bytes": 7420,
+      "definitionCharacters": 7414,
+      "skillResourceCount": 0
+    },
+    {
+      "agent": "sociotechnic-reviewer-security",
+      "version": "1.0.2",
+      "digest": "c9620868ae2f3192ade7821372cdf76588a3c4a5aa78b5e6a9bd4db975a6fbf8",
+      "releaseJsonUtf8Bytes": 8041,
+      "definitionUtf8Bytes": 7436,
+      "definitionCharacters": 7430,
+      "skillResourceCount": 0
+    },
+    {
+      "agent": "sociotechnic-reviewer-ui",
+      "version": "1.0.0",
+      "digest": "53f9713d74ddf7be7c04296df305b30df3796a2383ee3a1cc8b39e31a9bf0f21",
+      "releaseJsonUtf8Bytes": 7034,
+      "definitionUtf8Bytes": 6580,
+      "definitionCharacters": 6572,
+      "skillResourceCount": 0
+    },
+    {
+      "agent": "sociotechnic-reviewer-ux",
+      "version": "1.0.0",
+      "digest": "b98191763c516fd0ae7da643c1d019964cc7addb2858bfeb84e5ede70933e6e8",
+      "releaseJsonUtf8Bytes": 6624,
+      "definitionUtf8Bytes": 6175,
+      "definitionCharacters": 6167,
+      "skillResourceCount": 0
+    },
+    {
+      "agent": "sociotechnic-sweeper",
+      "version": "1.0.0",
+      "digest": "e15938081a5238fe10724b4658fbd072cfa92482967a42fd0d3b5b345a3b519b",
+      "releaseJsonUtf8Bytes": 8102,
+      "definitionUtf8Bytes": 7653,
+      "definitionCharacters": 7647,
+      "skillResourceCount": 0
+    }
+  ],
+  "caveats": [
+    "Current pretty JavaScript JSON bytes are a prospective staging estimate from current job values; they are not historical launch-time job.json byte counts.",
+    "Generated envelope prompt byte counts are pre-staging envelope text; prepareDispatch rewrites paths and appends a storage-adapter paragraph before provider dispatch.",
+    "Record-copy bytes use current record sizes multiplied by historical dispatch count; records can have been created or changed after those dispatches.",
+    "Wall duration is finishedAt-startedAt; it is neither queue time nor provider API time and parallel dispatch intervals overlap.",
+    "Token coverage uses the existing tokenUsage normalizer. Cumulative usage counters do not measure active context occupancy.",
+    "Definition lengths are decoded JavaScript string lengths and UTF-8 bytes, not JSON-escaped serialized property lengths.",
+    "The repeated-record byte projection excludes migration/*, matching prepareDispatch; historical record availability is still not reconstructed."
+  ]
+}

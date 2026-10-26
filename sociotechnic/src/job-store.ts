@@ -40,6 +40,9 @@ async function operation<T>(id: string | null, fn: (job: Job | null) => T | Prom
       if (job.consoleHolds !== undefined) parseConsoleHolds(job.consoleHolds);
       if (previous && id !== null && canonicalJson(previous.consoleHolds ?? null) !== canonicalJson(job.consoleHolds ?? null)) throw new SociotechnicError("console-holds-pinned", "A run's console holds cannot change after creation");
       if (previous && canonicalJson(previous.execution ?? {kind:"local"}) !== canonicalJson(job.execution ?? {kind:"local"})) throw new SociotechnicError("execution-pinned", "A run's execution setting cannot change after creation");
+      if (previous?.orchestrator && canonicalJson(previous.orchestrator) !== canonicalJson(job.orchestrator ?? null)) throw new SociotechnicError("orchestrator-pinned", "A run's orchestrator configuration cannot change after binding");
+      if (previous?.workflow && (!job.workflow || canonicalJson([previous.workflow.definition, previous.workflow.digest, previous.workflow.profile]) !== canonicalJson([job.workflow.definition, job.workflow.digest, job.workflow.profile]))) throw new SociotechnicError("workflow-pinned", "A run's workflow definition, digest and profile cannot change after binding");
+      if (previous && !previous.workflow && job.workflow && (previous.status !== "new" || previous.round !== 0 || previous.dispatches.length > 0)) throw new SociotechnicError("workflow-pinned", "A workflow can only bind before the run's first dispatch");
       await store.transaction(async (tx) => {
         await lease?.verify();
         for (const guard of state.commitGuards ?? []) await guard();
@@ -52,7 +55,7 @@ async function operation<T>(id: string | null, fn: (job: Job | null) => T | Prom
         }
         await tx.upsertJob(job);
         await tx.linkAgentVersions(job.id, job.agentVersions ?? {}, job.agentAssignments);
-        for (const dispatch of job.dispatches) if (dispatch.step === 'research' && dispatch.configuration?.version && dispatch.agent !== (job.agentAssignments?.['sociotechnic-researcher'] ?? 'sociotechnic-researcher')) {
+        for (const dispatch of job.dispatches) if (dispatch.configuration?.version && (job.workflow || dispatch.step === 'research' && dispatch.agent !== (job.agentAssignments?.['sociotechnic-researcher'] ?? 'sociotechnic-researcher'))) {
           const slot = `dispatch:${dispatch.id}`;
           await tx.linkAgentVersions(job.id, { [slot]: dispatch.configuration.version }, { [slot]: dispatch.agent });
         }
@@ -109,7 +112,7 @@ export async function effectJob<T>(id: string, kind: string, fn: (job: Job) => T
     job.lastOperation=job.externalOperation;delete job.externalOperation;return result;
   }); }
   catch(error) {
-    if(error instanceof SociotechnicError && (["illegal-transition","no-github-remote","gh-unavailable","confirm-required","accept-required","no-pull-request","stale-confirmation","invalid-pr","pr-repository-mismatch","pr-identity-mismatch","pr-head-changed","pr-not-open","worktree-dirty","not-on-base","base-dirty","dirty-tree","wrong-branch","already-merged","merge-conflict","driver-active","no-branch"].includes(error.code) || (kind === "clean" && error.code === "sandbox-preservation")))await invoke((job)=>{delete job.externalOperation;});
+    if(error instanceof SociotechnicError && (["illegal-transition","no-github-remote","github-base-missing","gh-unavailable","confirm-required","accept-required","no-pull-request","stale-confirmation","invalid-pr","pr-repository-mismatch","pr-identity-mismatch","pr-head-changed","pr-not-open","worktree-dirty","not-on-base","base-dirty","dirty-tree","wrong-branch","already-merged","merge-conflict","driver-active","no-branch"].includes(error.code) || (kind === "clean" && error.code === "sandbox-preservation")))await invoke((job)=>{delete job.externalOperation;});
     throw error;
   }
 }

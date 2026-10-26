@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "identity": {
+    "job": "20261026-example",
+    "dispatch": "d-example",
+    "round": 1,
+    "attempt": 1
+  },
+  "workspace": {
+    "repo": "/repos/example",
+    "worktree": "/worktrees/example",
+    "branch": "sociotechnic/20261026-example",
+    "baseCommit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "head": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "execution": "local",
+    "executionSource": "job",
+    "mappings": [],
+    "guestVerification": "not-performed"
+  },
+  "task": {
+    "objective": "Implement the pinned plan and report committed verification evidence.",
+    "source": {
+      "path": "/tmp/example-dispatch/inputs/job.json",
+      "pointer": "/feature"
+    },
+    "context": {
+      "path": "/tmp/example-dispatch/inputs/job.json",
+      "pointer": "/plan"
+    },
+    "history": []
+  },
+  "recipient": {
+    "agent": "example-builder",
+    "role": "sociotechnic-builder-lite",
+    "recordKind": "build",
+    "provider": "claude",
+    "model": "sonnet",
+    "effort": "high",
+    "profile": {
+      "mode": "pinned",
+      "version": "2.1.0",
+      "revision": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "source": {
+        "path": "/tmp/example-dispatch/inputs/job.json",
+        "pointer": "/dispatches/1/configuration"
+      }
+    }
+  },
+  "limits": {
+    "tools": [
+      "Read",
+      "Grep",
+      "Glob",
+      "Bash",
+      "Edit",
+      "Write"
+    ],
+    "maxTurns": 100,
+    "timeoutMinutes": 30,
+    "deadlineAt": "2026-10-26T12:30:00.000Z",
+    "unit": "model-turns"
+  },
+  "output": {
+    "record": "round-1/build.md",
+    "path": "/tmp/example-dispatch/outputs/round-1/build.md",
+    "kind": "build",
+    "contract": "engine-record-validator",
+    "supplementary": [],
+    "schema": null,
+    "validator": {
+      "module": "src/verdict.ts",
+      "export": "parseRecord",
+      "recordKind": "build"
+    }
+  },
+  "artifacts": [
+    {
+      "record": "plan.json",
+      "path": "/tmp/example-dispatch/inputs/plan.json",
+      "purpose": "Pinned implementation plan and acceptance criteria",
+      "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    }
+  ],
+  "escalation": {
+    "owner": "parent-supervisor:example",
+    "action": "block-before-launch"
+  }
+}

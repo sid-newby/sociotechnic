@@ -52,7 +52,7 @@ function RunScreen({ detail, disabled, stale, refresh, connection, now, subscrib
   const controller = useRunActions({ detail, disabled, refresh, sandboxes: palette.sandboxes });
   const { log, retry: retryLog } = useRunLog(detail.job.id, subscribeLog);
   const dispatch = detail.dispatches.find((entry) => entry.id === dispatchId) ?? null;
-  const design = !!detail.interactive || !!detail.design;
+  const design = (detail.job.status === "designing" || detail.job.status === "design-input") && (!!detail.interactive || !!detail.design);
   const designOnly = design && !detail.plan && detail.job.round === 0;
   return <>
     <SiteHeader detail={detail} connection={connection} commands={palette.openCommands}><RunControls detail={detail} controller={controller} disabled={disabled} details={() => showEvidence("details")} evidence={() => showEvidence("evidence")} /></SiteHeader>
@@ -62,13 +62,13 @@ function RunScreen({ detail, disabled, stale, refresh, connection, now, subscrib
       {stale ? <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4 text-sm"><p>Showing the last loaded state. {stale}</p><Button variant="outline" onClick={refresh}>Retry run</Button></div> : null}
       {dispatchId && !dispatch ? <p role="status" className="text-sm text-muted-foreground">The selected dispatch is unavailable.<Button variant="link" onClick={() => update({ dispatch: null })}>Clear selection</Button></p> : null}
       <DecisionBar detail={detail} controller={controller} disabled={disabled} read={showEvidence} />
-      {design ? <DesignCeremony detail={detail} refresh={refresh} disabled={disabled} /> : null}
+      {detail.interactive || detail.design ? <details open={design}><summary className="cursor-pointer py-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{design ? "Current design conversation" : "Saved design conversation and artifacts"}</summary><DesignCeremony detail={detail} refresh={refresh} disabled={disabled} /></details> : null}
       {!designOnly ? <><SectionCards detail={detail} now={now} open={openRecord} inspect={inspect} /><TokenBurnChart detail={detail} now={now} focus={chartFocus} openDispatch={openDispatch} /></> : null}
       <RunTable detail={detail} now={now} log={log} retryLog={retryLog} openRecord={openRecord} openDispatch={openDispatch} />
     </main>
     {controller.dialog}
-    <EvidenceSheet key={evidence ?? "closed"} detail={detail} open={evidence !== null} onClose={() => setEvidence(null)} openRecord={openRecord} initial={evidence ?? "evidence"} opener={evidenceOpener.current} />
-    <DispatchSheet key={dispatchId ?? "closed"} detail={detail} dispatch={dispatch} covered={record !== null} returnToRecord={recordOpener.current !== null} now={now} log={log} retryLog={retryLog} openRecord={openRecord} close={() => update({ dispatch: null, record: null })} refresh={refresh} disabled={disabled} opener={dispatchOpener.current} />
+    <EvidenceSheet key={`evidence:${evidence ?? "closed"}`} detail={detail} open={evidence !== null} onClose={() => setEvidence(null)} openRecord={openRecord} initial={evidence ?? "evidence"} opener={evidenceOpener.current} />
+    <DispatchSheet key={`dispatch:${dispatchId ?? "closed"}`} detail={detail} dispatch={dispatch} covered={record !== null} returnToRecord={recordOpener.current !== null} now={now} log={log} retryLog={retryLog} openRecord={openRecord} close={() => update({ dispatch: null, record: null })} refresh={refresh} disabled={disabled} opener={dispatchOpener.current} />
     <RecordSheet detail={detail} path={record} onClose={() => update({ record: null })} opener={recordOpener.current} />
     <MetricsSheet metric={metric} detail={detail} now={now} close={() => setMetric(null)} openDispatch={openDispatch} opener={metricOpener.current} />
     <CommandPalette opener={palette.commandOpener} open={palette.commands} close={palette.closeCommands} controller={controller} disabled={disabled} agents={palette.agents} history={palette.history} runs={palette.runs} settings={palette.settings} sandboxes={palette.sandboxes} />

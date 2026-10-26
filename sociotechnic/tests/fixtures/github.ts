@@ -8,20 +8,26 @@ export function fakeGithub(root: string) {
   mkdirSync(bin, { recursive: true });
   mkdirSync(remotes, { recursive: true });
   writeFileSync(join(bin, 'gh'), `#!${process.execPath}
-import { appendFileSync, mkdirSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 const args = process.argv.slice(2);
 appendFileSync(${JSON.stringify(log)}, JSON.stringify(args) + '\\n');
 if (args[0] === 'auth') process.exit(process.env.FAKE_GITHUB_AUTH_FAILURE ? 1 : 0);
 if (args[0] === 'api') { process.stdout.write('fixture-owner\\n'); process.exit(0); }
-if (args[0] === 'repo' && args[1] === 'view') { process.stdout.write(process.env.FAKE_GITHUB_PUBLIC ? 'false' : 'true'); process.exit(0); }
+if (args[0] === 'config') { process.stdout.write('ssh'); process.exit(0); }
+if (args[0] === 'repo' && args[1] === 'view') {
+  const name = args[2].replace('https://github.com/', '');
+  if (!existsSync(join(${JSON.stringify(remotes)}, name + '.git'))) { process.stderr.write('GraphQL: Could not resolve to a Repository'); process.exit(1); }
+  process.stdout.write(args[args.indexOf('--json') + 1] === 'isPrivate' ? String(!process.env.FAKE_GITHUB_PUBLIC) : JSON.stringify({nameWithOwner: name, isPrivate: !process.env.FAKE_GITHUB_PUBLIC})); process.exit(0);
+}
 if (args[0] === 'repo' && args[1] === 'create') {
   if (process.env.FAKE_GITHUB_CREATE_FAILURE) { process.stderr.write('fixture creation refused'); process.exit(1); }
   const name = args[2].replace(/^https:\\/\\/github.com\\//, '').replace(/^github.com\\//, '');
   const bare = join(${JSON.stringify(remotes)}, name + '.git');
   mkdirSync(bare, { recursive: true });
   execFileSync('git', ['init', '--bare', '--initial-branch=main', bare], { stdio: 'ignore' });
+  if (process.env.FAKE_GITHUB_CREATE_AFTER_REMOTE_FAILURE) { process.stderr.write('created but origin registration failed'); process.exit(1); }
   execFileSync('git', ['remote', 'add', 'origin', 'git@github.com:' + name + '.git'], { cwd: args[args.indexOf('--source') + 1] });
   process.exit(0);
 }

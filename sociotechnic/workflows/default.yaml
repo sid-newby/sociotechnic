@@ -1,0 +1,183 @@
+# Reviewed workflow composition; execution stays inside existing engine and human gates.
+# Selected agents resolve only from the run's frozen allowed catalog.
+# Concurrency is a ceiling, capped again by run limits; one builder owns the worktree.
+version: 1
+name: default-build
+entry: intake
+lead: selected.orchestrator
+resources:
+  catalog: run.allowedCatalog
+  tools: run.allowedTools
+  limits: run.limits
+  prefer: gpt-6-luna
+retry:
+  to: self
+  bound: run.caps.retriesPerStep
+escalate:
+  owner: lead
+  fallback: human
+contracts:
+  intent: engine:job-intent@1
+  brief: engine:project-brief@1
+  plan: sociotechnic/schemas/plan.schema.json#/$defs/plan
+  assignment: engine:execution-assignment@1
+  approval: engine:human-approval@1
+  build: sociotechnic/schemas/recipient-contract.v1.json#/$defs/build
+  checks: engine:checks-report@1
+  reviews: engine:review-bundle@1
+  gate: engine:quality-gate@1
+  decision: sociotechnic/schemas/recipient-contract.v1.json#/$defs/decision
+  intent-review: engine:intent-review@1
+nodes:
+  intake:
+    agent: lead
+    in:
+      intent:
+        from: run.intent
+        contract: intent
+    out:
+      brief: brief
+    concurrency: 1
+    next: plan
+  plan:
+    agent: selected.planner
+    in:
+      brief:
+        from: intake.brief
+        contract: brief
+    out:
+      plan: plan
+    concurrency: 1
+    next: assign
+  assign:
+    agent: lead
+    in:
+      intent:
+        from: run.intent
+        contract: intent
+      brief:
+        from: intake.brief
+        contract: brief
+      plan:
+        from: plan.plan
+        contract: plan
+    out:
+      assignment: assignment
+    concurrency: 1
+    next: approve-plan
+  approve-plan:
+    human: approve-plan-and-assignment
+    in:
+      plan:
+        from: plan.plan
+        contract: plan
+      assignment:
+        from: assign.assignment
+        contract: assignment
+    out:
+      approval: approval
+    concurrency: 1
+    next: build
+  build:
+    agent: selected.builder
+    in:
+      plan:
+        from: plan.plan
+        contract: plan
+      assignment:
+        from: assign.assignment
+        contract: assignment
+      approval:
+        from: approve-plan.approval
+        contract: approval
+    out:
+      build: build
+    concurrency: 1
+    next: checks
+  checks:
+    mechanical: canonical-checks
+    in:
+      build:
+        from: build.build
+        contract: build
+    out:
+      checks: checks
+    concurrency: 1
+    next: reviews
+    repair:
+      to: build
+      bound: run.caps.rounds
+  reviews:
+    agent: selected.reviewers
+    in:
+      plan:
+        from: plan.plan
+        contract: plan
+      build:
+        from: build.build
+        contract: build
+      checks:
+        from: checks.checks
+        contract: checks
+    out:
+      reviews: reviews
+    concurrency: 3
+    next: gate
+  gate:
+    mechanical: commit-and-evidence-gate
+    in:
+      build:
+        from: build.build
+        contract: build
+      checks:
+        from: checks.checks
+        contract: checks
+      reviews:
+        from: reviews.reviews
+        contract: reviews
+    out:
+      gate: gate
+    concurrency: 1
+    next: technical-approval
+    repair:
+      to: build
+      bound: run.caps.rounds
+  technical-approval:
+    agent: selected.approver
+    in:
+      gate:
+        from: gate.gate
+        contract: gate
+    out:
+      decision: decision
+    concurrency: 1
+    next: intent-review
+  intent-review:
+    agent: lead
+    in:
+      intent:
+        from: run.intent
+        contract: intent
+      plan:
+        from: plan.plan
+        contract: plan
+      build:
+        from: build.build
+        contract: build
+      decision:
+        from: technical-approval.decision
+        contract: decision
+    out:
+      intent-review: intent-review
+    concurrency: 1
+    next: accept
+  accept:
+    human: accept-result
+    in:
+      intent-review:
+        from: intent-review.intent-review
+        contract: intent-review
+    out:
+      approval: approval
+    concurrency: 1
+    next: done

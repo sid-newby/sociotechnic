@@ -1,3 +1,7 @@
+import { orchestratorFromEnvironment } from "./orchestrator-runner.ts";
+import { loadWorkflow } from "../src/workflow.ts";
+import { answerWorkflow, initializeWorkflow } from "../src/workflow-runtime.ts";
+import { workflowLeadRunner, workflowLeadProfile } from "./workflow-lead-runner.ts";
 import { answerDesignQuestion } from "./design-session-runner.ts";
 import { approveInteractiveDesign, enqueueDesignMessage, interactiveFingerprint, artifactFiles } from "../src/design-session.ts";
 import type { DesignQuery } from "./design-session-runner.ts";
@@ -32,7 +36,7 @@ import { SociotechnicError } from "../src/errors.ts";
 import { sandboxInventory, setSandboxLimit } from "../src/sandbox.ts";
 import { parseExecution } from "../src/execution.ts";
 import type { Status } from "../src/job.ts";
-import { isBound, loadJob, STATUSES } from "../src/job.ts";
+import { assertStatus, isBound, loadJob, STATUSES } from "../src/job.ts";
 import { assertJobId, sociotechnicHome, jobDir, stateDir } from "../src/paths.ts";
 
 import { ROLES } from "../src/roles.ts";
@@ -43,7 +47,8 @@ import type { ConsoleDriverState } from "./driver-view.ts";
 import type { Runner } from "./runner.ts";
 import { runnerFromEnv } from "./runner.ts";
 import { mergeMethod, mergeRemote } from "../src/remote-merge.ts";
-import { browseRepositories, createRepositoryDirectory, githubRepositoryName, prepareRepository, publishRepository } from "./repositories.ts";
+import { resolveCommit } from "../src/git.ts";
+import { browseRepositories, createRepositoryDirectory, githubRepositoryName, prepareRepository, prepareRepositoryPublication, publishRepository } from "./repositories.ts";
 
 const UI_DIR = dirname(fileURLToPath(import.meta.url));
 const INDEX_HTML = join(UI_DIR, "index.html");
@@ -56,7 +61,7 @@ const PING_MS = 15_000;
 const liveOrigin = process.env.NODE_ENV === "development" ? " http://localhost:8400" : "";
 const CSP = `default-src 'self'; script-src 'self' 'unsafe-inline'${liveOrigin}; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'${liveOrigin}`;
 
-export type ServerOptions = { port?: number; host?: string; runner?: () => Runner; designQuery?: DesignQuery; catalogBundles?: readonly CatalogBundle[] };
+export type ServerOptions = { orchestrator?: import("../src/orchestrator.ts").OrchestratorBinding; port?: number; host?: string; runner?: () => Runner; designQuery?: DesignQuery; catalogBundles?: readonly CatalogBundle[] };
 export type ServerHandle = { url: string; port: number; drivers: DriverRegistry; close: () => Promise<void> };
 export type RecordEntry = { path: string; bytes: number; mtime: string };
 
@@ -83,7 +88,7 @@ function sendJson(res: ServerResponse, status: number, value: unknown): void {
 function statusFor(err: unknown): { status: number; code: string; message: string } {
   if (err instanceof HttpError) return { status: err.status, code: err.code, message: err.message };
   if (err instanceof SociotechnicError) {
-    const status = ["illegal-transition", "driver-active", "locked", "stale-design", "stale-agent-version", "stale-sandbox-settings", "stale-job", "ownership-lost", "sandbox-interrupt", "dispatch-starting", "driver-stopped", "stale-local-capacity", "local-capacity-managed"].includes(err.code) ? 409 : err.code === "not-found" ? 404 : ["db", "db-unreachable", "db-disabled", "migration-required"].includes(err.code) ? 503 : 400;
+    const status = ["illegal-transition", "driver-active", "locked", "stale-design", "stale-agent-version", "stale-sandbox-settings", "stale-job", "workflow-stale", "ownership-lost", "sandbox-interrupt", "dispatch-starting", "driver-stopped", "stale-local-capacity", "local-capacity-managed"].includes(err.code) ? 409 : err.code === "not-found" ? 404 : ["db", "db-unreachable", "db-disabled", "migration-required"].includes(err.code) ? 503 : 400;
     return { status, code: err.code, message: err.message };
   }
   return { status: 500, code: "internal", message: err instanceof Error ? err.message : String(err) };
@@ -234,6 +239,7 @@ function serveAsset(res: ServerResponse, path: string, head: boolean): void {
 }
 
 export async function startServer(options: ServerOptions = {}): Promise<ServerHandle> {
+  const orchestrator = options.orchestrator ?? orchestratorFromEnvironment(options.runner ?? runnerFromEnv);
   const store = currentStore();
   if (store) await store.transaction((tx) => applyCatalogBundles(tx, options.catalogBundles ?? readCatalogBundles()));
   const host = options.host ?? "127.0.0.1";
@@ -244,7 +250,7 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
   };
   let port = 0;
   const consoleUrl = () => `http://${host}:${port}/`;
-  const drivers = createDriverRegistry({ runner: options.runner ?? runnerFromEnv, emit: (e: DriverEvent) => broadcast("driver", e), onLog: (e) => broadcast("log", e), owner: "ui", consoleUrl, designQuery: options.designQuery });
+  const drivers = createDriverRegistry({ runner: options.runner ?? runnerFromEnv, emit: (e: DriverEvent) => broadcast("driver", e), onLog: (e) => broadcast("log", e), owner: "ui", consoleUrl, designQuery: options.designQuery, orchestrator, workflowLead: workflowLeadRunner(options.runner ?? runnerFromEnv) });
   const assertSessionOwner = async (id: string, allowInterrupted = false): Promise<void> => {
     const ownership = (await consoleDriverState(drivers, id, consoleUrl())).ownership;
     if (ownership.kind === "external" || (ownership.kind === "interrupted" && !allowInterrupted)) throw new HttpError(409, "driver-active", "Manage this design session in its owning console, or explicitly resume an interrupted session");
@@ -393,7 +399,8 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
         const base = str(body, "base", false);
         const execution = parseExecution(body.execution);
         const consoleHolds = body.consoleHolds === undefined ? undefined : parseConsoleHolds(body.consoleHolds);
-        if (body.workflow !== undefined && body.workflow !== "comments" && body.workflow !== "design") throw new HttpError(400, "bad-input", "workflow must be comments or design when provided");
+        if (body.workflow !== undefined && body.workflow !== "comments" && body.workflow !== "design" && body.workflow !== "orchestrated") throw new HttpError(400, "bad-input", "workflow must be comments, design or orchestrated when provided");
+        if (body.workflow === "orchestrated" && execution.kind !== "local") throw new HttpError(400, "bad-input", "Orchestrated workflows require local execution");
         if (body.scope !== undefined && body.workflow !== "comments") throw new HttpError(400, "bad-input", "scope requires the comments workflow");
         if (body.initialize !== undefined && typeof body.initialize !== "boolean") throw new HttpError(400, "bad-input", "initialize must be a boolean");
         const githubRepository = body.githubRepository === undefined ? null : githubRepositoryName(body.githubRepository);
@@ -420,10 +427,12 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
         }
         const pinned = await pinAgentVersions(overrides, undefined, assignments);
         if (body.workflow === "design" && !interactiveDesigner(pinned.configurations["sociotechnic-designer"])) throw new HttpError(400, "bad-design", "Select the interactive designer release for a new design conversation");
+        const workflow = body.workflow === "orchestrated" ? { definition: loadWorkflow(), profile: workflowLeadProfile() } : null;
         if (body.initialize === true) prepareRepository(repoPath, baseBranch);
         if (githubRepository !== null) publishRepository(repoPath, baseBranch, githubRepository);
         return createJobOperation(async () => {
         const out = body.workflow === "comments" ? await engine.newCommentJob(repoPath, feature, baseBranch, body.scope, undefined, pinned, execution) : body.workflow === "design" ? await engine.newDesignJob(repoPath, feature, baseBranch, pinned, execution) : await engine.newJob(repoPath, feature, baseBranch, undefined, undefined, pinned, execution);
+        if (workflow) initializeWorkflow(loadJob(out.job), workflow.definition, workflow.profile);
         if (consoleHolds !== undefined) loadJob(out.job).consoleHolds = consoleHolds;
         return out;
         });
@@ -462,6 +471,22 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
     },
     {
       method: "POST",
+      pattern: /^\/api\/jobs\/([^/]+)\/workflow-answer$/,
+      handler: ({ params, body }) => {
+        const id = jobIdParam(params[0]);
+        const requestId = str(body, "requestId", true) ?? "";
+        const answer = str(body, "answer", true) ?? "";
+        return mutateJob(id, async (job) => {
+          if (drivers.isRunning(id)) throw new HttpError(409, "driver-active", "Wait for the workflow lead to stop before answering");
+          await assertNoForeignDriver(id, process.pid);
+          session().commitGuards = [() => assertNoForeignDriver(id, process.pid)];
+          answerWorkflow(job, requestId, answer, new Date().toISOString());
+          return { job: job.id };
+        });
+      },
+    },
+    {
+      method: "POST",
       pattern: /^\/api\/jobs\/([^/]+)\/answer$/,
       handler: ({ params, body }) => {
         const id = jobIdParam(params[0]);
@@ -491,7 +516,24 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
         const id = jobIdParam(params[0]);
         const push = body.push ?? false;
         if (typeof push !== "boolean") throw new HttpError(400, "bad-input", "push must be a boolean");
-        const out = await (push ? effectJob(id, "pr-push", (job) => engine.pr(job, { push: true })) : mutateJob(id, (job) => engine.pr(job)));
+        const repository = body.githubRepository === undefined ? null : githubRepositoryName(body.githubRepository);
+        const visibility = body.githubVisibility;
+        if (repository !== null && (!push || (visibility !== "private" && visibility !== "public"))) throw new HttpError(400, "bad-input", "GitHub recovery requires push: true and an explicit private or public visibility.");
+        if (repository === null && visibility !== undefined) throw new HttpError(400, "bad-input", "Choose the GitHub destination before its visibility.");
+        const setup = repository !== null && (visibility === "private" || visibility === "public") ? await readJob(id, (job) => {
+          assertStatus(job, ["accepted"], "pr --push");
+          resolveCommit(job.repo, job.branch);
+          const publish = prepareRepositoryPublication(job.repo, job.base.branch, repository, { commit: job.base.commit, visibility });
+          return { repo: job.repo, branch: job.branch, base: job.base.commit, publish };
+        }) : null;
+        const out = await (push ? effectJob(id, "pr-push", (job) => {
+          assertStatus(job, ["accepted"], "pr --push");
+          if (setup) {
+            if (job.repo !== setup.repo || job.branch !== setup.branch || job.base.commit !== setup.base) throw new SociotechnicError("stale-confirmation", "Run publication scope changed. Refresh before publishing.");
+            setup.publish();
+          }
+          return engine.pr(job, { push: true });
+        }) : mutateJob(id, (job) => engine.pr(job)));
         return readJob(id, () => ({ ...out, text: readText(join(jobDir(id), "pr.md")) }));
       },
     },

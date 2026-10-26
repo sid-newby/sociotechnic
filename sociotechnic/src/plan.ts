@@ -2,6 +2,8 @@ import { createHash } from "node:crypto";
 import type { Tier } from "./roles.ts";
 import type { Parsed } from "./verdict.ts";
 
+export const PLAN_CONTRACT_RECORD = "contracts/plan.schema.json";
+
 export type Stage = {
   id: string;
   title: string;

@@ -53,7 +53,7 @@ const conditional = (failure: string): string => `if test "$(cat src/feature.txt
 const checks = [
   { name: "feature", run: conditional("printf 'repair detail\\n' >&2; exit 7"), timeoutSeconds: 5 },
   { name: "signal", run: conditional("printf 'signal detail\\n'; kill -TERM $$"), timeoutSeconds: 5 },
-  { name: "deadline", run: conditional("printf 'timeout detail\\n'; sleep 2"), timeoutSeconds: 0.1 },
+  { name: "deadline", run: conditional("printf 'timeout detail\\n'; sleep 10"), timeoutSeconds: 1 },
   { name: "last check", run: "printf 'full suite completed'", timeoutSeconds: 5 },
 ];
 type Fixture = NewResult & { builder: DispatchOut };
@@ -96,6 +96,9 @@ async function build(ctx: NewResult, dispatch: DispatchOut, content: string, ui 
 async function finishReviews(ctx: NewResult, reviews: DispatchOut[]): Promise<void> {
   const head = git(ctx.worktree, "rev-parse", "HEAD");
   for (const review of reviews) {
+    assert.doesNotMatch(review.prompt, /## Team capabilities/);
+    assert.match(review.prompt, /needed expertise in ## Findings/);
+    assert.match(review.prompt, /Do not spawn agents for help/);
     const stages = review.agent === "sociotechnic-conformance" ? "\n## Plan steps\n| stage | status | justification |\n| --- | --- | --- |\n| s1 | implemented | Feature exists. |\n" : "";
     await complete(ctx, review, `VERDICT: PASS\nCOMMIT: ${head}\n\n## Findings\nNone.\n${stages}\n## Notes\nInspected fixture.\n`);
   }
@@ -150,6 +153,8 @@ test("red canonical checks retain evidence without reviews, repair once, then pa
   assert.equal((await snapshot(ctx)).rounds[1].gate?.pass, true);
   const approval = dispatches(await advance(ctx))[0];
   assert.equal(approval.agent, "sociotechnic-approver");
+  assert.doesNotMatch(approval.prompt, /## Team capabilities/);
+  assert.match(approval.prompt, /ESCALATE.*needed expertise and missing evidence/);
   await complete(ctx, approval, `DECISION: APPROVE\nCOMMIT: ${repairedHead}\n\n## Reasons\nAcceptance is covered.\n`);
   assert.equal((await advance(ctx)).status, "ready");
   assert.equal(await record(ctx, "round-1/build.md"), buildText);
@@ -219,14 +224,16 @@ for (const mode of ["head", "dirty", "plan"] as const) test(`passing checks cann
 });
 
 test("repair keeps the round bound and the normal review dispatch budget", async () => {
-  const bounded = await fixture({ checks, caps: { rounds: 1 } });
+  // Budget assertions need deterministic red/green checks; timeout behavior is covered separately.
+  const budgetChecks = [{ name: "feature", run: conditional("exit 7"), timeoutSeconds: 5 }];
+  const bounded = await fixture({ checks: budgetChecks, caps: { rounds: 1 } });
   await build(bounded, bounded.builder, "broken", false);
   const exhausted = await advance(bounded);
   assert.equal(exhausted.status, "needs-human");
   if (exhausted.action === "human") assert.match(exhausted.reason, /loop-bound:rounds/);
   assert.equal((await snapshot(bounded)).round, 1);
   assert.equal((await snapshot(bounded)).rounds[0].gate?.pass, false);
-  const limited = await fixture({ checks, caps: { rounds: 2, dispatchesPerRound: 1 } });
+  const limited = await fixture({ checks: budgetChecks, caps: { rounds: 2, dispatchesPerRound: 1 } });
   await build(limited, limited.builder, "broken");
   const repair = dispatches(await advance(limited))[0];
   await build(limited, repair, "repaired");

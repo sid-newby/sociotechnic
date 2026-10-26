@@ -5,7 +5,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, test } from "node:test";
 import { agentRoster, agentBase, createAgent, initializeAgentVersions, pinAgentVersions, publishAgentVersion, validateJobAgentVersions } from "../src/agent-versions.ts";
-import { canonicalJson } from "../src/agent-version-data.ts";
+import { canonicalJson, compareAgentVersions } from "../src/agent-version-data.ts";
+import { readCatalogBundles } from "../src/db/catalog-migrations.ts";
 import { connectClient, createMemoryStore, createPgStore, setStore } from "../src/db/store.ts";
 import { createJobOperation, mutateJob, readJob } from "../src/job-store.ts";
 import { finish, newJob, step } from "../src/engine.ts";
@@ -23,7 +24,15 @@ const root = mkdtempSync(join(tmpdir(), "sociotechnic-discovery-")), store = cre
 const pgUrl = await testDatabase("discovery");
 process.env.SOCIOTECHNIC_HOME = root;
 setStore(store);
-before(() => initializeAgentVersions(store));
+const bundles = readCatalogBundles();
+const latestReleases = new Map(bundles.flatMap((bundle) => bundle.releases)
+  .sort((left, right) => compareAgentVersions(left.version, right.version))
+  .map((release) => [release.agent, release]));
+function latestRelease(name: string) {
+  const release = latestReleases.get(name); assert.ok(release);
+  return release;
+}
+before(() => initializeAgentVersions(store, [], bundles));
 after(() => { setStore(null); rmSync(root, { recursive: true, force: true }); });
 let count = 0;
 async function create(locked = false) {
@@ -53,7 +62,12 @@ test("compact roster and API expose actual Azure capabilities without definition
   const roster = await agentRoster(), azure = roster.agents.filter((card) => card.name.startsWith("sociotechnic-azure-"));
   assert.equal(azure.length, 3);
   assert.deepEqual(new Set(azure.map((card) => card.mode)), new Set(["plan", "advise", "execute"]));
-  assert.ok(azure.every((card) => card.version === (card.name === "sociotechnic-azure-builder" ? "1.1.0" : "1.0.1") && card.skills.includes("azure-sme")));
+  for (const card of azure) {
+    const latest = latestRelease(card.name);
+    assert.equal(card.version, latest.version);
+    assert.equal(card.releaseDigest, latest.contentDigest);
+    assert.ok(card.skills.includes("azure-sme"));
+  }
   assert.equal(azure.find((card) => card.mode === "advise")?.access, "read-only");
   assert.deepEqual(azure.find((card) => card.name === "sociotechnic-azure-builder")?.compatibleRoles, ["sociotechnic-builder", "sociotechnic-builder-lite"]);
   assert.ok(roster.agents.every((card) => !("definition" in card) && !("skillResources" in card)));
@@ -85,11 +99,14 @@ test("planner consults the exact frozen advisor, retries that release, and regai
   await respond(id, planner, { status: "needs-research", questions: ["Explain Azure permissions without logging in."], advisors: ["sociotechnic-azure-advisor"] });
   const advice = dispatch(await mutateJob(id, (job) => step(job)));
   assert.equal(advice.agent, "sociotechnic-azure-advisor");
-  assert.equal(advice.configuration?.version, "1.0.1");
+  const latestAdvisor = latestRelease(advice.agent);
+  assert.equal(advice.configuration?.version, latestAdvisor.version);
+  assert.equal(advice.configuration?.releaseDigest, latestAdvisor.contentDigest);
   assert.equal(advice.configuration?.tools.includes("Bash"), false);
   assert.match(advice.prompt, /do not request another advisor/);
   const base = await agentBase("sociotechnic-azure-advisor");
-  await publishAgentVersion(base, { ...roleOf("sociotechnic-researcher"), model: "gpt-6.1-sol", version: "1.0.2", expectedLatest: "1.0.1", label: "Later fixture release" });
+  const [major, minor, patch] = latestAdvisor.version.split(".").map(Number);
+  await publishAgentVersion(base, { ...roleOf("sociotechnic-researcher"), model: "gpt-6.1-sol", version: `${major}.${minor}.${patch + 1}`, expectedLatest: latestAdvisor.version, label: "Later fixture release" });
   await respond(id, advice, "Failed fixture", "failed");
   const retry = dispatch(await mutateJob(id, (job) => step(job)));
   assert.equal(retry.agent, advice.agent);
@@ -102,7 +119,9 @@ test("planner consults the exact frozen advisor, retries that release, and regai
   const held = await mutateJob(id, (job) => step(job, { hold: ["planned"] })); assert.equal(held.action, "hold");
   const builder = dispatch(await mutateJob(id, (job) => step(job)));
   assert.equal(builder.agent, "sociotechnic-builder-lite");
-  assert.match(builder.prompt, /sociotechnic-azure-advisor/);
+  assert.doesNotMatch(builder.prompt, /## Team capabilities|"name":"sociotechnic-azure-advisor"/);
+  assert.match(builder.prompt, /The assigner selects resources/);
+  assert.match(builder.prompt, /STATUS: BLOCKED.*## Blocker/);
   assert.match(builder.prompt, /Keep ownership/);
   const worktree = await readJob(id, (job) => job.worktree);
   const head = execFileSync("git", ["rev-parse", "HEAD"], { cwd: worktree, encoding: "utf8" }).trim();
@@ -110,7 +129,7 @@ test("planner consults the exact frozen advisor, retries that release, and regai
   const blocked = await mutateJob(id, (job) => step(job)); assert.equal(blocked.action, "human");
   const job = await readJob(id, (job) => job);
   assert.equal(job.dispatches.length, 5);
-  assert.equal(job.agentVersions?.["sociotechnic-researcher"], "1.0.0");
+  assert.equal(job.agentVersions?.["sociotechnic-researcher"], latestRelease("sociotechnic-researcher").version);
   assert.equal(job.agentAssignments?.["sociotechnic-researcher"], undefined);
   const altered = structuredClone(job); altered.dispatches[1].agent = "sociotechnic-researcher";
   await assert.rejects(store.transaction((tx) => validateJobAgentVersions(tx, altered, job)), /pinned identity/);
@@ -159,14 +178,15 @@ test("pg: selected advisor snapshots and auxiliary foreign-key bindings survive 
   if (!pgUrl) return;
   const pg = createPgStore(pgUrl); setStore(pg);
   try {
-    await initializeAgentVersions(pg);
+    await initializeAgentVersions(pg, [], bundles);
     const id = await create(), planner = dispatch(await mutateJob(id, (job) => step(job)));
     await respond(id, planner, { status: "needs-research", questions: ["Explain the narrow Azure issue."], advisors: ["sociotechnic-azure-advisor"] });
     const advisor = dispatch(await mutateJob(id, (job) => step(job)));
     const client = await connectClient(pgUrl);
     try {
       const linked = await client.query("select agent, version from job_agent_versions where job_id=$1 and slot=$2", [id, `dispatch:${advisor.id}`]);
-      assert.deepEqual(linked.rows, [{ agent: "sociotechnic-azure-advisor", version: "1.0.1" }]);
+      assert.deepEqual(linked.rows, [{ agent: "sociotechnic-azure-advisor", version: latestRelease("sociotechnic-azure-advisor").version }]);
+      assert.equal(advisor.configuration?.releaseDigest, latestRelease("sociotechnic-azure-advisor").contentDigest);
     } finally { await client.end(); }
     await pg.close();
     const restarted = createPgStore(pgUrl); setStore(restarted);
@@ -175,7 +195,7 @@ test("pg: selected advisor snapshots and auxiliary foreign-key bindings survive 
       assert.equal(job.dispatches[1].agent, advisor.agent);
       assert.deepEqual(job.dispatches[1].configuration, advisor.configuration);
       await restarted.transaction((tx) => validateJobAgentVersions(tx, job));
-      assert.equal(job.agentVersions?.['sociotechnic-researcher'], '1.0.0');
+      assert.equal(job.agentVersions?.['sociotechnic-researcher'], latestRelease('sociotechnic-researcher').version);
     } finally { await restarted.close(); }
   } finally { setStore(store); await pg.close(); }
 });

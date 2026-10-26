@@ -1,0 +1,8 @@
+{
+  "status": "PASS",
+  "negativeChecks": [
+    "tampered source digest rejected",
+    "candidate body/digest drift rejected",
+    "source settings mutation rejected"
+  ]
+}

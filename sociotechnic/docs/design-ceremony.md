@@ -56,7 +56,9 @@ conversation for a specific follow-up. The normal plan-review hold remains.
 The native agent definition is also available to Claude teammates through the
 global agents directory. The caller determines how to use its output.
 
-Returning work does not close the chat. When no other driver owns the run, the
+Returning work restores the normal run charts and actions, with the saved chat
+and artifacts available in the collapsed design-conversation section. Interrupted
+conversation recovery is available in the conversation header. When no other driver owns the run, the
 human can continue the same conversation for review or improvement without
 automatically starting the build pipeline. Returned work remains bound to its
 recorded digest; changed artifacts require another handoff before being used

@@ -38,10 +38,11 @@ explicit `githubRepository` setup creates a private GitHub remote and publishes
 the initial base before the engine cuts the job branch. Authentication or push
 failure prevents job creation; matching origins support retry without another
 remote creation. Ordinary `initialize` stays local. Publishing run changes still
-requires human acceptance and a separate push-and-PR action. UI
-work without an existing UI scaffold is routed through design so the interview
-can recommend the bundled React + NestJS house special; the human chooses the
-stack and approves the design before implementation. Non-UI projects need no
+requires human acceptance and a separate push-and-PR action. The planner judges
+whether design collaboration is needed; a new HTML page or absent UI scaffold
+does not require an interview. When design is requested, the conversation may
+offer the bundled React + NestJS starter; the human chooses the stack and approves
+the design before implementation. Non-UI projects need no
 scaffold. Explicitly requested scaffolds and existing UI foundations are respected.
 
 ## Browser verification
@@ -917,3 +918,33 @@ existing pins remain. To roll back engine code, stop drivers and restore the pri
 binary before resuming; do not rewrite already-issued envelopes or failed-round
 evidence. Old code may buy reviews for a failed checked round, so review the saved
 status before continuing. No live rollback, import or publication occurred here.
+
+
+### Optional supervisor and recipient v1 boundaries
+
+The console's explicit `sol-high-v1` binding snapshots a local GPT-6.1 Sol/high
+controller before first dispatch. It chooses serial/parallel groups only among
+existing independent readers; shared-worktree builders still execute one whole
+plan per engine dispatch. Stage decomposition remains a validated proposal.
+Frozen worker releases, plan approval, existing retry/round caps and independent
+gates are unchanged. Unbound started jobs retain legacy record parsing.
+
+Opted-in output body validation supplements markers/commit parsing: precise errors
+are retained in `handoff/validation/<dispatch>.json` and enter the existing bounded
+retry path. Raw rejected outputs remain canonical/superseded records. Every pinned
+conformance stage occurs exactly once; malformed finding lines are rejected.
+Supervisor decisions cannot manufacture PASS/SKIPPED or resolve human questions.
+See the dispatch handoff section in [CONTRACTS](../CONTRACTS.md) for activation,
+request receipts, stale/cancelled reviews and the local-only execution boundary.
+
+### Executable default workflow
+
+Opted-in local workflow runs add a versioned lead phase before planning, an
+eligible immutable resource assignment after plan pinning, a mandatory human
+plan/assignment hold, and a final intent review after technical approval. The
+engine refuses direct step/accept/merge bypasses. Baseline role pins remain;
+selected eligible configurations are separately frozen per used slot and linked
+per dispatch. Checks, repair rounds, independent reviews, commit/digest binding
+and human acceptance retain their existing authority. See
+[workflow YAML](workflow-yaml.md) for the deliberately limited topology and
+[the phase contract](../schemas/workflow-lead.schema.json) for delivery shapes.

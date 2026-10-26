@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -12,13 +13,20 @@ import { jobDir } from "../src/paths.ts";
 import { readText, writeTextAtomic } from "../src/record-store.ts";
 import { ingestDispatch, prepareDispatch, stagedRecord } from "../src/staging.ts";
 import type { DispatchOut } from "../src/engine.ts";
+import { planDigest } from "../src/plan.ts";
 const home=mkdtempSync(join(tmpdir(),"sociotechnic-staging-tests-")),oldHome=process.env.SOCIOTECHNIC_HOME,id="20261024-stage",now="2026-10-24T10:00:00.000Z";
 process.env.SOCIOTECHNIC_HOME=home;let store:Store,envelope:DispatchOut,token:string;
-const output="STATUS: READY\nCOMMIT: "+"a".repeat(40)+"\n", result={outcome:"ok",usage:{input_tokens:10},note:null} as const;
+let output:string;
+const result={outcome:"ok",usage:{input_tokens:10},note:null} as const;
 beforeEach(async()=>{
  await releaseDriver(id,process.pid);
  rmSync(join(home,".sociotechnic"),{recursive:true,force:true});store=createMemoryStore();setStore(store);
- await createJobOperation(()=>{const job=createJob({id,feature:"stage safely",repo:"/repos/demo",worktree:join(home,"worktree"),branch:`sociotechnic/${id}`,base:{branch:"main",commit:"a".repeat(40)},caps:{rounds:3,dispatchesPerRound:10,retriesPerStep:1},now});job.status="building";saveJob(job);writeTextAtomic(join(jobDir(id),"plan.md"),"committed input\n");const d=addDispatch(job,{round:1,step:"build",lens:null,attempt:1,agent:"sociotechnic-builder",model:"opus",effort:"high",record:"round-1/build.md",timeoutMinutes:30},now);envelope={id:d.id,agent:d.agent,model:d.model,effort:d.effort,deadlineAt:d.deadlineAt,record:d.record,prompt:`Read ${join(jobDir(id),"plan.md")} and write ${join(jobDir(id),d.record)}`};d.execution={envelope,launch:"pending"};});
+ const repo=join(home,"repo"),worktree=join(home,"worktree");for(const path of [repo,worktree])rmSync(path,{recursive:true,force:true});mkdirSync(repo);
+ const git=(args:string[])=>execFileSync("git",["-c","core.hooksPath=/dev/null","-c","commit.gpgsign=false","-c","core.fsmonitor=false","-C",repo,...args],{encoding:"utf8",stdio:["ignore","pipe","pipe"]}).trim();
+ git(["init","-b","main"]);git(["config","user.name","Fixture"]);git(["config","user.email","fixture@example.invalid"]);writeFileSync(join(repo,"readme.md"),"fixture\n");git(["add","readme.md"]);git(["commit","-m","fixture"]);const head=git(["rev-parse","HEAD"]);git(["worktree","add","-b",`sociotechnic/${id}`,worktree]);
+ output=`STATUS: READY\nCOMMIT: ${head}\n`;
+ const plan=JSON.parse(readFileSync(new URL("../schemas/plan.schema.json",import.meta.url),"utf8")).examples[0];
+ await createJobOperation(()=>{const job=createJob({id,feature:"stage safely",repo,worktree,branch:`sociotechnic/${id}`,base:{branch:"main",commit:head},caps:{rounds:3,dispatchesPerRound:10,retriesPerStep:1},now});job.status="building";job.plan={digest:planDigest(plan),tier:"EASY",pinnedAt:now,researchRound:0};saveJob(job);writeTextAtomic(join(jobDir(id),"plan.json"),JSON.stringify(plan));writeTextAtomic(join(jobDir(id),"plan.md"),"committed input\n");const d=addDispatch(job,{round:1,step:"build",lens:null,attempt:1,agent:"sociotechnic-builder",model:"opus",effort:"high",record:"round-1/build.md",timeoutMinutes:30},now);envelope={id:d.id,agent:d.agent,model:d.model,effort:d.effort,deadlineAt:d.deadlineAt,record:d.record,prompt:`Read ${join(jobDir(id),"plan.md")} and write ${join(jobDir(id),d.record)}`};d.execution={envelope,launch:"pending"};});
  token=await acquireDriver(id,{pid:process.pid,startedAt:now,mode:"run",owner:"ui"});
 });
 after(async()=>{await releaseDriver(id,process.pid);setStore(undefined);if(oldHome===undefined)delete process.env.SOCIOTECHNIC_HOME;else process.env.SOCIOTECHNIC_HOME=oldHome;rmSync(home,{recursive:true,force:true});});

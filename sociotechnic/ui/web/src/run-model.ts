@@ -88,6 +88,7 @@ export function decisionFor(detail: Detail): Decision | null {
     line: driver.ownership.url ? "Follow this run and manage its controls in the console that owns it." : "This run is owned elsewhere. Use its original console or CLI to check progress and manage execution.",
     read: null,
   };
+  if (job.workflow?.pending && !TERMINAL.includes(job.status)) return { waiting: true, sentence: "The workflow lead has questions for you.", line: "Answer below to continue the workflow. Plan review and final acceptance remain your decisions.", read: null };
   switch (job.status) {
     case "design-input": return null;
     case "planning-input": return { waiting: true, sentence: "The planner has questions for you.", line: "Answer below so the planner can finish the plan. You will review the plan before building.", read: null };
@@ -127,7 +128,7 @@ function parkedCopy(detail: Detail, reason: Reason): { sentence: string; line: s
   }
 }
 
-export type ActionId = "answer-planning" | "restore" | "continue" | "step" | "hold" | "pause" | "stop" | "merge" | "accept" | "rework" | "retry-planning" | "override" | "pr-push" | "pr-text" | "merge-remote" | "reopen" | "clean" | "sandboxes" | "open-owner" | "refresh";
+export type ActionId = "answer-workflow" | "answer-planning" | "restore" | "continue" | "step" | "hold" | "pause" | "stop" | "merge" | "accept" | "rework" | "retry-planning" | "override" | "pr-push" | "pr-text" | "merge-remote" | "reopen" | "clean" | "sandboxes" | "open-owner" | "refresh";
 export type Placement = "bar" | "controls" | "palette";
 export type RunAction = { id: ActionId; label: string; cli: string | null; emphasis: "primary" | "secondary" | "quiet" | "danger"; placement: Placement[]; blocked: boolean };
 
@@ -142,6 +143,11 @@ export function runActions(detail: Detail): RunAction[] {
   const out: RunAction[] = [];
   const add = (action: Omit<RunAction, "blocked">, gate = true) => out.push({ ...action, blocked: gate && running });
   if (!detail.worktreePresent && !running && driver.ownership.kind !== "interrupted" && status !== "merged") add({ id: "restore", label: "Restore worktree", cli: cli("restore <job>"), emphasis: "secondary", placement: ["controls", "palette"] });
+  if (job.workflow?.pending && !TERMINAL.includes(status)) {
+    add({ id: "answer-workflow", label: "Answer workflow lead", cli: null, emphasis: "primary", placement: ["bar", "palette"] });
+    add({ id: "stop", label: "Stop run", cli: cli("stop <job>"), emphasis: "danger", placement: ["bar", "controls", "palette"] }, false);
+    return out;
+  }
   const sandboxed = job.execution?.kind === "docker-sandbox";
   const planningFailure = isPlanningFailure(detail);
   const reason = parseReason(job.statusReason);

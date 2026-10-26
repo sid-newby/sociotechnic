@@ -1,0 +1,130 @@
+{
+  "scope": "Current parser and gate only; synthetic checks and Git evidence do not demonstrate a real job passing or approver agreement.",
+  "sources": [
+    {
+      "path": "sociotechnic/src/verdict.ts",
+      "sha256": "0c281ed065f5087fc4898b5dda318206660da84724ddd0fa22d3ad950a319572"
+    },
+    {
+      "path": "sociotechnic/src/plan.ts",
+      "sha256": "01f4b523a1f8db749b720a21c3224f9a3f66be0d58d3ce1d497d281290fb2cbe"
+    },
+    {
+      "path": "sociotechnic/src/gate.ts",
+      "sha256": "93f1d6830577a70c54c42153202138a2b65b05e909031e07d508ccdeb980fe4f"
+    },
+    {
+      "path": "sociotechnic/src/brief.ts",
+      "sha256": "ac153aec5171a636055d7f90d71dde97934af5fdfb759650fd6485c118d38ff5"
+    }
+  ],
+  "probes": [
+    {
+      "name": "build without required body sections",
+      "bytes": 63,
+      "parsed": {
+        "kind": "ok",
+        "value": "READY",
+        "commit": "0123456789abcdef0123456789abcdef01234567",
+        "findings": [],
+        "blocking": 0,
+        "reason": null,
+        "effective": "READY"
+      }
+    },
+    {
+      "name": "review without Findings or Notes",
+      "bytes": 63,
+      "parsed": {
+        "kind": "ok",
+        "value": "PASS",
+        "commit": "0123456789abcdef0123456789abcdef01234567",
+        "findings": [],
+        "blocking": 0,
+        "reason": null,
+        "effective": "PASS"
+      }
+    },
+    {
+      "name": "decision without Reasons",
+      "bytes": 67,
+      "parsed": {
+        "kind": "ok",
+        "value": "APPROVE",
+        "commit": "0123456789abcdef0123456789abcdef01234567",
+        "findings": [],
+        "blocking": 0,
+        "reason": null,
+        "effective": "APPROVE"
+      }
+    },
+    {
+      "name": "research without Answer or Evidence",
+      "bytes": 71,
+      "parsed": {
+        "kind": "ok",
+        "value": "DONE",
+        "commit": null,
+        "findings": [],
+        "blocking": 0,
+        "reason": null,
+        "effective": "DONE"
+      }
+    },
+    {
+      "name": "conformance with only an unrelated stage",
+      "bytes": 170,
+      "parsed": {
+        "kind": "ok",
+        "value": "PASS",
+        "commit": "0123456789abcdef0123456789abcdef01234567",
+        "findings": [],
+        "blocking": 0,
+        "reason": null,
+        "effective": "PASS"
+      }
+    },
+    {
+      "name": "conformance with duplicate stages",
+      "bytes": 180,
+      "parsed": {
+        "kind": "ok",
+        "value": "PASS",
+        "commit": "0123456789abcdef0123456789abcdef01234567",
+        "findings": [],
+        "blocking": 0,
+        "reason": null,
+        "effective": "PASS"
+      }
+    },
+    {
+      "name": "review with an unrecognized severity",
+      "bytes": 167,
+      "parsed": {
+        "kind": "ok",
+        "value": "PASS",
+        "commit": "0123456789abcdef0123456789abcdef01234567",
+        "findings": [],
+        "blocking": 0,
+        "reason": null,
+        "effective": "PASS"
+      }
+    }
+  ],
+  "planProbe": {
+    "summaryBytes": 65536,
+    "stages": [
+      "s1",
+      "s2"
+    ],
+    "accepted": true
+  },
+  "gateWithIncompleteRecords": {
+    "pass": true,
+    "blockers": [],
+    "flags": [],
+    "head": "0123456789abcdef0123456789abcdef01234567",
+    "changedFiles": 1,
+    "computedAt": "2026-10-26T00:00:00.000Z"
+  }
+}

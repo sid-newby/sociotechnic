@@ -171,6 +171,21 @@ export async function validateJobAgentVersions(tx: StoreTx, job: Job, prior?: Jo
     if (job.agentVersions?.[name] !== config.version) conflict(`Run ${job.id} has inconsistent pinned configuration for ${name}`);
     const release = await need(job.agentAssignments?.[name] ?? name, config.version); matchingConfiguration(release.role, config, release, name);
   }
+  const selections = job.workflow?.selections ?? {};
+  for (const slot of new Set([...Object.keys(prior?.workflow?.selections ?? {}), ...Object.keys(selections)])) {
+    if (canonicalJson(prior?.workflow?.selections[slot] ?? null) !== canonicalJson(selections[slot] ?? null) && prior?.dispatches.some((dispatch) => (dispatch.configuration?.baseRole ?? dispatch.agent) === slot)) conflict(`Workflow selection for ${slot} cannot change after use`);
+  }
+  for (const [slot, config] of Object.entries(selections)) {
+    if (!ROLES.some((role) => role.name === slot && role.name !== "sociotechnic-comment-sicko")) conflict(`Unknown workflow role ${slot}`);
+    const name = config.agentName ?? slot;
+    const release = await need(name, config.version);
+    if (!supportsAgentSlot(release, slot)) conflict(`Workflow agent ${name} cannot fill role ${slot}`);
+    const expected = catalogEntry(release, slot).configuration;
+    if (canonicalJson(config) !== canonicalJson(expected)) conflict(`Workflow configuration differs from database release ${name} v${config.version}`);
+    const locked = job.agentLocks?.includes(slot);
+    if (locked && canonicalJson(config) !== canonicalJson(job.agentConfigurations?.[slot] ?? null)) conflict(`The explicit workflow assignment for ${slot} is locked`);
+    if (!locked && !job.agentRoster?.some((card) => card.name === name && card.version === release.version && card.releaseDigest === releaseContentDigest(release))) conflict(`Workflow agent ${name} is not in this run's frozen roster`);
+  }
   for (const dispatch of job.dispatches) if (dispatch.configuration?.definition && dispatch.configuration.version) {
     const release = await need(dispatch.agent, dispatch.configuration.version);
     const slot = dispatch.configuration.baseRole ?? release.template ?? dispatch.agent;
@@ -178,7 +193,8 @@ export async function validateJobAgentVersions(tx: StoreTx, job: Job, prior?: Jo
     if (release.builderProfiles && dispatch.step === "build" && (!job.plan || BUILDER_BY_TIER[job.plan.tier] !== slot)) conflict(`Dispatch ${dispatch.id} disagrees with its plan tier`);
     matchingConfiguration(release.role, dispatch.configuration, release, slot);
     const advisor = dispatch.step === "research" && slot === "sociotechnic-researcher" && !job.agentLocks?.includes(slot) && job.agentRoster?.some((card) => card.name === dispatch.agent && card.version === release.version && card.releaseDigest === releaseContentDigest(release));
-    if (dispatch.model !== release.role.model || dispatch.effort !== release.role.effort || (!advisor && job.agentVersions?.[slot] && (job.agentVersions[slot] !== release.version || (job.agentAssignments?.[slot] ?? slot) !== dispatch.agent))) conflict(`Dispatch ${dispatch.id} disagrees with its database release`);
+    const selected = selections[slot] && canonicalJson(selections[slot]) === canonicalJson(dispatch.configuration);
+    if (dispatch.model !== release.role.model || dispatch.effort !== release.role.effort || (!advisor && !selected && job.agentVersions?.[slot] && (job.agentVersions[slot] !== release.version || (job.agentAssignments?.[slot] ?? slot) !== dispatch.agent))) conflict(`Dispatch ${dispatch.id} disagrees with its database release`);
   }
   for (const dispatch of job.dispatches) if (dispatch.versionBackfill) {
     const attribution = dispatch.versionBackfill;

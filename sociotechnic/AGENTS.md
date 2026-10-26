@@ -33,6 +33,18 @@ or decisions, never edits record prose, never resumes an agent, and never pushes
 The Codex transport may publish an agent's final record verbatim to its assigned
 path; that record still passes through the engine parser and gate.
 
+The optional local Sol/high supervisor may choose validated serial/parallel groups
+within an engine-issued independent reader wave, or escalate its handoff. The
+driver still launches exactly the named workers and preserves gates. It cannot
+create workers from decomposition proposals or move sandbox execution onto the
+host. See [CONTRACTS](CONTRACTS.md#optional-supervising-orchestrator-v1).
+
+Explicit local orchestrated runs use the [executable YAML default](docs/workflow-yaml.md):
+the lead clarifies intent, selects eligible planner/resources and reader ceilings,
+and checks final intent. The driver persists phase receipts and enforces mandatory
+human plan/assignment approval, the existing technical gates and final acceptance.
+This opt-in does not change existing runs, grant permissions or split builder writes.
+
 ## From prompt to plan
 
 ### Team awareness and help
@@ -43,8 +55,10 @@ builder through New run's existing assignments or CLI `--agent-assignments`;
 use `--agent-versions` only for an explicit version choice. These choices pin
 and lock those slots. Do not load the whole library's prompts or skills.
 
-The engine freezes a roster for the run and adds it to every dispatch, including
-the planner, builders, researchers, reviewers, conformance and approver. Nested
+The engine freezes a roster for the run. Planning, research, design and authorized
+build coordinators receive the directory. Ordinary builders, reviewers, conformance
+and approvers receive help-return guidance without the directory. They describe
+needed expertise; the assigner chooses resources. Already-known experts may be named. Nested
 workers receive the roster and send help requests to their coordinator. New
 agent publication is automatically discoverable in new rosters; it cannot
 change existing runs. `sociotechnic roster <job>` reads a run's recorded cards.

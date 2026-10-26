@@ -197,6 +197,21 @@ hits or latency improvement. Optional reader-recovery concurrency is deferred.
 
 A local web page that shows what a run is doing and lets you start, hold, resume and gate runs. The project and global `/sociotechnic` skills also hand runs to this shared driver. It routes each pinned dispatch to Claude Agent SDK or the subscription-authenticated Codex CLI and obeys the same engine.
 
+Local supervisor opt-in: set `SOCIOTECHNIC_ORCHESTRATOR=sol-high-v1` **before**
+starting the console. It selects the prepared GPT-6.1 Sol/high candidate via the
+existing runner; it does not publish/import a catalog release. It binds before
+an unstarted local run's first dispatch and remains required on resume. Existing
+started unbound runs retain their prior driver policy. Sandbox runs cannot use
+this host-only v1 binding. Unset the variable to leave new runs unbound. Do not
+restart another operator's server to change this setting.
+
+Supervisor requests, decisions, raw captured usage and exceptions are records
+under `orchestrator/`; role handoffs and validation errors live under `handoff/`.
+The existing Records download and Log/SSE paths expose them. Use driver Stop to
+abort a supervisor call; individual worker interrupt does not target the
+supervisor. No new polling service or autonomous human-gate override is added.
+
+
 ```bash
 sociotechnic/bin/sociotechnic ui
 ```
@@ -960,3 +975,30 @@ SHA-256 and provenance. The importer preserves replaced bytes under
 `migration/unbound/`, records the recovery source, and validates the recovered
 content against the original pinned plan/design/record evidence. Recovery cannot
 change the job's pinned approval digest or manufacture a successful dispatch.
+
+
+### Recovering PR publication without origin
+
+If Push and open PR reports a missing GitHub remote, the same dialog asks for
+GitHub repository and visibility. Neither is assumed. Confirming publishes the
+run's recorded base commit to the remote base branch, then its existing work
+branch and PR. Locally merged work is not used to bootstrap remote main.
+Local history and review gates stay intact; GitHub merge remains separate.
+The PR API accepts `{push:true, githubRepository, githubVisibility}` for this
+explicit recovery. Visibility is required and must be private or public.
+A differing existing origin, visibility or remote base is refused, never replaced.
+
+Recovery preflight reads the explicit GitHub identity/visibility, every resolved origin push URL and the remote base before reserving an external publication operation. Side-effect-free refusals do not fence ordinary run actions. Partial creation with no origin reuses only the exact approved existing repository and visibility, using GitHub CLI’s configured Git protocol. Both base and work-branch pushes reject a mismatching push destination. An uncertain actual publication still retains its normal reconciliation fence.
+
+An existing origin with no remote base returns `github-base-missing` before pushing work. The same confirmation form reopens after a dialog close/reload; a failed base push therefore cannot skip bootstrap on retry. This known side-effect-free refusal clears the PR operation fence.
+
+### Executable YAML workflow opt-in
+
+New run's **Orchestrated workflow** corresponds to `POST /api/jobs` with
+`workflow: "orchestrated"` and local execution. The server snapshots the default
+YAML and selected Sol/high lead; existing runs keep their pins and routing.
+`POST /api/jobs/:id/workflow-answer` accepts `{requestId, answer}` for exactly
+one pending lead question; stale/duplicate answers return409. It does not approve
+an execution plan. Continue at the plan hold separately records approval of the
+pinned plan and assignment. See [workflow YAML](workflow-yaml.md) for actual
+supported execution, evidence records and limits.
