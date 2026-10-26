@@ -219,14 +219,16 @@ for (const mode of ["head", "dirty", "plan"] as const) test(`passing checks cann
 });
 
 test("repair keeps the round bound and the normal review dispatch budget", async () => {
-  const bounded = await fixture({ checks, caps: { rounds: 1 } });
+  // Budget assertions need deterministic red/green checks; timeout behavior is covered separately.
+  const budgetChecks = [{ name: "feature", run: conditional("exit 7"), timeoutSeconds: 5 }];
+  const bounded = await fixture({ checks: budgetChecks, caps: { rounds: 1 } });
   await build(bounded, bounded.builder, "broken", false);
   const exhausted = await advance(bounded);
   assert.equal(exhausted.status, "needs-human");
   if (exhausted.action === "human") assert.match(exhausted.reason, /loop-bound:rounds/);
   assert.equal((await snapshot(bounded)).round, 1);
   assert.equal((await snapshot(bounded)).rounds[0].gate?.pass, false);
-  const limited = await fixture({ checks, caps: { rounds: 2, dispatchesPerRound: 1 } });
+  const limited = await fixture({ checks: budgetChecks, caps: { rounds: 2, dispatchesPerRound: 1 } });
   await build(limited, limited.builder, "broken");
   const repair = dispatches(await advance(limited))[0];
   await build(limited, repair, "repaired");
