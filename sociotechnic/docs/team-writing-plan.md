@@ -12,12 +12,17 @@ catalog rollout separate from implementation.
 - Focused tests in `tests/agent-skills.test.ts`, `tests/agent-versions.test.ts`,
   `tests/codex.test.ts`, `tests/design.test.ts`, `tests/sandbox.test.ts` and catalog
   migration tests if a missing behavior requires coverage, plus their provider fixtures.
+  Closeout also covers `tests/driver.test.ts` readiness synchronization.
 - This plan and the CLI, engine, development, comment-cleanup and design-ceremony
-  technical references. Optional preview-only rollout tooling belongs in
+  technical references, plus `docs/evidence/team-writing/verification.md`.
+  Optional preview-only rollout tooling belongs in
   `sociotechnic/scripts/` or the external audit directory.
 
-No frontend changes, live catalog writes, agent publication, service restarts,
-pushes, merges or changes to the separate comment-cleanup branch.
+The implementation excludes live catalog writes, agent publication and service
+restarts. The operator subsequently authorized commit, synchronization, merge and
+cleanup of this work. Closeout combines the separately verified eight comment
+removals in chart/sidebar with this feature; it excludes concurrent audit and
+orchestrator/YAML development.
 
 ## Stages
 
@@ -57,3 +62,19 @@ paired evaluation and any authorized publication belong to the operator's separa
 rollout. Preserve complete current settings and use `expectedLatest` plus `addSkills`;
 reconcile every eligible identity with the live catalog before publication. Select
 an older release for fresh runs to roll back; never rewrite old releases or pins.
+
+## Authorized closeout
+
+- Combine only the verified comment-removal commits and this writing feature on
+  current `origin/main`, excluding inherited work owned by another chat.
+- Replace the pause fixture's synchronous readiness poll with its existing SSE
+  lifecycle event. Keep the pause, completion and no-builder assertions. This
+  fixes test event-loop starvation without changing the production driver.
+- Keep a public verification summary with provenance and measurement limits.
+  Private source studies and raw evaluation prompts stay outside the repository.
+- Run repository and disposable PostgreSQL checks separately. Obtain an
+  independent verdict for the final diff, then follow the normal minor-release
+  PR process. Retire only the two completed feature worktrees and branches.
+- Synchronize the local `main` ref without switching the primary checkout away
+  from concurrent development owned by another chat. Live catalog adoption
+  remains a separate operation after the updated runtime is running.

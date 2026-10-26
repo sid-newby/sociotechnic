@@ -227,15 +227,19 @@ test("pause waits for the in-flight dispatch, then stops without starting a buil
   const release = join(root, "pause-release");
   process.env.SOCIOTECHNIC_FAKE_RELEASE_FILE = release;
   const { id } = await newJob("Pause after planning");
+  const started = await driverEvents((e) => e.id === id && e.event === "dispatch-started");
   try {
     assert.equal((await call("POST", `/api/jobs/${id}/run`, { mode: "run" })).status, 200);
-    const deadline = Date.now() + 5000;
-    while ((job(id).dispatches as Json[]).length === 0 && Date.now() < deadline) await sleep(25);
+    await Promise.race([started.done, sleep(30_000, undefined, { ref: false })]);
+    assert.ok(started.events.some((e) => e.id === id && e.event === "dispatch-started"), "planner dispatch did not start");
     assert.equal((job(id).dispatches as Json[]).length, 1);
     const paused = await call("POST", `/api/jobs/${id}/pause`, {});
     assert.equal(paused.status, 200);
     assert.equal(paused.body.running, true, "pause keeps the in-flight agent running");
-  } finally { writeFileSync(release, "release"); }
+  } finally {
+    started.close();
+    writeFileSync(release, "release");
+  }
   const stopped = await settle(id);
   assert.equal(stopped.error, null, JSON.stringify(stopped));
   const dispatches = job(id).dispatches as Json[];

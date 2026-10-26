@@ -5,6 +5,7 @@ Dates on backfilled entries use America/Chicago. See the [release guide](sociote
 
 ## v0.8.0
 
+- Remove eight redundant comments from the chart and sidebar components while retaining useful context and preserving executable behavior.
 - Add a bundled team-writing standard with original Unslop and Technical Writing references for human-readable prose. Preserve facts, uncertainty, code and required record syntax; keep writing review within the current response.
 - Let immutable agent releases append selected skills without refreshing previous resource bytes. Reject conflicting selections, duplicate resources and additions that shadow native skills; preserve existing pins, settings and custom metadata.
 - Give initial and resumed native designer queries their pinned skill entrypoints and temporary reference roots, with cleanup on completion, failure and interruption. Preserve native Impeccable, transcripts and human handoff gates.
