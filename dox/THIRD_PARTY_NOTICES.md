@@ -5,6 +5,7 @@ The following bundled sources retain their original licenses and notices.
 
 | Material | Source and revision | Bundled license |
 | --- | --- | --- |
+| Team writing references: PStack Unslop and Technical Writing | [michael-denyer/pstack-claude](https://github.com/michael-denyer/pstack-claude), exact upstream blobs in [sources.json](../sociotechnic/skills/team-writing/sources.json) | [MIT](../sociotechnic/skills/team-writing/LICENSE.md), [upstream notices](../sociotechnic/skills/team-writing/NOTICE.md) |
 | Microsoft Azure skills | [microsoft/azure-skills](https://github.com/microsoft/azure-skills), `f3b512517ed86feceebfee480a46c971f6c6aff4` | [MIT, Microsoft Corporation](sociotechnic/skills/azure-sme/LICENSE.md) |
 | Terraform skill v1.17.2 | [antonbabenko/terraform-skill](https://github.com/antonbabenko/terraform-skill), `9c1e92d962a5407c227e5566416e962a2f057240` | [Apache-2.0, Anton Babenko](sociotechnic/skills/terraform-skill/LICENSE.md) |
 | shadcn skill and references | [shadcn-ui/ui](https://github.com/shadcn-ui/ui), `617134d5810bba521803b3ed787190bacbb80b35` | [MIT, shadcn](sociotechnic/scaffolds/react-nest/template/docs/ui-standards/upstream/shadcn/LICENSE) |

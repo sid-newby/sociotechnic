@@ -10,12 +10,16 @@ import { fileURLToPath } from "node:url";
 import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import type { Job } from "../src/job.ts";
 import { createMemoryStore, createPgStore, setStore } from "../src/db/store.ts";
-import { initializeAgentVersions, pinAgentVersions } from "../src/agent-versions.ts";
+import { initializeAgentVersions, pinAgentVersions, publishAgentVersion, readAgentVersion } from "../src/agent-versions.ts";
 import { createJobOperation, mutateJob, readJob } from "../src/job-store.ts";
 import { newDesignJob, startDesign, step } from "../src/engine.ts";
 import { parsePlanText } from "../src/plan.ts";
-import { readJson, readText, writeTextAtomic } from "../src/record-store.ts";
+import { readJson, readText, session, writeTextAtomic } from "../src/record-store.ts";
 import { prepareDispatch } from "../src/staging.ts";
+import { bundledSkills } from "../src/agent-skills.ts";
+import { canonicalJson } from "../src/agent-version-data.ts";
+import { parseFrontmatter } from "../src/agents.ts";
+import { roleOf } from "../src/roles.ts";
 import { acquireDriver, releaseDriver } from "../src/driverlock.ts";
 import { jobDir } from "../src/paths.ts";
 import { testDatabase } from "./pg-fixture.ts";
@@ -484,5 +488,101 @@ test("a durably recorded answer is replayed to the same native tool request afte
     await call(`/api/jobs/${id}/design-session/answer`, { questionId: "toolu_durable_answer", answers: { "Keep the reading direction?": "Keep it" } });
     let j = await settled(id); assert.equal(j.designSession?.state, "failed"); assert.deepEqual(j.designSession?.answers.toolu_durable_answer, { "Keep the reading direction?": "Keep it" });
     await call(`/api/jobs/${id}/design-session/resume`, {}); j = await settled(id); assert.equal(j.designSession?.state, "waiting"); assert.equal(j.designSession?.question, null); assert.equal(j.designSession?.messages.filter((m) => m.role === "user").length, 1);
+  } finally { injected = undefined; }
+});
+
+
+test("native designer materializes only pinned resources for initial and resumed queries and removes them on every exit", async () => {
+  const oldId = await create();
+  const oldPin = await readJob(oldId, (job) => canonicalJson(job.agentConfigurations?.["sociotechnic-designer"]));
+  const base = roleOf("sociotechnic-designer"), prior = await readAgentVersion(base, "1.2.0");
+  const release = await publishAgentVersion(base, { ...prior.role, expectedLatest: prior.version, version: "1.2.1", label: "Attach team writing", addSkills: ["team-writing"] });
+  const previousNames = parseFrontmatter(prior.definition)?.fields.skills;
+  const expectedNames = Array.isArray(previousNames) ? previousNames : [];
+  assert.deepEqual(parseFrontmatter(release.definition)?.fields.skills, [...expectedNames, "team-writing"]);
+  const resources = bundledSkills(["team-writing"]);
+  const id = await create();
+  assert.deepEqual(await readJob(id, (job) => job.agentConfigurations?.[base.name]?.skillResources), resources);
+  const referenceRoots: string[] = [];
+  const inspect: DesignQuery = async function* (args) {
+    const { options } = args;
+    assert.ok(options.cwd);
+    assert.ok(typeof options.systemPrompt === "object" && "append" in options.systemPrompt);
+    const prompt = options.systemPrompt.append ?? "";
+    const match = /Reference directory: (.+)/.exec(prompt); assert.ok(match);
+    const root = match[1]; referenceRoots.push(root);
+    assert.equal(resolve(root).startsWith(resolve(options.cwd) + "/"), false);
+    assert.ok(options.additionalDirectories?.includes(root));
+    assert.equal(readFileSync(join(root, "SKILL.md"), "utf8"), resources[0].files["SKILL.md"]);
+    assert.equal(readFileSync(join(root, "references/technical-writing.md"), "utf8"), resources[0].files["references/technical-writing.md"]);
+    const native = await readJob(id, () => readText(join(jobDir(id), "design/agent.md")));
+    assert.ok(native !== null);
+    assert.ok(prompt.startsWith(parseFrontmatter(native)?.body ?? native));
+    assert.equal(options.hooks?.SessionStart, undefined);
+    assert.equal(options.hooks?.Stop, undefined);
+    assert.ok(options.tools !== undefined && Array.isArray(options.tools) && options.tools.includes("Skill"));
+    assert.equal(realpathSync(join(options.cwd, ".claude/skills/impeccable")), realpathSync(skill));
+    yield* fixtureDesignQuery(args);
+  };
+  try {
+    injected = inspect;
+    const first = await completeInterview(id);
+    assert.equal(first.designSession?.state, "waiting");
+    assert.equal(referenceRoots.length, 1);
+    assert.equal(existsSync(referenceRoots[0]), false);
+    await call(`/api/jobs/${id}/design-session/messages`, { message: "Make it denser", messageId: randomUUID() });
+    const resumed = await settled(id);
+    assert.equal(resumed.designSession?.id, first.designSession?.id);
+    assert.equal(referenceRoots.length, 2);
+    assert.notEqual(referenceRoots[0], referenceRoots[1]);
+    assert.equal(existsSync(referenceRoots[1]), false);
+    assert.ok(resumed.designSession?.messages.at(-1)?.text.includes("retained our previous conversation"));
+    await readJob(id, () => {
+      assert.equal([...session().records.keys()].some((path) => path.includes("team-writing") || path.includes("technical-writing.md")), false);
+      const source = readText(join(jobDir(id), "design/agent.md"));
+      const metadata = readJson(join(jobDir(id), "design/agent-source.json"));
+      assert.ok(source !== null);
+      assert.ok(typeof metadata === "object" && metadata !== null && "digest" in metadata);
+      assert.equal(metadata.digest, createHash("sha256").update(source).digest("hex"));
+      assert.equal(source.includes("# Pinned instruction skills"), false);
+    });
+    injected = async function* (args) {
+      const append = typeof args.options.systemPrompt === "object" && "append" in args.options.systemPrompt ? args.options.systemPrompt.append ?? "" : "";
+      const match = /Reference directory: (.+)/.exec(append); assert.ok(match);
+      referenceRoots.push(match[1]);
+      throw new Error("Fixture query failed");
+    };
+    await call(`/api/jobs/${id}/design-session/messages`, { message: "Test failure", messageId: randomUUID() });
+    const failed = await settled(id);
+    assert.equal(failed.designSession?.state, "failed");
+    assert.match(failed.designSession?.error ?? "", /Fixture query failed/);
+    assert.equal(existsSync(referenceRoots[2]), false);
+    const cancelledId = await create();
+    injected = fixtureDesignQuery;
+    await completeInterview(cancelledId);
+    let entered = false;
+    injected = async function* (args) {
+      const append = typeof args.options.systemPrompt === "object" && "append" in args.options.systemPrompt ? args.options.systemPrompt.append ?? "" : "";
+      const match = /Reference directory: (.+)/.exec(append); assert.ok(match);
+      referenceRoots.push(match[1]);
+      entered = true;
+      yield* fixtureDesignQuery(args);
+    };
+    const queued = await call(`/api/jobs/${cancelledId}/design-session/messages`, { message: "hold response", messageId: randomUUID() });
+    assert.equal(queued.status, 200, JSON.stringify(queued.data));
+    for (let n = 0; n < 100 && !entered; n++) await sleep(15);
+    assert.equal(entered, true, JSON.stringify(await readJob(cancelledId, (job) => ({ status: job.status, design: job.designSession }))));
+    assert.equal(existsSync(referenceRoots[3]), true);
+    assert.equal((await call(`/api/jobs/${cancelledId}/design-session/interrupt`, {})).status, 200);
+    assert.equal((await settled(cancelledId)).designSession?.state, "interrupted");
+    assert.equal(existsSync(referenceRoots[3]), false);
+    injected = async function* (args) {
+      const append = typeof args.options.systemPrompt === "object" && "append" in args.options.systemPrompt ? args.options.systemPrompt.append ?? "" : "";
+      assert.equal(append.includes("# Pinned instruction skills"), false);
+      assert.equal(args.options.additionalDirectories?.some((path) => path.includes("sociotechnic-design-skills-")), false);
+      yield* fixtureDesignQuery(args);
+    };
+    await completeInterview(oldId);
+    assert.equal(await readJob(oldId, (job) => canonicalJson(job.agentConfigurations?.[base.name])), oldPin);
   } finally { injected = undefined; }
 });

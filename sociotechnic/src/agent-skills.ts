@@ -5,7 +5,7 @@ import { SociotechnicError } from "./errors.ts";
 import { parseFrontmatter } from "./agents.ts";
 
 export type SkillResource = { name: string; files: Record<string, string> };
-const BUNDLED = new Set(["terraform-skill", "container-technologies", "azure-sme", "browser-verification"]);
+const BUNDLED = new Set(["terraform-skill", "container-technologies", "azure-sme", "browser-verification", "team-writing"]);
 const ROOT = fileURLToPath(new URL("../skills/", import.meta.url));
 function fail(): never { throw new SociotechnicError("bad-agent-version", "Invalid packaged skill resources or selection"); }
 function object(v: unknown): v is Record<string, unknown> { return typeof v === "object" && v !== null && !Array.isArray(v); }

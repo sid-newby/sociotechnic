@@ -12,6 +12,7 @@ import { ROLES } from "../src/roles.ts";
 import { CODEX_MODELS, effortChoices, supportsCodexReader } from "../src/agent-models.ts";
 import { versionRole } from "../src/agent-version-data.ts";
 import { bundledAgentDefinition } from "../src/agents.ts";
+import { bundledSkills } from "../src/agent-skills.ts";
 import { usageByRole } from "../src/usage.ts";
 import { parseProfiles } from "../ui/web/src/model.ts";
 import { tokenUsage } from "../ui/web/src/token-usage.ts";
@@ -182,6 +183,27 @@ test("Codex builders enable worktree execution and count edits and shell calls; 
     const bounded = { ...entry, configuration: { ...configuration, maxTurns: 2 } };
     assert.equal((await codexRunner().run(bounded, role, ctx)).outcome, "failed");
     assert.equal(existsSync(ctx.recordPath), false);
+  } finally {
+    for (const key of Object.keys(process.env)) if (!(key in old)) delete process.env[key];
+    Object.assign(process.env, old); rmSync(root, { recursive: true, force: true });
+  }
+});
+
+
+test("isolated Codex receives pinned team writing and can read its references without enabling hooks", async () => {
+  const root = mkdtempSync(join(tmpdir(), "sociotechnic-codex-writing-")), old = { ...process.env };
+  try {
+    process.env.SOCIOTECHNIC_CODEX = join(HERE, "fixtures/fake-codex.mjs");
+    process.env.SOCIOTECHNIC_CODEX_TEST_WRITING_ROOT = join(root, "writing-root.txt");
+    writeFileSync(join(root, "evidence.txt"), "evidence\n");
+    const base = roleOf("sociotechnic-reviewer-code"), role = versionRole(base, { ...base, model: "gpt-6.1-sol", effort: "high" });
+    const configuration = { ...role, version: "1.0.0", revision: null, definition: bundledAgentDefinition(base.name), skills: ["team-writing"], skillResources: bundledSkills(["team-writing"]) };
+    const ctx: RunContext = { sociotechnicHome: root, repo: root, worktree: root, inputRoot: root, outputRoot: root, jobId: "fixture", round: 1, recordPath: join(root, "review.md"), signal: new AbortController().signal, onActivity: () => {}, onWarn: () => {} };
+    const result = await codexRunner().run({ id: "d-writing", agent: base.name, model: role.model, effort: role.effort, configuration, record: "review.md", prompt: "Review the evidence and return the required record.", deadlineAt: new Date(Date.now() + 10000).toISOString() }, role, ctx);
+    assert.equal(result.outcome, "ok", result.note ?? "");
+    assert.match(readFileSync(ctx.recordPath, "utf8"), /^VERDICT: PASS/);
+    const writingRoot = readFileSync(process.env.SOCIOTECHNIC_CODEX_TEST_WRITING_ROOT, "utf8");
+    assert.equal(existsSync(writingRoot), false);
   } finally {
     for (const key of Object.keys(process.env)) if (!(key in old)) delete process.env[key];
     Object.assign(process.env, old); rmSync(root, { recursive: true, force: true });
