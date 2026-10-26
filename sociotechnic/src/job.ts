@@ -1,4 +1,5 @@
 import type { ConsoleHold } from "./console-preferences.ts";
+import type { HandoffEscalation } from "./handoff-routing.ts";
 import type { InteractiveDesign } from "./design-session.ts";
 import { join } from "node:path";
 import type { Execution } from "./execution.ts";
@@ -75,7 +76,7 @@ export type PerformanceHistoryEntry = { at: string; reason: string; cancelled: s
 
 export type Dispatch = {
   performanceAnnotation?: DispatchPerformanceAnnotation;
-  execution?: { envelope: import("./engine.ts").DispatchOut; launch: "pending" | "claimed" | "finished"; owner?: string; inputDigest?: string; completionDigest?: string };
+  execution?: { envelope: import("./engine.ts").DispatchOut; launch: "pending" | "claimed" | "finished"; owner?: string; inputDigest?: string; completionDigest?: string; handoffRecord?: string };
   configuration?: AgentConfiguration;
   versionBackfill?: { version: "1.0.0"; source: "operator-confirmed"; at: string; before: string };
   id: string;
@@ -97,6 +98,7 @@ export type Dispatch = {
 };
 
 export type Job = {
+  orchestrator?: import("./orchestrator.ts").OrchestratorProfile;
   planningInput?: PlanningInput;
   consoleHolds?: ConsoleHold[];
   designReleaseMigration?: { session: string; from: string; to: string; at: string };
@@ -135,6 +137,7 @@ export type Job = {
   pr?: PrRecord;
   design?: DesignCeremony;
   designSession?: InteractiveDesign;
+  handoffEscalation?: HandoffEscalation;
   commentCleanup?: { inventoryDigest: string };
 };
 

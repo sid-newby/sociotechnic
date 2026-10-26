@@ -11,6 +11,11 @@ import { mutateJob, readJob } from "./job-store.ts";
 import { jobDir, stateDir } from "./paths.ts";
 import { session, validRecordPath } from "./record-store.ts";
 import { recordBytes, recordRow, requireStore } from "./db/store.ts";
+import { PLAN_CONTRACT_RECORD } from "./plan.ts";
+import { RECIPIENT_CONTRACT_FILE } from "./recipient-contract.ts";
+import { createHandoff, handoffInputRecords, handoffJobSnapshot } from "./handoff.ts";
+import type { Handoff } from "./handoff.ts";
+import { HANDOFF_RECORD, HandoffValidationError, handoffInput } from "./handoff-routing.ts";
 
 export type StagedDispatch = { entry: DispatchOut; root: string; inputs: string; outputs: string; manifest: Record<string,string>; token: string };
 const hash = (bytes: Buffer | string) => createHash("sha256").update(bytes).digest("hex");
@@ -41,13 +46,31 @@ export async function prepareDispatch(id: string, envelope: DispatchOut, token: 
   const root=stagingRoot(id,envelope.id), inputs=join(root,"inputs"),outputs=join(root,"outputs");
   if (existsSync(root)) throw new SociotechnicError("staging-exists", "Previous dispatch staging requires explicit recovery before relaunch");
   const manifest: Record<string,string> = {};
+  let handoff: Handoff | undefined;
   await readJob(id,(job)=>{
     const pending = job.dispatches.find((d)=>d.id===envelope.id);
     if (!pending || pending.finishedAt || pending.execution?.launch !== "pending") throw new SociotechnicError("dispatch-claimed", "Dispatch has already been claimed or finished");
+    const contracts = ["contracts/handoff.schema.json", "contracts/handoff.example.json", ...(envelope.record === "plan.json" ? [PLAN_CONTRACT_RECORD] : job.orchestrator?.contractVersion === 1 ? [`contracts/${RECIPIENT_CONTRACT_FILE}`] : [])];
+    for (const path of [...contracts, HANDOFF_RECORD]) if (session().records.has(path)) throw new HandoffValidationError(envelope, [{ field: `artifacts.${path}`, code: "reserved-input", message: "Canonical record conflicts with an engine-owned contract path", owner: "driver" }]);
     mkdirSync(inputs,{recursive:true}); mkdirSync(outputs,{recursive:true});
-    for(const [path,row] of session().records) { if(path.startsWith("migration/")) continue; const bytes=recordBytes(row); put(inputs,path,bytes); manifest[path]=hash(bytes); }
-    const bytes=Buffer.from(JSON.stringify(job,null,2)+"\n");put(inputs,"job.json",bytes);manifest["job.json"]=hash(bytes);
+    mkdirSync(dirname(join(outputs,envelope.record)),{recursive:true});
+    const selected = job.orchestrator?.contractVersion === 1 ? handoffInputRecords(handoffInput(job,envelope,session().records)) : null;
+    if (selected?.issues.length) throw new HandoffValidationError(envelope,selected.issues);
+    for(const [path,row] of session().records) { if(path.startsWith("migration/") || path.startsWith("handoff/archive/") || path.startsWith("orchestrator/") || (selected && !selected.records.includes(path))) continue; const bytes=recordBytes(row); put(inputs,path,bytes); manifest[path]=hash(bytes); }
+    const bytes=Buffer.from(JSON.stringify(handoffJobSnapshot(job,envelope),null,2)+"\n");put(inputs,"job.json",bytes);manifest["job.json"]=hash(bytes);
+    for (const path of contracts) {
+      let content: Buffer;
+      try { content = readFileSync(new URL(`../schemas/${path.slice("contracts/".length)}`, import.meta.url)); }
+      catch(error) { throw new HandoffValidationError(envelope,[{field:`contracts.${path}`,code:"contract-unavailable",message:"Engine-owned contract is unavailable",owner:"driver",evidence:String(error)}]); }
+      put(inputs,path,content);manifest[path]=hash(content);
+    }
+    const checked = createHandoff(handoffInput(job,envelope,session().records));
+    if (!checked.ok) throw new HandoffValidationError(envelope,checked.issues);
+    handoff = checked.handoff;
+    const content = Buffer.from(JSON.stringify(handoff,null,2)+"\n");put(inputs,HANDOFF_RECORD,content);manifest[HANDOFF_RECORD]=hash(content);
   });
+  const verifiedHandoff = handoff;
+  if (!verifiedHandoff) throw new HandoffValidationError(envelope,[{field:"handoff",code:"missing-handoff",message:"Handoff construction did not complete",owner:"driver"}]);
   const canonical=jobDir(id);
   const outputPaths=[envelope.record];
   if(envelope.record==="plan.json") outputPaths.push("plan.md");
@@ -60,6 +83,7 @@ export async function prepareDispatch(id: string, envelope: DispatchOut, token: 
     for(const name of ["PRODUCT.md","DESIGN.md"]) if(existsSync(join(inputs,rel,name))) put(outputs,join(rel,name),readFileSync(join(inputs,rel,name)));
   }
   prompt=prompt.replaceAll(canonical,inputs);
+  prompt += `\n\nHandoff: ${join(inputs,HANDOFF_RECORD)}. This is the engine-owned workspace, artifact, delivery and limit contract. Schema/example references: ${join(inputs,"contracts/handoff.schema.json")} and ${join(inputs,"contracts/handoff.example.json")}; read them only if needed. Missing required data or unavailable paths must be reported through the existing escalation path, never guessed.\n`;
   prompt += `\n\nStorage adapter: PostgreSQL owns committed job records. Read the staged inputs at ${inputs}. Write only assigned outputs under ${outputs}. Do not edit inputs. Legacy instruction paths refer to this staging scope; no .sociotechnic/jobs directory is authoritative.\n`;
   const entry: DispatchOut={...envelope,prompt, ...(envelope.designScope ? {designScope:{...envelope.designScope,record:join(outputs,envelope.record),artifacts:join(outputs,relative(canonical,envelope.designScope.artifacts)),receipt:join(outputs,relative(canonical,envelope.designScope.receipt))}} : {})};
   mkdirSync(dirname(join(outputs,envelope.record)),{recursive:true});
@@ -69,7 +93,9 @@ export async function prepareDispatch(id: string, envelope: DispatchOut, token: 
     if((await requireStore().driver(id))?.token!==token)throw new SociotechnicError("ownership-lost","Driver no longer owns this dispatch");
     const d=job.dispatches.find((d)=>d.id===entry.id);
     if(!d?.execution || d.execution.launch!=="pending")throw new SociotechnicError("dispatch-claimed","Dispatch already claimed");
-    d.execution={...d.execution,launch:"claimed",owner:token,inputDigest:hash(canonicalJson(manifest))};
+    const handoffRecord=`handoff/archive/${entry.id}.json`;
+    session().records.set(handoffRecord,recordRow(handoffRecord,Buffer.from(JSON.stringify({schemaVersion:1,handoff:verifiedHandoff,manifest,envelope:entry,transport:"host-staged; sandbox adapter rewrites mapped paths before guest delivery"},null,2)+"\n")));
+    d.execution={...d.execution,launch:"claimed",owner:token,inputDigest:hash(canonicalJson(manifest)),handoffRecord};
   });
   return {entry,root,inputs,outputs,manifest,token};
 }

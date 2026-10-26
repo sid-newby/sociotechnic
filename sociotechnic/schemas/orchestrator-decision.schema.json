@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Bounded orchestration decision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "requestId",
+    "action",
+    "owner",
+    "executionGroups",
+    "questions",
+    "reason",
+    "decomposition"
+  ],
+  "properties": {
+    "requestId": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "action": {
+      "enum": [
+        "continue",
+        "escalate"
+      ]
+    },
+    "owner": {
+      "type": "string",
+      "minLength": 1
+    },
+    "questions": {
+      "type": "array",
+      "maxItems": 6,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4000
+      }
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "executionGroups": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "minItems": 1,
+        "uniqueItems": true,
+        "items": {
+          "type": "string"
+        }
+      },
+      "description": "Continue partitions supplied dispatches exactly once; ordered groups run sequentially, readers inside a group may overlap. Exceptions/escalations use []."
+    },
+    "decomposition": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "stages",
+          "owner",
+          "deliverable",
+          "rationale"
+        ],
+        "properties": {
+          "stages": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string"
+            }
+          },
+          "owner": {
+            "type": "string",
+            "minLength": 1
+          },
+          "deliverable": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          }
+        }
+      },
+      "description": "Proposals name noncompeting approved stages and known owners. They do not create dispatches or change scope/pins."
+    }
+  },
+  "$comment": "requestId, dispatches and owner must match the supplied context. Escalation needs a question. Continue never overrides preflight or human gates; exceptions remain held.",
+  "examples": [
+    {
+      "requestId": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "action": "escalate",
+      "owner": "human",
+      "questions": [
+        "Which missing approved artifact should be supplied?"
+      ],
+      "reason": "Required artifact is absent; no worker has been launched.",
+      "executionGroups": [],
+      "decomposition": []
+    }
+  ]
+}

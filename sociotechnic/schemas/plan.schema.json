@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Sociotechnic planner output",
   "$comment": "Local output contract. src/plan.ts owns semantic checks and runtime escape eligibility. Extra object fields remain allowed. No remote schema lookup is needed.",
-  "oneOf": [{"$ref":"#/$defs/plan"}, {"$ref":"#/$defs/researchRequest"}, {"$ref":"#/$defs/designRequest"}],
+  "oneOf": [{"$ref":"#/$defs/plan"}, {"$ref":"#/$defs/researchRequest"}, {"$ref":"#/$defs/designRequest"}, {"$ref":"#/$defs/inputRequest"}],
   "$defs": {
     "text": {"type":"string", "pattern":"\\S"},
     "strings": {"type":"array", "items":{"$ref":"#/$defs/text"}},
@@ -20,7 +20,7 @@
     "plan": {
       "type":"object",
       "required":["title","summary","tier","tierReason","stages","acceptance","touches","docsImpact","testing","risks","outOfScope"],
-      "not":{"type":"object","properties":{"status":{"enum":["needs-research","needs-design"]}},"required":["status"]},
+      "not":{"type":"object","properties":{"status":{"enum":["needs-research","needs-design","needs-input"]}},"required":["status"]},
       "properties": {
         "title":{"$ref":"#/$defs/text","description":"Trimmed UTF-16 length 3..80; enforced by the engine."},
         "summary":{"$ref":"#/$defs/text"},
@@ -40,6 +40,7 @@
     },
     "researchRequest": {
       "type":"object", "required":["status","questions"],
+      "examples":[{"status":"needs-research","questions":["Which existing module owns this behavior?"],"advisors":[null]}],
       "properties": {
         "status":{"const":"needs-research"},
         "questions":{"type":"array","minItems":1,"maxItems":6,"items":{"$ref":"#/$defs/text"}},
@@ -47,8 +48,15 @@
       },
       "x-engine-checks":["Allowed once per run and only when the brief permits it.","If advisors is present, supply one name/null per question. Only compatible research-template roster agents; respect locked assignments. No onward delegation."]
     },
+    "inputRequest": {
+      "type":"object", "required":["status","questions"],
+      "examples":[{"status":"needs-input","questions":["Should this deliver a review report or an implementation?"]}],
+      "properties":{"status":{"const":"needs-input"},"questions":{"type":"array","minItems":1,"maxItems":6,"items":{"$ref":"#/$defs/text","description":"A specific human decision; raw UTF-16 length at most4000."}}},
+      "x-engine-checks":["Available after research too; never send unanswered human decisions to the builder.","The engine binds answers to this dispatch and resumes a fresh planner; answers do not approve the plan or authorize a build."]
+    },
     "designRequest": {
       "type":"object", "required":["status","reason"],
+      "examples":[{"status":"needs-design","reason":"Design the requested new dashboard with the human before implementation."}],
       "properties":{"status":{"const":"needs-design"},"reason":{"$ref":"#/$defs/text","description":"Specific assignment; raw UTF-16 length at most4000."}},
       "x-engine-checks":["Use only when permitted for new/substantial UI work or a specific follow-up. Returned artifacts and human approval remain binding."]
     }

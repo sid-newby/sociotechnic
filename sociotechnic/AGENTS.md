@@ -33,6 +33,12 @@ or decisions, never edits record prose, never resumes an agent, and never pushes
 The Codex transport may publish an agent's final record verbatim to its assigned
 path; that record still passes through the engine parser and gate.
 
+The optional local Sol/high supervisor may choose validated serial/parallel groups
+within an engine-issued independent reader wave, or escalate its handoff. The
+driver still launches exactly the named workers and preserves gates. It cannot
+create workers from decomposition proposals or move sandbox execution onto the
+host. See [CONTRACTS](CONTRACTS.md#optional-supervising-orchestrator-v1).
+
 ## From prompt to plan
 
 ### Team awareness and help

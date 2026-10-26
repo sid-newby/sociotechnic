@@ -20,11 +20,12 @@ import { roleOf } from "../src/roles.ts";
 import type { Role } from "../src/roles.ts";
 import { ingestDispatch, prepareDispatch, stagedRecord } from "../src/staging.ts";
 import type { StagedDispatch } from "../src/staging.ts";
+import { fixtureGitHead, seedStagedJobContext } from "./helpers/staged-job-context.ts";
 import { sdkOptions, sdkRunner } from "../ui/runner.ts";
 
 const home = realpathSync(mkdtempSync(join(tmpdir(), "sociotechnic-runner-envelope-")));
 const oldHome = process.env.SOCIOTECHNIC_HOME, oldConfig = process.env.SOCIOTECHNIC_CLAUDE_CONFIG;
-const id = "20261025-runner-envelope", commit = "a".repeat(40);
+const id = "20261025-runner-envelope", commit = fixtureGitHead(home,`sociotechnic/${id}`);
 process.env.SOCIOTECHNIC_HOME = home;
 process.env.SOCIOTECHNIC_CLAUDE_CONFIG = join(home, "missing-claude.json");
 cpSync(new URL("../hooks/", import.meta.url), join(home, "sociotechnic/hooks"), { recursive: true });
@@ -93,6 +94,7 @@ async function stages(f: Fixture, count = 1) {
       d.execution = { envelope, launch: "pending" };
       envelopes.push(envelope);
     }
+    seedStagedJobContext(job,count,!builder);
   });
   const token = await acquireDriver(id, { pid: process.pid, startedAt: now, mode: "step", owner: "ui" });
   const result: StagedDispatch[] = [];

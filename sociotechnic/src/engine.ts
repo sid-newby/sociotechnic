@@ -7,6 +7,7 @@ import { assistanceBrief, rosterBrief } from "./agent-roster.ts";
 import type { PinnedAgents } from "./agent-versions.ts";
 import { designDigest, designFingerprint, verifyDesign } from "./design.ts";
 import { newInteractiveDesign, verifyInteractiveDesign, designStarterBrief } from "./design-session.ts";
+import type { HandoffEscalation } from "./handoff-routing.ts";
 import { approveBrief, buildBrief, planBrief, researchBrief, reviewBrief } from "./brief.ts";
 import type { FailingCheck, LensChanges } from "./brief.ts";
 import { commentInventory, cleanupPlan, digest, INVENTORY_FILE, verifyCommentChanges } from "./comment-inventory.ts";
@@ -73,14 +74,15 @@ import { ROLES } from "./roles.ts";
 import type { RoleUsage } from "./usage.ts";
 import type { Parsed } from "./verdict.ts";
 import { parseRecord } from "./verdict.ts";
+import { RECIPIENT_CONTRACT_VERSION, validateRecipientOutput } from "./recipient-contract.ts";
 
-export type DispatchOut = { configuration?: AgentConfiguration; workerConfiguration?: AgentConfiguration; id: string; agent: string; model: string; effort: string; deadlineAt: string; record: string; prompt: string; designScope?: { record: string; artifacts: string; receipt: string; referenceRoot?: string } };
+export type DispatchOut = { configuration?: AgentConfiguration; workerConfiguration?: AgentConfiguration; requiredRecords?: string[]; id: string; agent: string; model: string; effort: string; deadlineAt: string; record: string; prompt: string; designScope?: { record: string; artifacts: string; receipt: string; referenceRoot?: string } };
 
 export type StepResult =
   | { job: string; status: Status; action: "dispatch"; dispatches: DispatchOut[] }
   | { job: string; status: Status; action: "wait"; pending: string[]; overdue: string[] }
   | { job: string; status: Status; action: "stop"; overdue: { id: string; agent: string; deadlineAt: string }[] }
-  | { job: string; status: Status; action: "human"; reason: string }
+  | { job: string; status: Status; action: "human"; reason: string; handoff?: HandoffEscalation }
   | { job: string; status: Status; action: "hold"; reason: string }
   | { job: string; status: Status; action: "done" };
 
@@ -152,7 +154,8 @@ function dispatchOne(job: Job, spec: DispatchSpec, now: string): DispatchOut {
   );
   d.configuration = configuration;
   const prompt = `${spec.prompt}\n\n## Team capabilities\n${rosterBrief(job.agentRoster ?? [], job.agentAssignments, job.agentLocks)}\n\n${assistanceBrief(role.record)}`;
-  const envelope: DispatchOut = { configuration, ...(spec.agent === "sociotechnic-comment-cleaner" ? { workerConfiguration: job.agentConfigurations?.["sociotechnic-comment-sicko"] } : {}), id: d.id, agent: d.agent, model: d.model, effort: d.effort, deadlineAt: d.deadlineAt, record: d.record, prompt,
+  const requiredRecords = [...session().records.keys()].filter(path => !path.startsWith("migration/") && prompt.includes(abs(job,path)));
+  const envelope: DispatchOut = { configuration, requiredRecords, ...(spec.agent === "sociotechnic-comment-cleaner" ? { workerConfiguration: job.agentConfigurations?.["sociotechnic-comment-sicko"] } : {}), id: d.id, agent: d.agent, model: d.model, effort: d.effort, deadlineAt: d.deadlineAt, record: d.record, prompt,
     ...(role.record === "design" && job.design ? { designScope: { record: abs(job, spec.record), artifacts: abs(job, `design/atelier/round-${job.design.iteration}`), referenceRoot: job.worktree, receipt: abs(job, `design/tool-${job.design.iteration}.json`) } } : {}),
   };
   d.execution = { envelope, launch: "pending" };
@@ -160,7 +163,7 @@ function dispatchOne(job: Job, spec: DispatchSpec, now: string): DispatchOut {
 }
 
 function human(job: Job): StepResult {
-  return { job: job.id, status: job.status, action: "human", reason: job.statusReason };
+  return { job: job.id, status: job.status, action: "human", reason: job.statusReason, ...(job.handoffEscalation ? { handoff: job.handoffEscalation } : {}) };
 }
 
 function parkWith(job: Job, reason: string, now: string): StepResult {
@@ -549,7 +552,7 @@ function stepReviewing(job: Job, now: string): StepResult | null {
     const latest = latestDispatch(job, (d) => d.step === "review" && d.round === job.round && d.lens === lens);
     if (latest === null) throw new SociotechnicError("corrupt-job", `no dispatch for lens ${lens}`);
     const p = latest.parsed;
-    const failure = failureOf(latest) ?? (p === null ? "record unparsed" : p.kind === "malformed" && RETRYABLE_REVIEW_REASONS.has(p.reason ?? "") ? `record malformed: ${p.reason ?? ""}` : null);
+    const failure = failureOf(latest) ?? (p === null ? "record unparsed" : p.kind === "malformed" && (RETRYABLE_REVIEW_REASONS.has(p.reason ?? "") || p.reason?.startsWith("recipient-contract:")) ? `record malformed: ${p.reason ?? ""}` : null);
     if (failure !== null) {
       retries.push({ latest, reason: failure, prompt: (r) => reviewPrompt(job, lens, head, changed, r) });
     } else if (p !== null) {
@@ -727,7 +730,16 @@ export function parseDispatchRecord(job: Job, d: Dispatch): Parsed {
     try { designFingerprint(folder(job), d.record); return { kind: "ok", value: "design", commit: null, findings: [], blocking: 0, reason: null, effective: "DONE" }; }
     catch (error) { return { kind: "malformed", value: null, commit: null, findings: [], blocking: 0, reason: error instanceof Error ? error.message : String(error), effective: "BLOCKED" }; }
   }
-  return parseRecord(text, role.record);
+  const parsed = parseRecord(text, role.record);
+  if (job.orchestrator?.contractVersion === RECIPIENT_CONTRACT_VERSION && text !== null && parsed.kind === "ok") {
+    const errors = validateRecipientOutput(role.record,text,job.plan ? readPlan(job).stages.map(stage => stage.id) : []);
+    if (errors.length) {
+      const record = `handoff/validation/${d.id}.json`;
+      writeJsonAtomic(abs(job,record),{ contractVersion: RECIPIENT_CONTRACT_VERSION, dispatch: d.id, record: d.record, errors: errors.slice(0,32), errorCount: errors.length });
+      return { ...parsed, kind: "malformed", effective: role.record === "build" || role.record === "research" ? "BLOCKED" : role.record === "decision" ? "ESCALATE" : "CHANGES", reason: `recipient-contract: ${errors.slice(0,8).map(error => `${error.field}: ${error.code}: ${error.message}`).join("; ")}; evidence ${record}` };
+    }
+  }
+  return parsed;
 }
 
 export function finish(job: Job, id: string, outcome: Outcome, usage: unknown, note: string | null, now = nowIso()): { dispatch: string; outcome: Outcome; parsed: Parsed } {

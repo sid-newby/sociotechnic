@@ -197,6 +197,21 @@ hits or latency improvement. Optional reader-recovery concurrency is deferred.
 
 A local web page that shows what a run is doing and lets you start, hold, resume and gate runs. The project and global `/sociotechnic` skills also hand runs to this shared driver. It routes each pinned dispatch to Claude Agent SDK or the subscription-authenticated Codex CLI and obeys the same engine.
 
+Local supervisor opt-in: set `SOCIOTECHNIC_ORCHESTRATOR=sol-high-v1` **before**
+starting the console. It selects the prepared GPT-6.1 Sol/high candidate via the
+existing runner; it does not publish/import a catalog release. It binds before
+an unstarted local run's first dispatch and remains required on resume. Existing
+started unbound runs retain their prior driver policy. Sandbox runs cannot use
+this host-only v1 binding. Unset the variable to leave new runs unbound. Do not
+restart another operator's server to change this setting.
+
+Supervisor requests, decisions, raw captured usage and exceptions are records
+under `orchestrator/`; role handoffs and validation errors live under `handoff/`.
+The existing Records download and Log/SSE paths expose them. Use driver Stop to
+abort a supervisor call; individual worker interrupt does not target the
+supervisor. No new polling service or autonomous human-gate override is added.
+
+
 ```bash
 sociotechnic/bin/sociotechnic ui
 ```

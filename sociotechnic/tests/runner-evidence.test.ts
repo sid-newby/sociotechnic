@@ -11,12 +11,13 @@ import { addDispatch, createJob, saveJob } from "../src/job.ts";
 import { createJobOperation } from "../src/job-store.ts";
 import { roleOf } from "../src/roles.ts";
 import { ingestDispatch, prepareDispatch, stagedRecord } from "../src/staging.ts";
+import { fixtureGitHead, seedStagedJobContext } from "./helpers/staged-job-context.ts";
 import { sdkRunner } from "../ui/runner.ts";
 import type { SdkQuery } from "../ui/runner.ts";
 
 const home = mkdtempSync(join(tmpdir(), "sociotechnic-runner-evidence-"));
 const oldHome = process.env.SOCIOTECHNIC_HOME;
-const id = "20261025-runner-evidence", commit = "a".repeat(40);
+const id = "20261025-runner-evidence", commit = fixtureGitHead(home,`sociotechnic/${id}`);
 const role = roleOf("sociotechnic-reviewer-ux");
 const report = `VERDICT: PASS\nCOMMIT: ${commit}\n`;
 const timings = {
@@ -73,6 +74,7 @@ async function runAndPersist(query: SdkQuery, expired = false) {
     entry = { id: dispatch.id, agent: role.name, model: role.model, effort: role.effort,
       record: dispatch.record, deadlineAt: dispatch.deadlineAt, prompt: "Return the assigned fixture review" };
     dispatch.execution = { envelope: entry, launch: "pending" };
+    seedStagedJobContext(job,1,true);
   });
   const token = await acquireDriver(id, { pid: process.pid, startedAt: issuedAt, mode: "step", owner: "ui" });
   try {

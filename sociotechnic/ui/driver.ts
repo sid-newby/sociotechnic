@@ -13,6 +13,9 @@ import { IllegalTransition, SociotechnicError } from "../src/errors.ts";
 import type { Job, Status } from "../src/job.ts";
 import { localDispatchLimit } from "../src/local-capacity.ts";
 import { session } from "../src/record-store.ts";
+import { HandoffValidationError, preflightDriverStep, rejectHandoffs } from "../src/handoff-routing.ts";
+import { askOrchestrator, bindOrchestrator, holdForOrchestrator, OrchestratorReviewError, orchestratorRecord, orchestratorRequest, saveOrchestratorReceipt, validateOrchestratorDecision } from "../src/orchestrator.ts";
+import type { Commitments, OrchestratorBinding, OrchestratorDecision, OrchestratorReceipt, OrchestratorRun } from "../src/orchestrator.ts";
 
 
 import { restoreWorktree } from "../src/db/restore.ts";
@@ -60,7 +63,7 @@ export type DriverRegistry = {
   shutdown: () => Promise<void>;
 };
 
-export type DriverOptions = { runner: () => Runner; emit: (event: DriverEvent) => void; onLog?: (event: LogEvent) => void; owner?: DriverOwner; consoleUrl?: () => string; designQuery?: DesignQuery };
+export type DriverOptions = { runner: () => Runner; emit: (event: DriverEvent) => void; onLog?: (event: LogEvent) => void; owner?: DriverOwner; consoleUrl?: () => string; designQuery?: DesignQuery; orchestrator?: OrchestratorBinding };
 
 const LOG_TAIL = 200;
 const LOG_BYTES = 1024 * 1024;
@@ -145,6 +148,52 @@ export function createDriverRegistry(options: DriverOptions): DriverRegistry {
 
   const lifecycle = (id: string, slot: Slot, event: LifecycleEvent): void => {
     options.emit({ id, event, state: snapshot(slot) });
+  };
+
+  const supervise = async (id: string, slot: Slot, result: StepResult): Promise<{ result: StepResult; groups?: string[][] }> => {
+    const binding = options.orchestrator;
+    if (!binding) return { result };
+    const commitments: Commitments = { scope: "this-driver-process", active: [...slots.values()].flatMap(s => s.state.active.map(a => ({ job: s.id, dispatch: a.dispatchId, agent: a.agent }))), queued: pool.queue.length, limit: localDispatchLimit() };
+    const request = await readJob(id, job => orchestratorRequest(job,result,commitments));
+    if (!request || slot.abort.signal.aborted || slot.pauseRequested) return { result };
+    const record = orchestratorRecord(request);
+    const existing = await mutateJob(id, async job => {
+      (session().commitGuards ??= []).push(() => verifyDriverLease(id,slot.token));
+      bindOrchestrator(job,binding);
+      if (orchestratorRequest(job,result,commitments)?.requestId !== request.requestId) throw new SociotechnicError("stale-job","Orchestrator context changed before review");
+      const prior = session().records.get(record);
+      if (prior) return JSON.parse(prior.text) as OrchestratorReceipt;
+      for (const row of session().records.values()) if (row.path.startsWith("orchestrator/")) {
+        const earlier = JSON.parse(row.text) as OrchestratorReceipt;
+        if (earlier.request.reviewKey === request.reviewKey && earlier.state !== "complete") return {state:"failed",request,error:`Earlier unresolved review ${row.path}; changing capacity does not authorize a second call`} as OrchestratorReceipt;
+      }
+      saveOrchestratorReceipt(job,{ state: "pending", request });
+      return null;
+    });
+    let decision: OrchestratorDecision | undefined = existing?.decision;
+    let execution: OrchestratorRun | undefined = existing?.execution;
+    let failure: string | undefined = existing && existing.state !== "complete" ? "Earlier orchestrator review has no accepted completion; resolve the preserved request before retrying" : undefined;
+    if (existing?.state === "complete" && validateOrchestratorDecision(decision,request).length) failure = "Saved orchestrator response no longer validates against this exact request";
+    if (!existing) {
+      log(slot,"info",`${binding.agent} ${binding.configuration.model}/${binding.configuration.effort} reviewing ${request.phase} (${request.assignments.map(d=>d.id).join(", ")}); request ${record}`);
+      lifecycle(id,slot,"step");
+      try { const reviewed = await askOrchestrator(binding,request,slot.abort.signal,line => { const entry = log(slot,"info",line); options.emit({id,event:"activity",active:slot.state.active,log:[entry]}); }); decision = reviewed.decision; execution = reviewed.execution; }
+      catch (error) { failure = error instanceof Error ? error.message : String(error); if (error instanceof OrchestratorReviewError && error.execution) execution = error.execution; }
+      log(slot,failure ? "warn" : "info",`${binding.agent} ${failure ? `held: ${failure}` : `${decision?.action}; ${decision?.executionGroups.length ?? 0} execution groups`}`);
+    }
+    return mutateJob(id, job => {
+      (session().commitGuards ??= []).push(() => verifyDriverLease(id,slot.token));
+      bindOrchestrator(job,binding);
+      if (orchestratorRequest(job,result,commitments)?.requestId !== request.requestId) {
+        saveOrchestratorReceipt(job,{state:"stale",request,...(decision ? {decision}:{}),...(execution ? {execution}:{}),error:"Response retained without applying it: job context changed during review"});
+        return {result:{job:id,status:job.status,action:"hold" as const,reason:"Orchestrator response retained against stale context; no workers launched"}};
+      }
+      saveOrchestratorReceipt(job,{ state: failure ? "failed" : "complete", request, ...(decision ? { decision } : {}), ...(execution ? { execution } : {}), ...(failure ? { error: failure } : {}) });
+      if (slot.abort.signal.aborted || slot.pauseRequested) return { result: { job: id, status: job.status, action: "hold" as const, reason: "Driver paused during orchestrator review; no workers launched" } };
+      if (failure || !decision) return { result: holdForOrchestrator(job,request,failure ?? "Missing orchestrator decision") };
+      if (decision.action === "escalate") return { result: holdForOrchestrator(job,request,decision.reason,decision) };
+      return { result, groups: request.phase === "assignments" ? decision.executionGroups : undefined };
+    });
   };
 
   const flushActivity = (id: string, dispatchId: string, slot: Slot): void => {
@@ -323,15 +372,24 @@ export function createDriverRegistry(options: DriverOptions): DriverRegistry {
           lifecycle(id, slot, "paused");
           return;
         }
-        const result = await mutateJob(id, (job) => step(job, { hold, signal: slot.abort.signal }));
+        const stepResult = await mutateJob(id, async (job) => {
+          (session().commitGuards ??= []).push(() => verifyDriverLease(id,slot.token));
+          return preflightDriverStep(job, await step(job, { hold, signal: slot.abort.signal }));
+        });
+        const supervised = await supervise(id,slot,stepResult);
+        const result = supervised.result;
         slot.state.lastStep = result;
         if (result.action === "dispatch") for (const entry of result.dispatches) track(slot, entry.id);
         lifecycle(id, slot, "step");
         if (result.action === "dispatch") {
           const job = await readJob(id, (job) => job);
-          const outcomes = await Promise.allSettled(result.dispatches.map((entry) => runOne(id, slot, runner, entry, job)));
-          const failed = outcomes.find((o) => o.status === "rejected");
-          if (failed !== undefined) throw failed.reason;
+          const groups = supervised.groups ?? [result.dispatches.map(entry => entry.id)];
+          for (const group of groups) {
+            if (slot.abort.signal.aborted || slot.pauseRequested) break;
+            const outcomes = await Promise.allSettled(group.map(dispatch => runOne(id,slot,runner,result.dispatches.find(entry => entry.id === dispatch)!,job)));
+            const failed = outcomes.find(o => o.status === "rejected");
+            if (failed !== undefined) throw failed.reason;
+          }
           if (mode === "step") return;
           continue;
         }
@@ -347,7 +405,13 @@ export function createDriverRegistry(options: DriverOptions): DriverRegistry {
           const unlaunchedDispatches = job.dispatches.filter((d) => result.pending.includes(d.id) && d.execution?.launch === "pending");
           if (unlaunchedDispatches.length === result.pending.length) {
             for (const dispatch of unlaunchedDispatches) if (dispatch.execution) track(slot, dispatch.id);
-            for (const dispatch of unlaunchedDispatches) if (dispatch.execution) await runOne(id, slot, runner, dispatch.execution.envelope, job);
+            const groups = supervised.groups ?? unlaunchedDispatches.map(dispatch => [dispatch.id]);
+            for (const group of groups) {
+              if (slot.abort.signal.aborted || slot.pauseRequested) break;
+              const outcomes = await Promise.allSettled(group.map(id => runOne(slot.id,slot,runner,unlaunchedDispatches.find(dispatch => dispatch.id === id)!.execution!.envelope,job)));
+              const failed = outcomes.find(outcome => outcome.status === "rejected");
+              if (failed !== undefined) throw failed.reason;
+            }
             if (mode === "step") return;
             continue;
           }
@@ -370,6 +434,16 @@ export function createDriverRegistry(options: DriverOptions): DriverRegistry {
         return;
       }
     } catch (err) {
+      if (err instanceof HandoffValidationError) {
+        try {
+          slot.state.lastStep = await mutateJob(id, (job) => {
+            (session().commitGuards ??= []).push(() => verifyDriverLease(id,slot.token));
+            return rejectHandoffs(job, [{ entry: err.dispatch, issues: err.issues }]);
+          });
+          slot.state.lastStep = (await supervise(id,slot,slot.state.lastStep)).result;
+          lifecycle(id, slot, "step");
+        } catch (reportError) { log(slot,"error",`Handoff escalation was not committed: ${String(reportError)}`); }
+      }
       const message = err instanceof Error ? err.message : String(err);
       slot.state.error = message;
       log(slot, "error", message);
@@ -397,6 +471,9 @@ export function createDriverRegistry(options: DriverOptions): DriverRegistry {
       if (slot.state.running) throw new SociotechnicError("driver-active", `a driver is already running job ${id}`);
       const startedAt = nowIso();
       const job = await readJob(id, (job) => job);
+      // A binding is opt-in before first dispatch; subsequent starts require the same snapshot.
+      const trial = structuredClone(job);
+      bindOrchestrator(trial,job.orchestrator || !job.dispatches.length ? options.orchestrator : undefined);
       const next=statusLine(job).nextAction;
       if(next === "human" || next === "done")throw new SociotechnicError("illegal-transition", "A driver cannot advance a human gate or finished job");
       slot.token = await acquireDriver(id, { pid: process.pid, startedAt, mode, owner, ...(options.consoleUrl ? { consoleUrl: options.consoleUrl() } : {}) }, () => { slot.abort.abort(); slot.pauseRequested = true; });
@@ -405,6 +482,7 @@ export function createDriverRegistry(options: DriverOptions): DriverRegistry {
         if(action === "human" || action === "done")throw new SociotechnicError("illegal-transition","A driver cannot advance a human gate or finished job");
         if(restoreWorktree(current) === "no-branch")throw new SociotechnicError("no-branch","The job repository or branch is missing");
         if(current.creation)current.creation.state="complete";
+        bindOrchestrator(current,current.orchestrator || !current.dispatches.length ? options.orchestrator : undefined);
       }); }
       catch(error) { await releaseDriver(id,process.pid); throw error; }
       slot.state = { ...emptyState(), running: true, mode, hold: [...hold], startedAt };

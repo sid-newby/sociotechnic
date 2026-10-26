@@ -1,3 +1,4 @@
+import { orchestratorFromEnvironment } from "./orchestrator-runner.ts";
 import { answerDesignQuestion } from "./design-session-runner.ts";
 import { approveInteractiveDesign, enqueueDesignMessage, interactiveFingerprint, artifactFiles } from "../src/design-session.ts";
 import type { DesignQuery } from "./design-session-runner.ts";
@@ -56,7 +57,7 @@ const PING_MS = 15_000;
 const liveOrigin = process.env.NODE_ENV === "development" ? " http://localhost:8400" : "";
 const CSP = `default-src 'self'; script-src 'self' 'unsafe-inline'${liveOrigin}; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'${liveOrigin}`;
 
-export type ServerOptions = { port?: number; host?: string; runner?: () => Runner; designQuery?: DesignQuery; catalogBundles?: readonly CatalogBundle[] };
+export type ServerOptions = { orchestrator?: import("../src/orchestrator.ts").OrchestratorBinding; port?: number; host?: string; runner?: () => Runner; designQuery?: DesignQuery; catalogBundles?: readonly CatalogBundle[] };
 export type ServerHandle = { url: string; port: number; drivers: DriverRegistry; close: () => Promise<void> };
 export type RecordEntry = { path: string; bytes: number; mtime: string };
 
@@ -234,6 +235,7 @@ function serveAsset(res: ServerResponse, path: string, head: boolean): void {
 }
 
 export async function startServer(options: ServerOptions = {}): Promise<ServerHandle> {
+  const orchestrator = options.orchestrator ?? orchestratorFromEnvironment(options.runner ?? runnerFromEnv);
   const store = currentStore();
   if (store) await store.transaction((tx) => applyCatalogBundles(tx, options.catalogBundles ?? readCatalogBundles()));
   const host = options.host ?? "127.0.0.1";
@@ -244,7 +246,7 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
   };
   let port = 0;
   const consoleUrl = () => `http://${host}:${port}/`;
-  const drivers = createDriverRegistry({ runner: options.runner ?? runnerFromEnv, emit: (e: DriverEvent) => broadcast("driver", e), onLog: (e) => broadcast("log", e), owner: "ui", consoleUrl, designQuery: options.designQuery });
+  const drivers = createDriverRegistry({ runner: options.runner ?? runnerFromEnv, emit: (e: DriverEvent) => broadcast("driver", e), onLog: (e) => broadcast("log", e), owner: "ui", consoleUrl, designQuery: options.designQuery, orchestrator });
   const assertSessionOwner = async (id: string, allowInterrupted = false): Promise<void> => {
     const ownership = (await consoleDriverState(drivers, id, consoleUrl())).ownership;
     if (ownership.kind === "external" || (ownership.kind === "interrupted" && !allowInterrupted)) throw new HttpError(409, "driver-active", "Manage this design session in its owning console, or explicitly resume an interrupted session");

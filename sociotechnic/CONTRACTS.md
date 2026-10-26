@@ -2,28 +2,76 @@
 
 ## Dispatch handoff contracts
 
+### Optional supervising orchestrator v1
+
+The explicitly selected local binding is `gpt-6.1-sol` with high effort.
+`SOCIOTECHNIC_ORCHESTRATOR=sol-high-v1` opts the console driver into the prepared
+candidate through the existing provider runner. Reading the candidate does not
+import it into PostgreSQL. The candidate lives outside automatic release bundles;
+its configuration is snapshotted and pinned before a local run's first dispatch.
+It inherits the read-only code-reviewer transport's 60-operation/20-minute caps.
+No existing published release, worker pin or configured budget changes.
+Already-started unbound runs keep their prior policy. Bound runs require the
+same configuration on resume. Sandbox runs are rejected before provider launch:
+v1 does not execute a sandbox run's supervisor on the host.
+
+The supervisor receives proposed assignments, the approved plan when one exists,
+work volume, tier/risk, frozen capability cards and process-local active/queued
+commitments. Time estimates and commitments outside this driver process are
+unknown. Its referenced `schemas/orchestrator-decision.schema.json` response
+chooses ordered groups: groups run serially and independent readers within a
+group may overlap, within existing admission/deadline limits. Shared-worktree
+builders remain single-owner. Alternative decomposition proposals name distinct
+approved stages, owners, deliverables and rationale. They are retained proposals,
+not new dispatches or a stage scheduler. Worker identity, scope, tools, models,
+human approval and independent evidence gates cannot be changed by this response.
+
+The same connection receives engine exceptions, original BLOCKED questions and
+canonical evidence. Continue on an exception only acknowledges it; the human
+hold remains. Escalate records a responsible owner and concrete questions. The
+driver executes these typed decisions; it does not infer authority from prose.
+Native interactive designer sessions retain their existing conversation path.
+
+Requests are persisted before calls. Exact responses, captured usage and failures
+are retained under the driver lease. Stale responses are archived without applying
+them. Abort waits for the existing runner's transport to settle. An interrupted
+or unresolved review is not repurchased because capacity changed; a human
+resolution/override must establish a new decision context. There is no automatic
+supervisor retry loop. Completed decisions are reused only for the exact request
+and binding. Already started siblings settle before exception routing.
+
+### Typed delivery and recipient contracts
+
 Fresh dispatches receive an engine-owned handoff JSON file with identity,
-purposeful role context, exact artifact links, workspace and output identity,
-effective limits and escalation ownership. The schema and example are files,
-not repeated prompt text. Required missing data and unavailable host artifacts
-fail preflight with field paths and evidence before provider launch. A sandbox
-mapping records intended guest paths; host inspection never claims guest
-availability. Historical unversioned dispatches require explicit compatibility
-provenance instead of invented release identities.
+role context, exact artifact links, workspace/output identity, effective limits
+and escalation ownership. Schema and examples are files, not repeated prompt
+text. Missing required data or unavailable host artifacts fail before launch
+with field paths and evidence. Mapping records intended guest paths; host
+inspection never claims guest availability. Historical unversioned dispatches
+require explicit provenance rather than invented release identities.
 
-Planner output uses the staged `contracts/plan.schema.json` reference. The
-existing plan parser remains authoritative for semantic and runtime checks;
-unknown fields and existing validation compatibility remain intact. Schema,
-handoff and other staged inputs are covered by the existing immutable input
-manifest. Already-issued envelopes and immutable published releases are not
-rewritten. A shortened planner profile is an unpublished candidate only.
+Planner output references `contracts/plan.schema.json`; the current plan parser
+remains authoritative for semantic/runtime checks. Opted-in orchestrator v1 runs
+also reference `contracts/recipient-contract.v1.json` for Markdown output.
+Required sections, finding syntax/severity and exact conformance stage coverage
+are checked by code. Each pinned stage appears exactly once; explicitly added
+path rows retain the existing scope/gate policy. Precise contract errors and raw
+outputs survive bounded retries. Legacy/in-flight unbound runs retain their
+existing parser behavior; no record is rewritten into PASS or engine SKIPPED.
 
-Codex receives its actual completed-tool-operation cap and deadline. These are
-the configured limits, not new defaults or a model recommendation. All existing
-ownership, retries, human gates, admission limits and sibling completion waits
-remain. Structured failure context reaches the existing driver/human stop path;
-a model-backed supervisor requires a separately selected runtime binding and
-is not activated by this contract.
+Opted-in inputs contain required role artifacts plus every input frozen from the
+generated brief, including inventory/proof/worker evidence. Their versioned job
+context retains relevant pointer positions and the current profile, rather than
+broadcasting every historical dispatch prompt and agent definition. Full dispatch
+payloads and supervisor receipts remain inspectable canonical records. The
+handoff archive preserves its envelope and manifest hashes; it does not promise
+a durable copy of every staged byte or a readable guest filesystem after cleanup.
+Existing immutable manifests, ownership, digest claims and replay guards apply.
+
+Codex receives its actual completed-operation cap, deadline and bounded tool
+limits. Controller activity reports remaining completed operations; no separate
+model-side live counter or increased cap is claimed. The operator's planner
+rewrite and twenty-release prompt audit remain separately owned and untouched.
 
 ## Interactive design sessions
 

@@ -22,6 +22,11 @@ if (process.env.SOCIOTECHNIC_CODEX_TEST_EFFORT) assert.ok(args.includes(`model_r
 let prompt = "";
 for await (const chunk of process.stdin) prompt += chunk;
 assert.ok(prompt.includes("Return ONLY the complete required record"));
+const budget = /Execution limits: (\d+) completed tool operations total/.exec(prompt);
+assert.ok(budget, "runtime must disclose the actual completed-operation limit");
+assert.ok(prompt.includes("not per tool and not model turns"));
+assert.ok(prompt.includes("final response itself needs no tool call"));
+assert.match(prompt, /Deadline: \d{4}-\d\d-\d\dT/);
 const output = args[args.indexOf("--output-last-message") + 1];
 const mode = process.env.SOCIOTECHNIC_CODEX_TEST_MODE;
 if (mode === "hang") {
@@ -58,6 +63,12 @@ if (mode === "hang") {
   mcp.stdin.end();
   console.log(JSON.stringify({ type: "item.completed", item: { type: "mcp_tool_call", tool: "read_file" } }));
   if (mode === "budget") for (let i = 0; i < 70; i++) console.log(JSON.stringify({ type: "item.completed", item: { type: "web_search" } }));
+  if (mode === "at-budget" || mode === "over-budget") {
+    for (let i = 1; i < Number(budget[1]) + (mode === "over-budget" ? 1 : 0); i++) {
+      console.log(JSON.stringify({ type: "item.started", item: { type: "mcp_tool_call", tool: "read_file" } }));
+      console.log(JSON.stringify({ type: "item.completed", item: { type: "mcp_tool_call", tool: "read_file" } }));
+    }
+  }
   if (mode === "forbidden") console.log(JSON.stringify({ type: "item.completed", item: { type: "command_execution" } }));
   if (builder) {
     const worktree = args[args.indexOf("--cd") + 1];

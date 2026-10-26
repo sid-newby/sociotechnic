@@ -82,7 +82,8 @@ test("Codex subprocess and real MCP write only successful records; bounds kill s
     mkdirSync(join(home, ".claude", "agents"), { recursive: true });
     mkdirSync(join(home, ".sociotechnic", "jobs", "fixture"), { recursive: true });
     const abort = new AbortController();
-    const ctx: RunContext = { inputRoot: root, outputRoot: root, sociotechnicHome: home, repo: root, worktree: root, jobId: "fixture", round: 1, recordPath: join(root, "record.md"), signal: abort.signal, onActivity: () => {}, onWarn: () => {} };
+    const activity:string[]=[], warnings:string[]=[];
+    const ctx: RunContext = { inputRoot: root, outputRoot: root, sociotechnicHome: home, repo: root, worktree: root, jobId: "fixture", round: 1, recordPath: join(root, "record.md"), signal: abort.signal, onActivity: (line) => activity.push(line), onWarn: (line) => warnings.push(line) };
     for (const name of ["sociotechnic-reviewer-code", "sociotechnic-researcher"]) {
       const role = roleOf(name);
       const entry = { id: "d-001", agent: name, model: role.model, effort: "high", record: "record.md", prompt: "Read evidence.txt and write your record.", deadlineAt: new Date(Date.now() + 10_000).toISOString() };
@@ -90,7 +91,14 @@ test("Codex subprocess and real MCP write only successful records; bounds kill s
       assert.equal(result.outcome, "ok", result.note ?? "");
       assert.match(readFileSync(ctx.recordPath, "utf8"), name.endsWith("researcher") ? /^STATUS: DONE/ : /^VERDICT: PASS/);
       rmSync(ctx.recordPath);
-      for (const mode of ["failed", "budget", "forbidden"]) {
+      process.env.SOCIOTECHNIC_CODEX_TEST_MODE = "at-budget";
+      const exact = await codexRunner().run(entry, role, ctx);
+      assert.equal(exact.outcome, "ok", exact.note ?? "");
+      assert.ok(activity.some((line) => line.includes(`tool operations ${role.maxTurns}/${role.maxTurns}, 0 remaining`)));
+      assert.ok(warnings.some((line) => line.includes("1 operation remaining")));
+      assert.ok(warnings.some((line) => line.includes("0 operations remaining")));
+      rmSync(ctx.recordPath);
+      for (const mode of ["failed", "budget", "over-budget", "forbidden"]) {
         process.env.SOCIOTECHNIC_CODEX_TEST_MODE = mode;
         const result = await codexRunner().run(entry, role, ctx);
         assert.equal(result.outcome, "failed", mode);

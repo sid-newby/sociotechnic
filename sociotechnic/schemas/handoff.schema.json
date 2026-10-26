@@ -1,0 +1,525 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Sociotechnic dispatch handoff",
+  "description": "Versioned host-preflight envelope; staged files remain authoritative and the existing engine validates outputs. Guest mapping paths describe intent only. No scheduler or provider is selected by this document.",
+  "$defs": {
+    "reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^/"
+        },
+        "pointer": {
+          "type": "string",
+          "pattern": "^/"
+        }
+      },
+      "required": [
+        "path",
+        "pointer"
+      ]
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "job": {
+          "type": "string",
+          "minLength": 1
+        },
+        "dispatch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "round": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "attempt": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "job",
+        "dispatch",
+        "round",
+        "attempt"
+      ]
+    },
+    "workspace": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "repo": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^/"
+        },
+        "worktree": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^/"
+        },
+        "branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "baseCommit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "head": {
+          "type": "string",
+          "minLength": 1
+        },
+        "execution": {
+          "enum": [
+            "local",
+            "docker-sandbox"
+          ]
+        },
+        "executionSource": {
+          "enum": [
+            "job",
+            "legacy-local"
+          ]
+        },
+        "mappings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "host": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "^/"
+              },
+              "guest": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "^/"
+              }
+            },
+            "required": [
+              "host",
+              "guest"
+            ]
+          }
+        },
+        "guestVerification": {
+          "const": "not-performed"
+        }
+      },
+      "required": [
+        "repo",
+        "worktree",
+        "branch",
+        "baseCommit",
+        "head",
+        "execution",
+        "executionSource",
+        "mappings",
+        "guestVerification"
+      ]
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "objective": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "$ref": "#/$defs/reference"
+        },
+        "context": {
+          "$ref": "#/$defs/reference"
+        },
+        "history": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/reference"
+          }
+        }
+      },
+      "required": [
+        "objective",
+        "source",
+        "context",
+        "history"
+      ]
+    },
+    "recipient": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "agent": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recordKind": {
+          "enum": [
+            "plan",
+            "research",
+            "design",
+            "build",
+            "review",
+            "conformance",
+            "decision"
+          ]
+        },
+        "provider": {
+          "enum": [
+            "claude",
+            "codex"
+          ]
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "effort": {
+          "type": "string",
+          "minLength": 1
+        },
+        "profile": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "mode": {
+                  "const": "pinned"
+                },
+                "version": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "revision": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "source": {
+                  "$ref": "#/$defs/reference"
+                }
+              },
+              "required": [
+                "mode",
+                "version",
+                "revision",
+                "source"
+              ]
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "mode": {
+                  "const": "legacy-unversioned"
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "source": {
+                  "$ref": "#/$defs/reference"
+                }
+              },
+              "required": [
+                "mode",
+                "reason",
+                "source"
+              ]
+            }
+          ]
+        }
+      },
+      "required": [
+        "agent",
+        "role",
+        "recordKind",
+        "provider",
+        "model",
+        "effort",
+        "profile"
+      ]
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tools": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "description": "Configured role tool policy labels. These labels do not claim provider-native tool availability; the launch adapter supplies native tool schemas."
+        },
+        "maxTurns": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "timeoutMinutes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "deadlineAt": {
+          "type": "string",
+          "minLength": 1,
+          "format": "date-time"
+        },
+        "unit": {
+          "enum": [
+            "model-turns",
+            "completed-tool-operations"
+          ]
+        }
+      },
+      "required": [
+        "tools",
+        "maxTurns",
+        "timeoutMinutes",
+        "deadlineAt",
+        "unit"
+      ]
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "record": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^/"
+        },
+        "kind": {
+          "enum": [
+            "plan",
+            "research",
+            "design",
+            "build",
+            "review",
+            "conformance",
+            "decision"
+          ]
+        },
+        "contract": {
+          "const": "engine-record-validator"
+        },
+        "supplementary": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^/"
+          }
+        },
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^/",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "validator": {
+          "description": "Logical engine module/export identity used by parseDispatchRecord. This is not a recipient-readable filesystem path. The record kind selects the existing parser contract; validation stays in the engine.",
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "module": {
+                  "const": "src/plan.ts"
+                },
+                "export": {
+                  "const": "parsePlanText"
+                },
+                "recordKind": {
+                  "enum": [
+                    "plan"
+                  ]
+                }
+              },
+              "required": [
+                "module",
+                "export",
+                "recordKind"
+              ]
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "module": {
+                  "const": "src/design.ts"
+                },
+                "export": {
+                  "const": "designFingerprint"
+                },
+                "recordKind": {
+                  "enum": [
+                    "design"
+                  ]
+                }
+              },
+              "required": [
+                "module",
+                "export",
+                "recordKind"
+              ]
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "module": {
+                  "const": "src/verdict.ts"
+                },
+                "export": {
+                  "const": "parseRecord"
+                },
+                "recordKind": {
+                  "enum": [
+                    "build",
+                    "review",
+                    "conformance",
+                    "research",
+                    "decision"
+                  ]
+                }
+              },
+              "required": [
+                "module",
+                "export",
+                "recordKind"
+              ]
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "module": {
+                  "const": "src/recipient-contract.ts"
+                },
+                "export": {
+                  "const": "validateRecipientOutput"
+                },
+                "recordKind": {
+                  "enum": [
+                    "build",
+                    "review",
+                    "conformance",
+                    "research",
+                    "decision"
+                  ]
+                }
+              },
+              "required": [
+                "module",
+                "export",
+                "recordKind"
+              ]
+            }
+          ]
+        }
+      },
+      "required": [
+        "record",
+        "path",
+        "kind",
+        "contract",
+        "supplementary",
+        "schema",
+        "validator"
+      ]
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "record": {
+            "type": "string",
+            "minLength": 1
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^/"
+          },
+          "purpose": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": [
+          "record",
+          "path",
+          "purpose",
+          "sha256"
+        ]
+      }
+    },
+    "escalation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "action": {
+          "const": "block-before-launch"
+        }
+      },
+      "required": [
+        "owner",
+        "action"
+      ]
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "identity",
+    "workspace",
+    "task",
+    "recipient",
+    "limits",
+    "output",
+    "artifacts",
+    "escalation"
+  ]
+}
