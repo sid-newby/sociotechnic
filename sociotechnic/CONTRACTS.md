@@ -1,5 +1,30 @@
 # Sociotechnic contracts
 
+## Dispatch handoff contracts
+
+Fresh dispatches receive an engine-owned handoff JSON file with identity,
+purposeful role context, exact artifact links, workspace and output identity,
+effective limits and escalation ownership. The schema and example are files,
+not repeated prompt text. Required missing data and unavailable host artifacts
+fail preflight with field paths and evidence before provider launch. A sandbox
+mapping records intended guest paths; host inspection never claims guest
+availability. Historical unversioned dispatches require explicit compatibility
+provenance instead of invented release identities.
+
+Planner output uses the staged `contracts/plan.schema.json` reference. The
+existing plan parser remains authoritative for semantic and runtime checks;
+unknown fields and existing validation compatibility remain intact. Schema,
+handoff and other staged inputs are covered by the existing immutable input
+manifest. Already-issued envelopes and immutable published releases are not
+rewritten. A shortened planner profile is an unpublished candidate only.
+
+Codex receives its actual completed-tool-operation cap and deadline. These are
+the configured limits, not new defaults or a model recommendation. All existing
+ownership, retries, human gates, admission limits and sibling completion waits
+remain. Structured failure context reaches the existing driver/human stop path;
+a model-backed supervisor requires a separately selected runtime binding and
+is not activated by this contract.
+
 ## Interactive design sessions
 
 New design work uses one resumable local Claude session and the installed
