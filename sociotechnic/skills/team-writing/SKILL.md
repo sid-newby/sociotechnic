@@ -9,7 +9,7 @@ Write so the reader understands on the first read. Use this standard when drafti
 
 The assigned role, task, record schema, permissions, and human gates take precedence. Preserve facts, quantities, negation, uncertainty, evidence, and unresolved work. Keep code, commands, identifiers, hashes, URLs, verbatim quotations, required headings, field names, status values, and delimiters exact. Edit a record's free-text fields only when their meaning stays intact.
 
-Use the real names from the code and name who does what. Prefer everyday words. Remove filler, unsupported attribution, promotional claims, abstract metaphors, and repeated conclusions. Keep articles, necessary qualifications, and natural sentence rhythm. Choose clarity over a word ban or punctuation rule.
+Use the actual names from the source material or code, and name who does what. Prefer everyday words. Remove filler, unsupported attribution, promotional claims, abstract metaphors, and repeated conclusions. Keep articles, necessary qualifications, and natural sentence rhythm. Choose clarity over a word ban or punctuation rule.
 
 For a substantial prose revision, read [Unslop](references/unslop.md). For documentation, instructions, proposals, PR descriptions, or commit messages, also read [Technical writing](references/technical-writing.md). Use the relevant document mode; short replies and fixed records do not need a new outline.
 
