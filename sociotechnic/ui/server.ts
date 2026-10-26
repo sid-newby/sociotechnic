@@ -1,4 +1,7 @@
 import { orchestratorFromEnvironment } from "./orchestrator-runner.ts";
+import { loadWorkflow } from "../src/workflow.ts";
+import { answerWorkflow, initializeWorkflow } from "../src/workflow-runtime.ts";
+import { workflowLeadRunner, workflowLeadProfile } from "./workflow-lead-runner.ts";
 import { answerDesignQuestion } from "./design-session-runner.ts";
 import { approveInteractiveDesign, enqueueDesignMessage, interactiveFingerprint, artifactFiles } from "../src/design-session.ts";
 import type { DesignQuery } from "./design-session-runner.ts";
@@ -85,7 +88,7 @@ function sendJson(res: ServerResponse, status: number, value: unknown): void {
 function statusFor(err: unknown): { status: number; code: string; message: string } {
   if (err instanceof HttpError) return { status: err.status, code: err.code, message: err.message };
   if (err instanceof SociotechnicError) {
-    const status = ["illegal-transition", "driver-active", "locked", "stale-design", "stale-agent-version", "stale-sandbox-settings", "stale-job", "ownership-lost", "sandbox-interrupt", "dispatch-starting", "driver-stopped", "stale-local-capacity", "local-capacity-managed"].includes(err.code) ? 409 : err.code === "not-found" ? 404 : ["db", "db-unreachable", "db-disabled", "migration-required"].includes(err.code) ? 503 : 400;
+    const status = ["illegal-transition", "driver-active", "locked", "stale-design", "stale-agent-version", "stale-sandbox-settings", "stale-job", "workflow-stale", "ownership-lost", "sandbox-interrupt", "dispatch-starting", "driver-stopped", "stale-local-capacity", "local-capacity-managed"].includes(err.code) ? 409 : err.code === "not-found" ? 404 : ["db", "db-unreachable", "db-disabled", "migration-required"].includes(err.code) ? 503 : 400;
     return { status, code: err.code, message: err.message };
   }
   return { status: 500, code: "internal", message: err instanceof Error ? err.message : String(err) };
@@ -247,7 +250,7 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
   };
   let port = 0;
   const consoleUrl = () => `http://${host}:${port}/`;
-  const drivers = createDriverRegistry({ runner: options.runner ?? runnerFromEnv, emit: (e: DriverEvent) => broadcast("driver", e), onLog: (e) => broadcast("log", e), owner: "ui", consoleUrl, designQuery: options.designQuery, orchestrator });
+  const drivers = createDriverRegistry({ runner: options.runner ?? runnerFromEnv, emit: (e: DriverEvent) => broadcast("driver", e), onLog: (e) => broadcast("log", e), owner: "ui", consoleUrl, designQuery: options.designQuery, orchestrator, workflowLead: workflowLeadRunner(options.runner ?? runnerFromEnv) });
   const assertSessionOwner = async (id: string, allowInterrupted = false): Promise<void> => {
     const ownership = (await consoleDriverState(drivers, id, consoleUrl())).ownership;
     if (ownership.kind === "external" || (ownership.kind === "interrupted" && !allowInterrupted)) throw new HttpError(409, "driver-active", "Manage this design session in its owning console, or explicitly resume an interrupted session");
@@ -396,7 +399,8 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
         const base = str(body, "base", false);
         const execution = parseExecution(body.execution);
         const consoleHolds = body.consoleHolds === undefined ? undefined : parseConsoleHolds(body.consoleHolds);
-        if (body.workflow !== undefined && body.workflow !== "comments" && body.workflow !== "design") throw new HttpError(400, "bad-input", "workflow must be comments or design when provided");
+        if (body.workflow !== undefined && body.workflow !== "comments" && body.workflow !== "design" && body.workflow !== "orchestrated") throw new HttpError(400, "bad-input", "workflow must be comments, design or orchestrated when provided");
+        if (body.workflow === "orchestrated" && execution.kind !== "local") throw new HttpError(400, "bad-input", "Orchestrated workflows require local execution");
         if (body.scope !== undefined && body.workflow !== "comments") throw new HttpError(400, "bad-input", "scope requires the comments workflow");
         if (body.initialize !== undefined && typeof body.initialize !== "boolean") throw new HttpError(400, "bad-input", "initialize must be a boolean");
         const githubRepository = body.githubRepository === undefined ? null : githubRepositoryName(body.githubRepository);
@@ -423,10 +427,12 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
         }
         const pinned = await pinAgentVersions(overrides, undefined, assignments);
         if (body.workflow === "design" && !interactiveDesigner(pinned.configurations["sociotechnic-designer"])) throw new HttpError(400, "bad-design", "Select the interactive designer release for a new design conversation");
+        const workflow = body.workflow === "orchestrated" ? { definition: loadWorkflow(), profile: workflowLeadProfile() } : null;
         if (body.initialize === true) prepareRepository(repoPath, baseBranch);
         if (githubRepository !== null) publishRepository(repoPath, baseBranch, githubRepository);
         return createJobOperation(async () => {
         const out = body.workflow === "comments" ? await engine.newCommentJob(repoPath, feature, baseBranch, body.scope, undefined, pinned, execution) : body.workflow === "design" ? await engine.newDesignJob(repoPath, feature, baseBranch, pinned, execution) : await engine.newJob(repoPath, feature, baseBranch, undefined, undefined, pinned, execution);
+        if (workflow) initializeWorkflow(loadJob(out.job), workflow.definition, workflow.profile);
         if (consoleHolds !== undefined) loadJob(out.job).consoleHolds = consoleHolds;
         return out;
         });
@@ -461,6 +467,22 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
         const id = jobIdParam(params[0]);
         const note = str(body, "note", true) ?? "";
         return mutateJob(id, (job) => engine.rework(job, note));
+      },
+    },
+    {
+      method: "POST",
+      pattern: /^\/api\/jobs\/([^/]+)\/workflow-answer$/,
+      handler: ({ params, body }) => {
+        const id = jobIdParam(params[0]);
+        const requestId = str(body, "requestId", true) ?? "";
+        const answer = str(body, "answer", true) ?? "";
+        return mutateJob(id, async (job) => {
+          if (drivers.isRunning(id)) throw new HttpError(409, "driver-active", "Wait for the workflow lead to stop before answering");
+          await assertNoForeignDriver(id, process.pid);
+          session().commitGuards = [() => assertNoForeignDriver(id, process.pid)];
+          answerWorkflow(job, requestId, answer, new Date().toISOString());
+          return { job: job.id };
+        });
       },
     },
     {

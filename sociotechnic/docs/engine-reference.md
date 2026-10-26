@@ -917,3 +917,15 @@ conformance stage occurs exactly once; malformed finding lines are rejected.
 Supervisor decisions cannot manufacture PASS/SKIPPED or resolve human questions.
 See the dispatch handoff section in [CONTRACTS](../CONTRACTS.md) for activation,
 request receipts, stale/cancelled reviews and the local-only execution boundary.
+
+### Executable default workflow
+
+Opted-in local workflow runs add a versioned lead phase before planning, an
+eligible immutable resource assignment after plan pinning, a mandatory human
+plan/assignment hold, and a final intent review after technical approval. The
+engine refuses direct step/accept/merge bypasses. Baseline role pins remain;
+selected eligible configurations are separately frozen per used slot and linked
+per dispatch. Checks, repair rounds, independent reviews, commit/digest binding
+and human acceptance retain their existing authority. See
+[workflow YAML](workflow-yaml.md) for the deliberately limited topology and
+[the phase contract](../schemas/workflow-lead.schema.json) for delivery shapes.

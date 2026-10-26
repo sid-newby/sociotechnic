@@ -50,11 +50,11 @@ export async function prepareDispatch(id: string, envelope: DispatchOut, token: 
   await readJob(id,(job)=>{
     const pending = job.dispatches.find((d)=>d.id===envelope.id);
     if (!pending || pending.finishedAt || pending.execution?.launch !== "pending") throw new SociotechnicError("dispatch-claimed", "Dispatch has already been claimed or finished");
-    const contracts = ["contracts/handoff.schema.json", "contracts/handoff.example.json", ...(envelope.record === "plan.json" ? [PLAN_CONTRACT_RECORD] : job.orchestrator?.contractVersion === 1 ? [`contracts/${RECIPIENT_CONTRACT_FILE}`] : [])];
+    const contracts = ["contracts/handoff.schema.json", "contracts/handoff.example.json", ...(envelope.record === "plan.json" ? [PLAN_CONTRACT_RECORD] : (job.orchestrator?.contractVersion === 1 || !!job.workflow) ? [`contracts/${RECIPIENT_CONTRACT_FILE}`] : [])];
     for (const path of [...contracts, HANDOFF_RECORD]) if (session().records.has(path)) throw new HandoffValidationError(envelope, [{ field: `artifacts.${path}`, code: "reserved-input", message: "Canonical record conflicts with an engine-owned contract path", owner: "driver" }]);
     mkdirSync(inputs,{recursive:true}); mkdirSync(outputs,{recursive:true});
     mkdirSync(dirname(join(outputs,envelope.record)),{recursive:true});
-    const selected = job.orchestrator?.contractVersion === 1 ? handoffInputRecords(handoffInput(job,envelope,session().records)) : null;
+    const selected = (job.orchestrator?.contractVersion === 1 || !!job.workflow) ? handoffInputRecords(handoffInput(job,envelope,session().records)) : null;
     if (selected?.issues.length) throw new HandoffValidationError(envelope,selected.issues);
     for(const [path,row] of session().records) { if(path.startsWith("migration/") || path.startsWith("handoff/archive/") || path.startsWith("orchestrator/") || (selected && !selected.records.includes(path))) continue; const bytes=recordBytes(row); put(inputs,path,bytes); manifest[path]=hash(bytes); }
     const bytes=Buffer.from(JSON.stringify(handoffJobSnapshot(job,envelope),null,2)+"\n");put(inputs,"job.json",bytes);manifest["job.json"]=hash(bytes);

@@ -15,6 +15,7 @@ import { jobDir } from "./paths.ts";
 import type { Lens, Tier } from "./roles.ts";
 import { addMinutes, isPast } from "./time.ts";
 import type { Parsed } from "./verdict.ts";
+import type { WorkflowRun } from "./workflow-runtime.ts";
 
 export const STATUSES = [
   "new",
@@ -41,7 +42,7 @@ export type Status = (typeof STATUSES)[number];
 export type Step = "plan" | "research" | "design" | "build" | "review" | "approve";
 export type Bound = keyof Caps;
 export type Outcome = "ok" | "failed" | "timeout" | "interrupted";
-export type HumanAction = "accept" | "rework" | "stop" | "override" | "merge" | "merge-remote" | "reopen" | "pr-push" | "interrupt" | "design-answer" | "design-select" | "design-revise" | "design-approve" | "design-migrate" | "design-handoff" | "plan-answer";
+export type HumanAction = "accept" | "rework" | "stop" | "override" | "merge" | "merge-remote" | "reopen" | "pr-push" | "interrupt" | "design-answer" | "design-select" | "design-revise" | "design-approve" | "design-migrate" | "design-handoff" | "plan-answer" | "workflow-answer" | "workflow-approve";
 
 export const BOUNDS: readonly Bound[] = ["rounds", "dispatchesPerRound", "retriesPerStep"];
 export const HUMAN_REVIEW_KEY = "review-human";
@@ -98,6 +99,7 @@ export type Dispatch = {
 };
 
 export type Job = {
+  workflow?: WorkflowRun;
   orchestrator?: import("./orchestrator.ts").OrchestratorProfile;
   planningInput?: PlanningInput;
   consoleHolds?: ConsoleHold[];
@@ -146,7 +148,7 @@ const TERMINAL: readonly Status[] = ["merged", "stopped"];
 export const HUMAN_GATES: readonly Status[] = ["ready", "needs-human", "merged-local"];
 
 export const TRANSITIONS: Readonly<Record<Status, readonly Status[]>> = {
-  new: ["planning", "designing", "stopped"],
+  new: ["planning", "designing", "needs-human", "stopped"],
   designing: ["design-input", "needs-human", "stopped"],
   "design-input": ["designing", "planning", "stopped"],
   planning: ["planning-input", "designing", "researching", "planned", "needs-human", "stopped"],
@@ -159,8 +161,8 @@ export const TRANSITIONS: Readonly<Record<Status, readonly Status[]>> = {
   reviewing: ["reviewed", "needs-human", "stopped"],
   reviewed: ["approving", "building", "needs-human", "stopped"],
   approving: ["ready", "needs-human", "stopped"],
-  ready: ["merged-local", "accepted", "building", "stopped"],
-  "needs-human": ["merged-local", "accepted", "building", "stopped", ...PARKABLE],
+  ready: ["needs-human", "merged-local", "accepted", "building", "stopped"],
+  "needs-human": ["ready", "new", "merged-local", "accepted", "building", "stopped", ...PARKABLE],
   "merged-local": ["accepted", "building", "stopped"],
   accepted: ["merged", "stopped"],
   merged: [],

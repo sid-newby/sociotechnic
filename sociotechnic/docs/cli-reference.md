@@ -978,3 +978,14 @@ A differing existing origin, visibility or remote base is refused, never replace
 Recovery preflight reads the explicit GitHub identity/visibility, every resolved origin push URL and the remote base before reserving an external publication operation. Side-effect-free refusals do not fence ordinary run actions. Partial creation with no origin reuses only the exact approved existing repository and visibility, using GitHub CLI’s configured Git protocol. Both base and work-branch pushes reject a mismatching push destination. An uncertain actual publication still retains its normal reconciliation fence.
 
 An existing origin with no remote base returns `github-base-missing` before pushing work. The same confirmation form reopens after a dialog close/reload; a failed base push therefore cannot skip bootstrap on retry. This known side-effect-free refusal clears the PR operation fence.
+
+### Executable YAML workflow opt-in
+
+New run's **Orchestrated workflow** corresponds to `POST /api/jobs` with
+`workflow: "orchestrated"` and local execution. The server snapshots the default
+YAML and selected Sol/high lead; existing runs keep their pins and routing.
+`POST /api/jobs/:id/workflow-answer` accepts `{requestId, answer}` for exactly
+one pending lead question; stale/duplicate answers return409. It does not approve
+an execution plan. Continue at the plan hold separately records approval of the
+pinned plan and assignment. See [workflow YAML](workflow-yaml.md) for actual
+supported execution, evidence records and limits.

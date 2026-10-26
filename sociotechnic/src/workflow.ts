@@ -23,7 +23,7 @@ const AGENTS = ["lead", "selected.planner", "selected.builder", "selected.review
 const MECHANICAL = ["canonical-checks", "commit-and-evidence-gate"];
 const HUMAN = ["approve-plan-and-assignment", "accept-result"];
 const CONTRACTS = new Set([
-  "engine:job-intent@1", "engine:orchestrator-request@1", "engine:orchestrator-decision@1", "engine:human-approval@1",
+  "engine:job-intent@1", "engine:project-brief@1", "engine:execution-assignment@1", "engine:intent-review@1", "engine:human-approval@1",
   "sociotechnic/schemas/plan.schema.json#/$defs/plan", "sociotechnic/schemas/recipient-contract.v1.json#/$defs/build",
   "sociotechnic/schemas/recipient-contract.v1.json#/$defs/decision", "engine:checks-report@1", "engine:review-bundle@1", "engine:quality-gate@1",
 ]);
@@ -151,14 +151,14 @@ export function parseWorkflowYaml(source: string): WorkflowDefinition {
   }
   const workflow = value as unknown as WorkflowDefinition;
   const requirements: Record<string, { in: Record<string, string>; out: Record<string, string> }> = {
-    "selected.planner": { in: { brief: "engine:orchestrator-request@1" }, out: { plan: "sociotechnic/schemas/plan.schema.json#/$defs/plan" } },
-    "selected.builder": { in: { plan: "sociotechnic/schemas/plan.schema.json#/$defs/plan", assignment: "engine:orchestrator-decision@1", approval: "engine:human-approval@1" }, out: { build: "sociotechnic/schemas/recipient-contract.v1.json#/$defs/build" } },
+    "selected.planner": { in: { brief: "engine:project-brief@1" }, out: { plan: "sociotechnic/schemas/plan.schema.json#/$defs/plan" } },
+    "selected.builder": { in: { plan: "sociotechnic/schemas/plan.schema.json#/$defs/plan", assignment: "engine:execution-assignment@1", approval: "engine:human-approval@1" }, out: { build: "sociotechnic/schemas/recipient-contract.v1.json#/$defs/build" } },
     "canonical-checks": { in: { build: "sociotechnic/schemas/recipient-contract.v1.json#/$defs/build" }, out: { checks: "engine:checks-report@1" } },
     "selected.reviewers": { in: { plan: "sociotechnic/schemas/plan.schema.json#/$defs/plan", build: "sociotechnic/schemas/recipient-contract.v1.json#/$defs/build", checks: "engine:checks-report@1" }, out: { reviews: "engine:review-bundle@1" } },
     "commit-and-evidence-gate": { in: { build: "sociotechnic/schemas/recipient-contract.v1.json#/$defs/build", checks: "engine:checks-report@1", reviews: "engine:review-bundle@1" }, out: { gate: "engine:quality-gate@1" } },
     "selected.approver": { in: { gate: "engine:quality-gate@1" }, out: { decision: "sociotechnic/schemas/recipient-contract.v1.json#/$defs/decision" } },
-    "approve-plan-and-assignment": { in: { plan: "sociotechnic/schemas/plan.schema.json#/$defs/plan", assignment: "engine:orchestrator-decision@1" }, out: { approval: "engine:human-approval@1" } },
-    "accept-result": { in: { "intent-review": "engine:orchestrator-decision@1" }, out: { approval: "engine:human-approval@1" } },
+    "approve-plan-and-assignment": { in: { plan: "sociotechnic/schemas/plan.schema.json#/$defs/plan", assignment: "engine:execution-assignment@1" }, out: { approval: "engine:human-approval@1" } },
+    "accept-result": { in: { "intent-review": "engine:intent-review@1" }, out: { approval: "engine:human-approval@1" } },
   };
   for (const [name, node] of Object.entries(workflow.nodes)) {
     const expected = requirements[node.agent ?? node.mechanical ?? node.human];

@@ -2,6 +2,38 @@
 
 ## Dispatch handoff contracts
 
+### Opt-in executable workflow default
+
+A new Local run may bind a parsed YAML workflow. The engine snapshots its
+validated definition, digest and compact lead guide; later edits never reinterpret
+that run. The first executable topology is the default intake/planning/assignment/
+approval/build/check/review/gate/technical-approval/intent-review/acceptance chain.
+Unsupported owners, routes or topology fail explicitly before agent work. This
+does not execute arbitrary graphs or independent builder stages.
+
+Sol/high leads client clarification and supplies a factual brief to the selected
+planner. It then selects compatible resources and reader concurrency from the
+returned plan, before the existing human plan/assignment approval. Selections
+resolve against the frozen allowed catalog, actual immutable versions and explicit
+assignment locks. Existing baseline pins and completed dispatch configurations
+are never rewritten; selected dispatches retain their own verified release links.
+The planner owns executable task design; the lead does not duplicate that work.
+
+Missing decisions produce a recorded question and human hold, not guessed fields.
+Answers bind to the exact pending request; stale/duplicate answers cannot advance.
+Lead calls, raw replies, actual usage and errors are retained under the driver lease.
+Unknown launches require reconciliation; provider/format retries and repair rounds
+use existing bounds. No model call runs while holding the job-operation lock.
+
+Node ceilings constrain independent readers inside existing admission/deadline
+limits; one builder owns the worktree. Failed deterministic checks route through
+existing bounded repair before reviews. All applicable independent reviews,
+commit/digest evidence and human gates remain mandatory. The lead also compares
+the returned work with original intent before final acceptance. It receives concise
+canonical evidence and pulls details as needed; no tool-transcript broadcast or
+context-rollover machinery is added. Restore/reset requests remain proposals,
+with existing preservation and explicit destructive-action approval constraints.
+
 ### Optional supervising orchestrator v1
 
 The explicitly selected local binding is `gpt-6.1-sol` with high effort.

@@ -70,9 +70,13 @@ schemas. The `engine:...` identifiers are closed, versioned adapter references;
 the runtime must bind them to actual typed job/orchestrator/approval/check/review/
 gate records and validate those artifacts before advancing. The loader verifies
 reference/link compatibility, not the contents or freshness of a future record.
-In particular, `engine:orchestrator-request@1` is the existing request/context
-shape; `engine:orchestrator-decision@1` is the existing supervised decision shape,
-not a new free-form project brief or new permission to change assignments.
+`engine:project-brief@1` is the validated intake brief retained as Markdown;
+`engine:execution-assignment@1` is the validated selection/concurrency reply plus
+its plan/configuration digest; `engine:intent-review@1` is the retained intent
+verdict. Phase response shapes and examples are in
+[workflow-lead.schema.json](../schemas/workflow-lead.schema.json), with exact
+required slots, release eligibility and limits checked by the runtime. These
+are separate from the older reader-wave supervisor decision contract.
 
 The default's two human gates must use real recorded decisions bound to the
 current inputs/commit. Existing record parsers, recipient validation, canonical
@@ -101,3 +105,40 @@ field-path failure without freezing an experimental schema in a new unit-test
 matrix. The runtime integration owner owns the combined final checks. No live
 catalog import, database operation, provider call or agent launch is needed to
 load/validate this definition.
+
+## Opt in and inspect the run
+
+Choose **Orchestrated workflow** in New run (local execution), or create with
+`POST /api/jobs` and `workflow: "orchestrated"`. Creation snapshots the definition
+and the unpublished workflow-lead 1.1.0 candidate on GPT-6.1 Sol/high; it does not
+import any catalog release. Merely starting the server does not activate it.
+The old `SOCIOTECHNIC_ORCHESTRATOR=sol-high-v1` reader-wave opt-in is separate;
+workflow runs use their pinned phase runner instead of purchasing both leads.
+
+The first drive performs intake, planning and assignment, then stops for human
+plan/assignment approval even if no optional holds were requested. Continue
+records approval bound to both digests before the builder can start. Lead
+questions use `POST /api/jobs/:id/workflow-answer` with the exact pending
+`requestId` and a nonempty `answer` up to16000 characters. Stale/duplicate replies
+return409. Intake/assignment/intent answers resume that phase; execution-exception
+answers remain held for explicit existing rework/override decisions.
+
+Inspect `workflow/definition.json`, `workflow/guide.md`,
+`workflow/project-brief.md`, `workflow/execution-assignment.json`,
+`workflow/plan-approval.json` and `workflow/calls/w-N.json`. Call receipts retain
+requests, raw replies, provider usage, outcomes, timestamps and field errors.
+An uncertain started receipt is fenced from automatic replay. Lead calls share
+the existing per-round dispatch budget and retry bound; queue time counts against
+the configured deadline. Lead usage is retained in these receipts; the legacy
+worker-dispatch usage summary does not yet aggregate it.
+
+Only the default eleven-stage responsibility sequence and its concrete ports
+execute. Node IDs/contract aliases and reviewer ceilings may vary within that
+sequence; unsupported routes/ports fail before dispatch. Review ceilings are
+work-conserving and still subject to installation admission. Pause awaits launched
+siblings and leaves later readers pending. Planner research/design escapes retain
+their existing internal contracts and approval gates. One builder still receives
+the whole plan; this version does not split writable stages, choose arbitrary
+workflow templates, support sandbox leads or execute arbitrary DAGs. The lead
+can report an intent mismatch or ask about blocked work; it cannot automatically
+waive a gate, spawn a remediation framework or reset a worktree.

@@ -39,6 +39,12 @@ driver still launches exactly the named workers and preserves gates. It cannot
 create workers from decomposition proposals or move sandbox execution onto the
 host. See [CONTRACTS](CONTRACTS.md#optional-supervising-orchestrator-v1).
 
+Explicit local orchestrated runs use the [executable YAML default](docs/workflow-yaml.md):
+the lead clarifies intent, selects eligible planner/resources and reader ceilings,
+and checks final intent. The driver persists phase receipts and enforces mandatory
+human plan/assignment approval, the existing technical gates and final acceptance.
+This opt-in does not change existing runs, grant permissions or split builder writes.
+
 ## From prompt to plan
 
 ### Team awareness and help

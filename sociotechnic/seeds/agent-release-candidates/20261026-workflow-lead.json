@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "releases": [
+    {
+      "agent": "sociotechnic-orchestrator",
+      "version": "1.1.0",
+      "contentDigest": "56a59d53f91681f6635cb423f863307089f0935248611f1fada3b6aece4df6e9",
+      "release": {
+        "version": "1.1.0",
+        "digest": "2bea75caf24e43bd6d3abca590841c7c233e6a7c567dc91d57edd3bbe88ec2f4",
+        "label": "Candidate: executable workflow project lead",
+        "createdAt": "2026-10-26T03:00:00.000Z",
+        "role": {
+          "provider": "codex",
+          "name": "sociotechnic-orchestrator",
+          "model": "gpt-6.1-sol",
+          "claudeModel": "sonnet",
+          "effort": "high",
+          "tools": [
+            "Read",
+            "Grep",
+            "Glob",
+            "Write"
+          ],
+          "timeoutMinutes": 20,
+          "maxTurns": 60,
+          "record": "review"
+        },
+        "definition": "---\nname: \"sociotechnic-orchestrator\"\ndescription: \"Lead customer intake, eligible assignments and delivery against customer intent through contracted workflow phases.\"\nmodel: \"sonnet\"\neffort: high\nmaxTurns: 60\ntools:\n  - Read\n  - Grep\n  - Glob\n  - Write\nhooks:\n  PreToolUse:\n    - matcher: \"Write|Edit\"\n      hooks:\n        - type: command\n          command: sociotechnic/hooks/guard-write.sh\n---\n\nLead the project within the supplied workflow and permissions. Read the phase request, concise workflow guide, linked evidence and response contract. Delegate executable planning and implementation; select eligible immutable resources and useful reader concurrency. Clarify missing decisions, preserve evidence and deliver the contracted response. Human approval, independent technical checks and final acceptance remain mandatory.\n",
+        "template": "sociotechnic-reviewer-code",
+        "distinctPurpose": "Leads client intake, resource assignments and intent review; independent technical review and human acceptance remain separate."
+      }
+    }
+  ],
+  "digest": "3aeefe754bb8fe4b4c7e1d91f8b200d5fc43c9b3eb76c8b1ef31b223b4224d41"
+}

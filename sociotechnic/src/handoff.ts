@@ -87,7 +87,7 @@ export function handoffInputRecords(input: HandoffInput): { records: string[]; i
 }
 
 export function handoffJobSnapshot(job: Job, dispatch: DispatchOut): unknown {
-  if (job.orchestrator?.contractVersion !== 1) return job;
+  if (job.orchestrator?.contractVersion !== 1 && !job.workflow) return job;
   const kind = roleOf(dispatch.configuration?.baseRole ?? dispatch.agent).record;
   const current = job.dispatches.find(d => d.id === dispatch.id)!;
   return {
@@ -203,7 +203,7 @@ function buildHandoff(input: HandoffInput, phase: "canonical" | "staged"): Hando
   // Match the generated brief's actual references as well as role defaults. This
   // preserves scoped inventory/proof/worker inputs without broadcasting history.
   for (const record of records.keys()) if (!record.startsWith("migration/") && !record.startsWith("handoff/archive/") && !record.startsWith("orchestrator/") && dispatch.prompt.includes(join(jobDir(job.id),record))) add(record,"Input explicitly referenced by the generated recipient brief");
-  if (job.orchestrator?.contractVersion === 1 && saved && saved.attempt > 1) {
+  if ((job.orchestrator?.contractVersion === 1 || !!job.workflow) && saved && saved.attempt > 1) {
     const previous = job.dispatches.filter(d => d.record === dispatch.record && d.attempt === saved.attempt - 1 && d.id !== saved.id).at(-1);
     const retained = `${dispatch.record}.superseded-by-${dispatch.id}`;
     if (records.has(retained)) add(retained,"Retained previous attempt output; repair only the rejected contract/evidence");
@@ -282,7 +282,7 @@ function buildHandoff(input: HandoffInput, phase: "canonical" | "staged"): Hando
     task: { objective: input.objective ?? objectives[kind], source: ref("/feature"), context: ref(context), history },
     recipient: { agent: dispatch.agent, role: config?.baseRole ?? role.name, recordKind: kind, provider: role.provider, model: dispatch.model, effort: dispatch.effort, profile },
     limits: { tools: [...role.tools], maxTurns: role.maxTurns, unit: role.provider === "codex" ? "completed-tool-operations" : "model-turns", timeoutMinutes: role.timeoutMinutes, deadlineAt: dispatch.deadlineAt },
-    output: { record: dispatch.record, path: join(input.outputRoot, dispatch.record), kind, contract: "engine-record-validator", validator: job.orchestrator?.contractVersion === 1 && kind !== "plan" && kind !== "design" ? { module: "src/recipient-contract.ts", export: "validateRecipientOutput", recordKind: kind } : outputValidator(kind), schema: kind === "plan" ? join(input.inputRoot, PLAN_CONTRACT_RECORD) : job.orchestrator?.contractVersion === 1 && kind !== "design" ? join(input.inputRoot,"contracts",RECIPIENT_CONTRACT_FILE) : null, supplementary: kind === "plan" ? [join(input.outputRoot, "plan.md")] : kind === "decision" ? [join(input.outputRoot, "pr-notes.md")] : [] },
+    output: { record: dispatch.record, path: join(input.outputRoot, dispatch.record), kind, contract: "engine-record-validator", validator: (job.orchestrator?.contractVersion === 1 || !!job.workflow) && kind !== "plan" && kind !== "design" ? { module: "src/recipient-contract.ts", export: "validateRecipientOutput", recordKind: kind } : outputValidator(kind), schema: kind === "plan" ? join(input.inputRoot, PLAN_CONTRACT_RECORD) : (job.orchestrator?.contractVersion === 1 || !!job.workflow) && kind !== "design" ? join(input.inputRoot,"contracts",RECIPIENT_CONTRACT_FILE) : null, supplementary: kind === "plan" ? [join(input.outputRoot, "plan.md")] : kind === "decision" ? [join(input.outputRoot, "pr-notes.md")] : [] },
     artifacts,
     escalation: { owner: input.escalationOwner, action: "block-before-launch" },
   } };

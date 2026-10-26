@@ -33,11 +33,12 @@ export type Round = {
 };
 export type DesignView = { state: "generating"; phase: string; iteration: number } | { state: "waiting" | "approved"; packet: DesignPacket; digest: string; iteration: number; optionId: string; stack: string };
 export type InteractiveDesignView = { id: string; state: string; needsMigration: boolean; streamingText: string; messages: DesignMessage[]; question: DesignQuestion | null; previewUrl: string | null; error: string | null; fingerprint: string; files: string[]; skillVersion: string | null; usage: { turns: number; tokens: number; reported: boolean } };
+export type WorkflowQuestionView = { requestId: string; phase: string; questions: string[]; resumeStatus: Status };
 export type Detail = {
   interactive: InteractiveDesignView | null;
   design: DesignView | null;
   worktreePresent: boolean;
-  job: Pick<Job, "id" | "feature" | "repo" | "worktree" | "branch" | "status" | "statusReason" | "round" | "base" | "updatedAt" | "caps" | "execution" | "consoleHolds" | "planningInput">;
+  job: Pick<Job, "id" | "feature" | "repo" | "worktree" | "branch" | "status" | "statusReason" | "round" | "base" | "updatedAt" | "caps" | "execution" | "consoleHolds" | "planningInput"> & { workflow?: { pending: WorkflowQuestionView | null } };
   rounds: Round[];
   records: { path: string; bytes: number; mtime: string }[];
   plan: { title: string; summary: string; tier: string | null; tierReason: string; acceptance: string[]; stages?: Stage[] } | null;
@@ -130,6 +131,19 @@ function parsePlanningInput(value: unknown): PlanningInput | undefined {
   throw new Error("Invalid planning answer. Refresh after updating the console.");
 }
 
+function parseWorkflowView(value: unknown): Detail["job"]["workflow"] {
+  if (value === undefined) return undefined;
+  const workflow = object(value);
+  if (workflow.pending == null) return { pending: null };
+  const pending = object(workflow.pending);
+  const questions = list(pending.questions);
+  if (typeof pending.requestId !== "string" || !pending.requestId.trim() || typeof pending.phase !== "string" || !pending.phase.trim()
+    || questions.length < 1 || questions.length > 6 || questions.some((question) => typeof question !== "string" || !question.trim() || question.length > 4000)) {
+    throw new Error("Invalid workflow questions. Refresh after updating the console.");
+  }
+  return { pending: { requestId: pending.requestId, phase: pending.phase, questions: questions as string[], resumeStatus: status(pending.resumeStatus) } };
+}
+
 export function parseDetail(value: unknown): Detail {
   const d = object(value), j = object(d.job), base = object(j.base), caps = object(j.caps);
   const driver = d.driver == null ? null : object(d.driver);
@@ -138,7 +152,7 @@ export function parseDetail(value: unknown): Detail {
   const merge = pr?.merge == null ? null : object(pr.merge);
   const local = j.localMerge == null ? null : object(j.localMerge);
   return {
-    job: { planningInput: parsePlanningInput(j.planningInput), id: text(j.id), feature: text(j.feature), repo: text(j.repo), worktree: text(j.worktree), branch: text(j.branch), status: status(j.status), statusReason: text(j.statusReason), round: count(j.round), updatedAt: text(j.updatedAt), base: { branch: text(base.branch), commit: text(base.commit) }, caps: { rounds: count(caps.rounds), dispatchesPerRound: count(caps.dispatchesPerRound), retriesPerStep: count(caps.retriesPerStep) }, execution: parseExecution(j.execution), ...(j.consoleHolds === undefined ? {} : { consoleHolds: parseConsoleHolds(j.consoleHolds) }) },
+    job: { workflow: parseWorkflowView(j.workflow), planningInput: parsePlanningInput(j.planningInput), id: text(j.id), feature: text(j.feature), repo: text(j.repo), worktree: text(j.worktree), branch: text(j.branch), status: status(j.status), statusReason: text(j.statusReason), round: count(j.round), updatedAt: text(j.updatedAt), base: { branch: text(base.branch), commit: text(base.commit) }, caps: { rounds: count(caps.rounds), dispatchesPerRound: count(caps.dispatchesPerRound), retriesPerStep: count(caps.retriesPerStep) }, execution: parseExecution(j.execution), ...(j.consoleHolds === undefined ? {} : { consoleHolds: parseConsoleHolds(j.consoleHolds) }) },
     rounds: list(j.rounds).map(parseRound),
     records: list(d.records).map((value) => { const r = object(value); return { path: text(r.path), bytes: count(r.bytes), mtime: text(r.mtime) }; }),
     plan: plan && typeof plan.title === "string" ? { title: plan.title, summary: text(plan.summary), tier: optionalText(plan.tier), tierReason: text(plan.tierReason), acceptance: strings(plan.acceptance), stages: list(plan.stages ?? []).map((value) => { const stage = object(value); return { id: text(stage.id), title: text(stage.title), description: text(stage.description), files: strings(stage.files), acceptance: strings(stage.acceptance), risks: strings(stage.risks) }; }) } : null,

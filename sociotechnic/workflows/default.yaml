@@ -18,16 +18,16 @@ escalate:
   fallback: human
 contracts:
   intent: engine:job-intent@1
-  brief: engine:orchestrator-request@1
+  brief: engine:project-brief@1
   plan: sociotechnic/schemas/plan.schema.json#/$defs/plan
-  assignment: engine:orchestrator-decision@1
+  assignment: engine:execution-assignment@1
   approval: engine:human-approval@1
   build: sociotechnic/schemas/recipient-contract.v1.json#/$defs/build
   checks: engine:checks-report@1
   reviews: engine:review-bundle@1
   gate: engine:quality-gate@1
   decision: sociotechnic/schemas/recipient-contract.v1.json#/$defs/decision
-  intent-review: engine:orchestrator-decision@1
+  intent-review: engine:intent-review@1
 nodes:
   intake:
     agent: lead

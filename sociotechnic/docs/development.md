@@ -618,3 +618,18 @@ work-branch PR, plus visibility/destination refusal. No live provider or GitHub
 publication is needed. UI recovery stays in the existing PR dialog.
 
 Recovery preflight reads the explicit GitHub identity/visibility, every resolved origin push URL and the remote base before reserving an external publication operation. Side-effect-free refusals do not fence ordinary run actions. Partial creation with no origin reuses only the exact approved existing repository and visibility, using GitHub CLI’s configured Git protocol. Both base and work-branch pushes reject a mismatching push destination. An uncertain actual publication still retains its normal reconciliation fence.
+
+### Executable workflow map
+
+`src/workflow.ts` loads the small YAML surface; `workflows/default.yaml` is the
+current template. `src/workflow-runtime.ts` owns phase receipts, exact approvals
+and engine barriers; `src/workflow-selection.ts` validates frozen catalog choices.
+`src/workflow-lead.ts` and `schemas/workflow-lead.schema.json` own phase reply
+validation/examples. `ui/workflow-lead-runner.ts` uses the existing local provider
+transport with staged files; `ui/driver.ts` owns lease/admission/launch/ingestion.
+`skills/orchestrator-workflow/SKILL.md` is the short lead guide. The candidate in
+`seeds/agent-release-candidates/20261026-workflow-lead.json` stays outside automatic
+catalog imports. `tests/workflow-integration.test.ts` exercises real temporary Git
+and memory persistence with fake provider boundaries, including human pauses,
+malformed output, uncertain launch fencing and reader recovery. The YAML shape
+remains experimental; avoid a speculative unit matrix locking it down.
