@@ -608,3 +608,13 @@ It checks planning feedback and the plan hold, capacity editing, stop/remove
 confirmations, dirty-work refusal, failed requests, ownership limits, keyboard
 focus and a narrow layout. Screenshots use fixture data. It makes no live model
 calls, does not modify production jobs or VMs, and prints its proof directory.
+
+
+Repository-bootstrap recovery is covered in `tests/repositories.test.ts` through
+actual local Git and bare remotes with a fake authenticated GitHub CLI boundary.
+It exercises an accepted locally merged run, missing origin, explicit destination/
+visibility, failed creation/retry, original starter-only remote main and separate
+work-branch PR, plus visibility/destination refusal. No live provider or GitHub
+publication is needed. UI recovery stays in the existing PR dialog.
+
+Recovery preflight reads the explicit GitHub identity/visibility, every resolved origin push URL and the remote base before reserving an external publication operation. Side-effect-free refusals do not fence ordinary run actions. Partial creation with no origin reuses only the exact approved existing repository and visibility, using GitHub CLI’s configured Git protocol. Both base and work-branch pushes reject a mismatching push destination. An uncertain actual publication still retains its normal reconciliation fence.

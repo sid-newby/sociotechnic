@@ -3,6 +3,10 @@
 Release notes are committed before publication. [GitHub Releases](https://github.com/sid-newby/sociotechnic/releases) confirms which versions shipped.
 Dates on backfilled entries use America/Chicago. See the [release guide](sociotechnic/docs/releasing.md).
 
+## Unreleased
+
+- Recover missing GitHub origin or base from the accepted run’s recorded starter commit, with explicit destination and visibility, safe retry after partial setup, and separate work-branch PR publication. Refuse conflicting push URLs and remote state without overwriting local history.
+
 ## v0.7.0
 
 - Let planners ask the human specific questions before pinning a plan or dispatching a builder, including after research. Show the questions in the console and retain dispatch-bound answers for resumed planning with mandatory plan review.

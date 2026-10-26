@@ -1129,7 +1129,7 @@ owner uses the authenticated GitHub user. Auth, creation or push failure prevent
 job creation and preserves local files for retry. An existing matching origin is
 reused on retry; a different origin or a remote base at another commit is refused.
 Only the selected base branch is pushed, without force; untracked files and run
-branches are excluded. Ordinary Git initialization remains local. No scaffold or
+branches are excluded. Ordinary Git initialization remains local. Missing-origin recovery on an accepted run requires an explicit GitHub destination and public/private visibility in the PR request. It publishes the recorded job.base.commit to the remote base branch, never the current locally merged base HEAD, then pushes the existing work branch and opens its PR. It verifies the published base, refuses destination/visibility conflicts and divergent remote bases, does not reset local history, and never merges the PR. Failed creation/push leaves no success claim; retry reuses a matching origin. No scaffold or
 engine gate changes. This explicit setup action is the sole pre-accept publication
 exception: agents still never push, and publishing run changes still requires accept.
 For UI work without an existing UI scaffold, planning routes to the design ceremony
@@ -2383,3 +2383,7 @@ measured zero; model names do not establish provenance. Image-token detail has
 no verified retained mapping and remains unreported. The History `cacheRead`
 filter includes measured zero and excludes unavailable values. Raw records
 retain their original values, including incompatible historical semantics.
+
+Recovery preflight reads the explicit GitHub identity/visibility, every resolved origin push URL and the remote base before reserving an external publication operation. Side-effect-free refusals do not fence ordinary run actions. Partial creation with no origin reuses only the exact approved existing repository and visibility, using GitHub CLI’s configured Git protocol. Both base and work-branch pushes reject a mismatching push destination. An uncertain actual publication still retains its normal reconciliation fence.
+
+An existing origin with no remote base returns `github-base-missing` before pushing work. The same confirmation form reopens after a dialog close/reload; a failed base push therefore cannot skip bootstrap on retry. This known side-effect-free refusal clears the PR operation fence.

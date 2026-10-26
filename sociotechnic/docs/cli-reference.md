@@ -962,3 +962,19 @@ SHA-256 and provenance. The importer preserves replaced bytes under
 `migration/unbound/`, records the recovery source, and validates the recovered
 content against the original pinned plan/design/record evidence. Recovery cannot
 change the job's pinned approval digest or manufacture a successful dispatch.
+
+
+### Recovering PR publication without origin
+
+If Push and open PR reports a missing GitHub remote, the same dialog asks for
+GitHub repository and visibility. Neither is assumed. Confirming publishes the
+run's recorded base commit to the remote base branch, then its existing work
+branch and PR. Locally merged work is not used to bootstrap remote main.
+Local history and review gates stay intact; GitHub merge remains separate.
+The PR API accepts `{push:true, githubRepository, githubVisibility}` for this
+explicit recovery. Visibility is required and must be private or public.
+A differing existing origin, visibility or remote base is refused, never replaced.
+
+Recovery preflight reads the explicit GitHub identity/visibility, every resolved origin push URL and the remote base before reserving an external publication operation. Side-effect-free refusals do not fence ordinary run actions. Partial creation with no origin reuses only the exact approved existing repository and visibility, using GitHub CLI’s configured Git protocol. Both base and work-branch pushes reject a mismatching push destination. An uncertain actual publication still retains its normal reconciliation fence.
+
+An existing origin with no remote base returns `github-base-missing` before pushing work. The same confirmation form reopens after a dialog close/reload; a failed base push therefore cannot skip bootstrap on retry. This known side-effect-free refusal clears the PR operation fence.

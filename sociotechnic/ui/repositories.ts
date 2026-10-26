@@ -111,30 +111,69 @@ export function githubRepositoryName(value: unknown): string {
   return value;
 }
 
-export function publishRepository(input: string, base: string | null, name: string): void {
+type PublicationOptions = { commit?: string; visibility?: "private" | "public" };
+
+// Read-only preflight lets the run refuse setup without reserving an external operation.
+export function prepareRepositoryPublication(input: string, base: string | null, name: string, options: PublicationOptions = {}): () => void {
   const path = repositoryDirectory(input);
   githubRepositoryName(name);
   if (git(path, ["rev-parse", "--show-toplevel"]).trim() !== path) throw new SociotechnicError("not-a-repo", "Select the repository root before publishing a new repository.");
   const branch = base ?? currentBranch(path);
   if (!branch) throw new SociotechnicError("no-branch", "Choose a base branch before publishing.");
-  const head = resolveCommit(path, `refs/heads/${branch}`);
+  const head = resolveCommit(path, options.commit ?? `refs/heads/${branch}`);
+  const visibility = options.visibility ?? "private";
   if (!ghReady(path)) throw new SociotechnicError("gh-unavailable", "GitHub setup needs authenticated gh. Run gh auth login, then retry. Local starter files were kept.");
   const owner = name.includes("/") ? null : gh(path, ["api", "--hostname", "github.com", "user", "--jq", ".login"]).trim();
   const destination = githubRepositoryName(owner === null ? name : `${owner}/${name}`);
   const url = `https://github.com/${destination}`;
+  const allowed = [url, `${url}.git`, `git@github.com:${destination}`, `git@github.com:${destination}.git`, `ssh://git@github.com/${destination}`, `ssh://git@github.com/${destination}.git`];
+  const matches = (value: string) => allowed.some(candidate => candidate.toLowerCase() === value.toLowerCase());
   const origin = remoteUrl(path, "origin");
-  if (origin === null) {
-    gh(path, ["repo", "create", `github.com/${destination}`, "--private", "--source", path, "--remote", "origin"]);
-  } else if (![url, `${url}.git`, `git@github.com:${destination}`, `git@github.com:${destination}.git`, `ssh://git@github.com/${destination}`, `ssh://git@github.com/${destination}.git`].some((candidate) => candidate.toLowerCase() === origin.toLowerCase())) {
-    throw new SociotechnicError("bad-input", `origin already points to ${origin}. Choose its GitHub destination or use Feature or fix for an existing repository.`);
-  }
-  if (gh(path, ["repo", "view", url, "--json", "isPrivate", "--jq", ".isPrivate"]).trim() !== "true") throw new SociotechnicError("bad-input", "New repository setup requires a private GitHub repository. Nothing was pushed.");
-  const ref = `refs/heads/${branch}`;
-  const published = git(path, ["ls-remote", "--heads", "origin", ref]).trim();
-  if (published && published.split(/\s+/)[0] !== head) throw new SociotechnicError("base-changed", `GitHub's ${branch} is at another commit. Inspect it before starting; nothing was pushed.`);
+  const checkOrigin = () => {
+    const fetch = remoteUrl(path, "origin");
+    if (fetch === null || !matches(fetch) || git(path, ["remote", "get-url", "--push", "--all", "origin"]).trim().split(/\r?\n/).some(value => !matches(value))) throw new SociotechnicError("pr-repository-mismatch", "Origin fetch and every push destination must match the approved GitHub repository. Nothing was pushed.");
+  };
+  if (origin !== null) checkOrigin();
+  const checkRepository = () => {
+    const info = JSON.parse(gh(path, ["repo", "view", url, "--json", "nameWithOwner,isPrivate", "--jq", "."])) as { nameWithOwner?: unknown; isPrivate?: unknown };
+    if (typeof info.nameWithOwner !== "string" || info.nameWithOwner.toLowerCase() !== destination.toLowerCase()) throw new SociotechnicError("pr-repository-mismatch", "GitHub resolved a different repository. Nothing was pushed.");
+    if (info.isPrivate !== (visibility === "private")) throw new SociotechnicError("bad-input", `New repository setup requires a ${visibility} GitHub repository. Nothing was pushed.`);
+  };
+  let existing = false;
   try {
-    git(path, ["push", "--set-upstream", "origin", `${ref}:${ref}`]);
+    checkRepository(); existing = true;
   } catch (error) {
-    throw new SociotechnicError("git", `Could not publish ${branch} to ${url}. The repository and origin were kept; fix the push error and retry. ${error instanceof Error ? error.message : String(error)}`);
+    if (!(error instanceof SociotechnicError && error.code === "gh" && /Could not resolve to a Repository|HTTP 404/.test(error.message))) throw error;
+    if (origin !== null) throw error;
   }
+  const protocol = origin === null && existing ? gh(path, ["config", "get", "git_protocol", "--host", "github.com"]).trim() : "";
+  if (origin === null && existing && protocol !== "ssh" && protocol !== "https") throw new SociotechnicError("bad-input", "Choose ssh or https in GitHub CLI git_protocol before connecting the existing repository.");
+  const remote = origin ?? (protocol === "https" ? `${url}.git` : `git@github.com:${destination}.git`);
+  const ref = `refs/heads/${branch}`;
+  const checkBase = (target: string) => {
+    const published = git(path, ["ls-remote", "--heads", target, ref]).trim();
+    if (published && published.split(/\s+/)[0] !== head) throw new SociotechnicError("base-changed", `GitHub's ${branch} is at another commit. Inspect it before starting; nothing was pushed.`);
+  };
+  if (existing) checkBase(remote);
+  return () => {
+    if (remoteUrl(path, "origin") !== origin) throw new SociotechnicError("stale-confirmation", "Origin changed after setup confirmation. Retry without overwriting it.");
+    if (origin === null) {
+      if (existing) git(path, ["remote", "add", "origin", remote]);
+      else gh(path, ["repo", "create", `github.com/${destination}`, `--${visibility}`, "--source", path, "--remote", "origin"]);
+    }
+    checkOrigin();
+    checkRepository();
+    checkBase("origin");
+    try {
+      // Recovery publishes the recorded base, never an already locally merged branch.
+      git(path, options.commit ? ["push", "origin", `${head}:${ref}`] : ["push", "--set-upstream", "origin", `${ref}:${ref}`]);
+      if (git(path, ["ls-remote", "--heads", "origin", ref]).trim().split(/\s+/)[0] !== head) throw new SociotechnicError("git", "GitHub did not confirm the published base commit. Retry before publishing run work.");
+    } catch (error) {
+      throw new SociotechnicError("git", `Could not publish ${branch} to ${url}. The repository and origin were kept; fix the push error and retry. ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+}
+
+export function publishRepository(input: string, base: string | null, name: string, options: PublicationOptions = {}): void {
+  prepareRepositoryPublication(input, base, name, options)();
 }

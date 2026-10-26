@@ -33,7 +33,7 @@ import { SociotechnicError } from "../src/errors.ts";
 import { sandboxInventory, setSandboxLimit } from "../src/sandbox.ts";
 import { parseExecution } from "../src/execution.ts";
 import type { Status } from "../src/job.ts";
-import { isBound, loadJob, STATUSES } from "../src/job.ts";
+import { assertStatus, isBound, loadJob, STATUSES } from "../src/job.ts";
 import { assertJobId, sociotechnicHome, jobDir, stateDir } from "../src/paths.ts";
 
 import { ROLES } from "../src/roles.ts";
@@ -44,7 +44,8 @@ import type { ConsoleDriverState } from "./driver-view.ts";
 import type { Runner } from "./runner.ts";
 import { runnerFromEnv } from "./runner.ts";
 import { mergeMethod, mergeRemote } from "../src/remote-merge.ts";
-import { browseRepositories, createRepositoryDirectory, githubRepositoryName, prepareRepository, publishRepository } from "./repositories.ts";
+import { resolveCommit } from "../src/git.ts";
+import { browseRepositories, createRepositoryDirectory, githubRepositoryName, prepareRepository, prepareRepositoryPublication, publishRepository } from "./repositories.ts";
 
 const UI_DIR = dirname(fileURLToPath(import.meta.url));
 const INDEX_HTML = join(UI_DIR, "index.html");
@@ -493,7 +494,24 @@ export async function startServer(options: ServerOptions = {}): Promise<ServerHa
         const id = jobIdParam(params[0]);
         const push = body.push ?? false;
         if (typeof push !== "boolean") throw new HttpError(400, "bad-input", "push must be a boolean");
-        const out = await (push ? effectJob(id, "pr-push", (job) => engine.pr(job, { push: true })) : mutateJob(id, (job) => engine.pr(job)));
+        const repository = body.githubRepository === undefined ? null : githubRepositoryName(body.githubRepository);
+        const visibility = body.githubVisibility;
+        if (repository !== null && (!push || (visibility !== "private" && visibility !== "public"))) throw new HttpError(400, "bad-input", "GitHub recovery requires push: true and an explicit private or public visibility.");
+        if (repository === null && visibility !== undefined) throw new HttpError(400, "bad-input", "Choose the GitHub destination before its visibility.");
+        const setup = repository !== null && (visibility === "private" || visibility === "public") ? await readJob(id, (job) => {
+          assertStatus(job, ["accepted"], "pr --push");
+          resolveCommit(job.repo, job.branch);
+          const publish = prepareRepositoryPublication(job.repo, job.base.branch, repository, { commit: job.base.commit, visibility });
+          return { repo: job.repo, branch: job.branch, base: job.base.commit, publish };
+        }) : null;
+        const out = await (push ? effectJob(id, "pr-push", (job) => {
+          assertStatus(job, ["accepted"], "pr --push");
+          if (setup) {
+            if (job.repo !== setup.repo || job.branch !== setup.branch || job.base.commit !== setup.base) throw new SociotechnicError("stale-confirmation", "Run publication scope changed. Refresh before publishing.");
+            setup.publish();
+          }
+          return engine.pr(job, { push: true });
+        }) : mutateJob(id, (job) => engine.pr(job)));
         return readJob(id, () => ({ ...out, text: readText(join(jobDir(id), "pr.md")) }));
       },
     },

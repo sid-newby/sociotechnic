@@ -110,7 +110,7 @@ export async function effectJob<T>(id: string, kind: string, fn: (job: Job) => T
     job.lastOperation=job.externalOperation;delete job.externalOperation;return result;
   }); }
   catch(error) {
-    if(error instanceof SociotechnicError && (["illegal-transition","no-github-remote","gh-unavailable","confirm-required","accept-required","no-pull-request","stale-confirmation","invalid-pr","pr-repository-mismatch","pr-identity-mismatch","pr-head-changed","pr-not-open","worktree-dirty","not-on-base","base-dirty","dirty-tree","wrong-branch","already-merged","merge-conflict","driver-active","no-branch"].includes(error.code) || (kind === "clean" && error.code === "sandbox-preservation")))await invoke((job)=>{delete job.externalOperation;});
+    if(error instanceof SociotechnicError && (["illegal-transition","no-github-remote","github-base-missing","gh-unavailable","confirm-required","accept-required","no-pull-request","stale-confirmation","invalid-pr","pr-repository-mismatch","pr-identity-mismatch","pr-head-changed","pr-not-open","worktree-dirty","not-on-base","base-dirty","dirty-tree","wrong-branch","already-merged","merge-conflict","driver-active","no-branch"].includes(error.code) || (kind === "clean" && error.code === "sandbox-preservation")))await invoke((job)=>{delete job.externalOperation;});
     throw error;
   }
 }

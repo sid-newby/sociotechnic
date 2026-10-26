@@ -1086,7 +1086,17 @@ export function pr(job: Job, options: PrOptions = {}): PrResult {
   if (remote === null || !isGithubRemote(remote)) {
     throw new SociotechnicError("no-github-remote", `origin of ${job.repo} is ${remote ?? "not set"}; pr --push needs a GitHub remote`);
   }
+  const identity = (value: string): string => {
+    if (value.startsWith("/")) return value.replace(/\.git$/, "").toLowerCase();
+    try {
+      const parsed = new URL(value.replace(/^([^@/:]+)@([^:]+):/, "ssh://$1@$2/"));
+      return `${parsed.host}${parsed.pathname.replace(/\.git$/, "")}`.toLowerCase();
+    } catch { return ""; }
+  };
+  const pushUrls = git.git(job.repo, ["remote", "get-url", "--push", "--all", "origin"]).trim().split(/\r?\n/);
+  if (pushUrls.some(url => identity(url) !== identity(remote))) throw new SociotechnicError("pr-repository-mismatch", "Origin push destinations differ from its GitHub repository. Nothing was pushed.");
   if (!git.ghReady(job.repo)) throw new SociotechnicError("gh-unavailable", "gh is not on PATH or not authenticated (gh auth status failed)");
+  if (!git.git(job.repo, ["ls-remote", "--heads", "origin", `refs/heads/${job.base.branch}`]).trim()) throw new SociotechnicError("github-base-missing", "The GitHub base branch is missing. Confirm the repository and visibility to publish the recorded base before the work branch.");
   if (restoreWorktree(job) === "no-branch") throw new SociotechnicError("no-branch", `branch ${job.branch} is gone from ${job.repo}; nothing to push`);
   const plan = readPlan(job);
   const path = writePrText(job, plan);

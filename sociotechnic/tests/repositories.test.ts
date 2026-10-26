@@ -9,7 +9,7 @@ import { dirname, join } from "node:path";
 import { after, before, test } from "node:test";
 import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
-import { prepareRepository } from "../ui/repositories.ts";
+import { prepareRepository, publishRepository } from "../ui/repositories.ts";
 import { startServer } from "../ui/server.ts";
 import { fakeGithub } from "./fixtures/github.ts";
 
@@ -273,5 +273,143 @@ test("invalid GitHub setup requests are rejected before local initialization", a
     const path = directory();
     assert.equal((await call("/api/jobs", { repo: path, feature: "Invalid request", initialize: true, ...extra })).status, 400);
     assert.deepEqual(readdirSync(path), []);
+  }
+});
+
+
+test("accepted local-only run recovers GitHub from its recorded starter, never its locally merged main", async () => {
+  const fake = fakeGithub(directory());
+  const previous = { PATH: process.env.PATH, GIT_SSH_COMMAND: process.env.GIT_SSH_COMMAND };
+  Object.assign(process.env, fake.env);
+  try {
+    const path = directory();
+    const created = await call("/api/jobs", { repo: path, feature: "Recover starter publication", initialize: true });
+    assert.equal(created.status, 200, JSON.stringify(created.body));
+    const initial = git(path, "rev-parse", "main");
+    const route = `/api/jobs/${created.body.job}/pr`;
+    const recovery = { push: true, githubRepository: "fixture-owner/recovery", githubVisibility: "private" };
+    assert.notEqual((await call(route, recovery)).status, 200, "Unaccepted work must not publish even its base");
+    assert.equal(git(path, "remote"), "");
+    await call(`/api/jobs/${created.body.job}/run`, { mode: "run" });
+    const deadline = Date.now() + 20_000;
+    let running = true;
+    while (running && Date.now() < deadline) {
+      await sleep(50);
+      running = (await (await fetch(new URL(`/api/jobs/${created.body.job}/driver`, server.url))).json()).running;
+    }
+    assert.equal(running, false);
+    assert.equal((await call(`/api/jobs/${created.body.job}/merge`, { confirm: true })).status, 200);
+    assert.equal((await call(`/api/jobs/${created.body.job}/accept`, {})).status, 200);
+    const merged = git(path, "rev-parse", "main");
+    assert.notEqual(merged, initial);
+    const missing = await call(route, { push: true });
+    assert.equal(missing.body.code, "no-github-remote");
+    for (const body of [ { push: true, githubRepository: recovery.githubRepository }, { ...recovery, githubVisibility: "unknown" }, { ...recovery, push: false }, { push: true, githubVisibility: "private" } ]) {
+      assert.equal((await call(route, body)).status, 400);
+      assert.equal(git(path, "remote"), "", "Incomplete consent must not create a remote");
+    }
+    process.env.FAKE_GITHUB_CREATE_FAILURE = "1";
+    try {
+      const failed = await call(route, recovery);
+      assert.equal(failed.status, 400); assert.equal(failed.body.pushed, undefined);
+      assert.equal(await readJob(created.body.job, (job) => job.pr), undefined);
+      assert.equal(git(path, "remote"), "");
+    } finally { delete process.env.FAKE_GITHUB_CREATE_FAILURE; }
+    process.env.FAKE_GITHUB_PUSH_FAILURE = "1";
+    try { assert.equal((await call(route, recovery)).status, 400); }
+    finally { delete process.env.FAKE_GITHUB_PUSH_FAILURE; }
+    const bareBeforeRetry = join(fake.remotes, "fixture-owner/recovery.git");
+    assert.equal(git(bareBeforeRetry, "for-each-ref", "--format=%(refname)"), "");
+    const reopened = await call(route, { push: true });
+    assert.equal(reopened.body.code, "github-base-missing", "A reopened dialog must rediscover incomplete bootstrap");
+    assert.equal(git(bareBeforeRetry, "for-each-ref", "--format=%(refname)"), "", "Work must not push before the starter base");
+    assert.equal(await readJob(created.body.job, (job) => job.externalOperation), undefined);
+    const published = await call(route, recovery);
+    assert.equal(published.status, 200, JSON.stringify(published.body));
+    assert.equal(published.body.pushed, true);
+    assert.match(published.body.url, /pull\/1$/);
+    const bare = join(fake.remotes, "fixture-owner/recovery.git");
+    assert.equal(git(bare, "rev-parse", "main"), initial);
+    assert.deepEqual(git(bare, "ls-tree", "--name-only", "main").split("\n"), [".gitignore", "readme.md"]);
+    assert.equal(git(bare, "show", "main:readme.md"), "tbd");
+    assert.equal(git(path, "rev-parse", "main"), merged, "Recovery must not reset local work");
+    assert.equal(git(bare, "rev-parse", created.body.branch), git(path, "rev-parse", created.body.branch));
+    assert.notEqual(git(bare, "diff", "main", created.body.branch), "");
+    assert.equal(await readJob(created.body.job, (job) => job.status), "accepted", "Opening a PR must not merge it");
+    const unexpected = join(fake.remotes, "fixture-owner/unapproved.git");
+    mkdirSync(unexpected, { recursive: true }); git(unexpected, "init", "--bare", "--initial-branch=main");
+    git(path, "config", "--add", "remote.origin.pushurl", "git@github.com:fixture-owner/recovery.git");
+    git(path, "config", "--add", "remote.origin.pushurl", "git@github.com:fixture-owner/unapproved.git");
+    for (const body of [recovery, { push: true }]) {
+      const refused = await call(route, body);
+      assert.equal(refused.body.code, "pr-repository-mismatch", JSON.stringify(refused.body));
+      assert.equal(await readJob(created.body.job, (job) => job.externalOperation), undefined);
+      assert.equal((await call(route, { push: false })).status, 200, "Refusal must not fence ordinary run actions");
+    }
+    assert.equal(git(unexpected, "for-each-ref", "--format=%(refname)"), "");
+    git(path, "config", "--unset-all", "remote.origin.pushurl");
+    const wrongVisibility = await call(route, { ...recovery, githubVisibility: "public" });
+    assert.equal(wrongVisibility.status, 400);
+    assert.equal(await readJob(created.body.job, (job) => job.externalOperation), undefined);
+    assert.equal((await call(route, { push: false })).status, 200);
+    // A different remote base is refused before any new publication intent.
+    git(path, "push", "origin", "main:refs/heads/main");
+    const changedBase = await call(route, recovery);
+    assert.equal(changedBase.body.code, "base-changed");
+    assert.equal(await readJob(created.body.job, (job) => job.externalOperation), undefined);
+    assert.equal((await call(route, { push: false })).status, 200);
+
+  } finally {
+    for (const [key, value] of Object.entries(previous)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
+  }
+});
+
+test("explicit public recovery honors visibility and refuses a mismatching existing destination", () => {
+  const fake = fakeGithub(directory());
+  const previous = { PATH: process.env.PATH, GIT_SSH_COMMAND: process.env.GIT_SSH_COMMAND };
+  Object.assign(process.env, fake.env);
+  process.env.FAKE_GITHUB_PUBLIC = "1";
+  try {
+    const refused = directory(); prepareRepository(refused, "main");
+    assert.throws(() => publishRepository(refused, "main", "fixture-owner/wrong-visibility", { visibility: "private" }), /requires a private/);
+    assert.equal(git(join(fake.remotes, "fixture-owner/wrong-visibility.git"), "for-each-ref", "--format=%(refname)"), "", "Verify actual created visibility before pushing any data");
+    const path = directory(); prepareRepository(path, "main");
+    const initial = git(path, "rev-parse", "main");
+    publishRepository(path, "main", "fixture-owner/public", { commit: initial, visibility: "public" });
+    const calls = readFileSync(fake.log, "utf8").trim().split("\n").map(line => JSON.parse(line) as string[]);
+    assert.ok(calls.some(args => args[0] === "repo" && args[1] === "create" && args.includes("--public")));
+    assert.equal(git(join(fake.remotes, "fixture-owner/public.git"), "rev-parse", "main"), initial);
+    assert.throws(() => publishRepository(path, "main", "fixture-owner/public", { commit: initial, visibility: "private" }), /requires a private/);
+    assert.throws(() => publishRepository(path, "main", "fixture-owner/elsewhere", { commit: initial, visibility: "public" }), /approved GitHub repository/);
+  } finally {
+    delete process.env.FAKE_GITHUB_PUBLIC;
+    for (const [key, value] of Object.entries(previous)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
+  }
+});
+
+
+test("retry reuses an approved repository created before origin registration failed", () => {
+  const fake = fakeGithub(directory());
+  const previous = { PATH: process.env.PATH, GIT_SSH_COMMAND: process.env.GIT_SSH_COMMAND };
+  Object.assign(process.env, fake.env);
+  try {
+    const path = directory(); prepareRepository(path, "main");
+    const initial = git(path, "rev-parse", "main");
+    process.env.FAKE_GITHUB_CREATE_AFTER_REMOTE_FAILURE = "1";
+    try { assert.throws(() => publishRepository(path, "main", "fixture-owner/partial", { commit: initial, visibility: "private" }), /origin registration failed/); }
+    finally { delete process.env.FAKE_GITHUB_CREATE_AFTER_REMOTE_FAILURE; }
+    assert.equal(git(path, "remote"), "");
+    const bare = join(fake.remotes, "fixture-owner/partial.git");
+    assert.equal(git(bare, "for-each-ref", "--format=%(refname)"), "");
+    assert.throws(() => publishRepository(path, "main", "fixture-owner/partial", { commit: initial, visibility: "public" }), /requires a public/);
+    assert.equal(git(path, "remote"), "", "Wrong visibility must not attach the existing destination");
+    publishRepository(path, "main", "fixture-owner/partial", { commit: initial, visibility: "private" });
+    assert.equal(git(bare, "rev-parse", "main"), initial);
+    publishRepository(path, "main", "fixture-owner/partial", { commit: initial, visibility: "private" });
+    const creates = readFileSync(fake.log, "utf8").trim().split("\n").map(line => JSON.parse(line) as string[]).filter(args => args[0] === "repo" && args[1] === "create");
+    assert.equal(creates.length, 1);
+  } finally {
+    delete process.env.FAKE_GITHUB_CREATE_AFTER_REMOTE_FAILURE;
+    for (const [key, value] of Object.entries(previous)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
   }
 });

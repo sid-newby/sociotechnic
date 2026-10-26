@@ -527,6 +527,12 @@ test("e2e: pr --push is accepted-only, needs a GitHub origin and gh, pushes, ope
   assert.equal(noGh.out.code, "gh-unavailable");
   assert.equal(remoteHas(), false);
 
+  const noBase = sociotechnicWith(env, "pr", ctx.id, "--push");
+  assert.equal(noBase.out.code, "github-base-missing");
+  assert.equal(remoteHas(), false, "An empty remote must not receive work before its base");
+  const base = loadJob(ctx).base as Json;
+  g(repo, "push", "origin", `${String(base.commit)}:refs/heads/${String(base.branch)}`);
+
   rmSync(log, { force: true });
   const pushed = sociotechnicWith(env, "pr", ctx.id, "--push");
   assert.equal(pushed.code, 0, JSON.stringify(pushed.out));

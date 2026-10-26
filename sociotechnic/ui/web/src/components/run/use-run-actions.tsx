@@ -3,7 +3,7 @@ import { currentOpener, returnFocus } from "../../lib/focus";
 import { useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { toast } from "sonner";
-import { jobUrl, request } from "../../api";
+import { ApiError, jobUrl, request } from "../../api";
 import { errorMessage, statusLabels } from "../../model";
 import type { Detail } from "../../model";
 import { BOUNDS, HOLDABLE, boundLabels, isBound, isPlanningFailure, overrideBound, runActions } from "../../run-model";
@@ -13,6 +13,7 @@ import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Label } from "../ui/label";
+import { Input } from "../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Textarea } from "../ui/textarea";
 
@@ -28,6 +29,9 @@ export function useRunActions({ detail, disabled, refresh, sandboxes }: { detail
   const [confirmedPr, setConfirmedPr] = useState<{ url: string; head: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [setupGithub, setSetupGithub] = useState(false);
+  const [githubRepository, setGithubRepository] = useState("");
+  const [githubVisibility, setGithubVisibility] = useState<"private" | "public" | "">("");
   const inFlight = useRef(false);
   const opener = useRef<HTMLElement | null>(null);
   const cancel = useRef<HTMLButtonElement>(null);
@@ -44,7 +48,7 @@ export function useRunActions({ detail, disabled, refresh, sandboxes }: { detail
       await request(`${jobUrl(job.id)}/${route}`, undefined, body);
       await after?.();
       setAction(null); toast.success(message); refresh();
-    } catch (error) { const message = errorMessage(error); setError(message); if (!action) toast.error(message); refresh(); }
+    } catch (error) { if (error instanceof ApiError && ["no-github-remote", "github-base-missing"].includes(error.code)) setSetupGithub(true); const message = errorMessage(error); setError(message); if (!action) toast.error(message); refresh(); }
     finally { inFlight.current = false; setBusy(false); }
   };
   const execute = (entry: RunAction, source?: HTMLElement | null) => {
@@ -58,6 +62,7 @@ export function useRunActions({ detail, disabled, refresh, sandboxes }: { detail
     if (entry.id === "step") { void mutate("run", { mode: "step", hold: continueConsoleHolds(job) }, "One step started."); return; }
     opener.current = source?.isConnected ? source : currentOpener();
     setAction(entry.id); setNote(""); setTested(false); setDiscard(false); setBound(overrideBound(detail)); setHold(job.round === 0 && job.status !== "planned" ? "planned" : "reviewed"); setMethod("merge"); setError("");
+    setSetupGithub(false); setGithubRepository(""); setGithubVisibility("");
     setPlanningQuestion(detail.job.planningInput);
     setConfirmedPr(detail.pullRequest ? { url: detail.pullRequest.url, head: detail.pullRequest.head } : null);
   };
@@ -68,6 +73,7 @@ export function useRunActions({ detail, disabled, refresh, sandboxes }: { detail
     if (selected.id === "answer-planning" && (!planningQuestion || planningQuestion.state !== "pending" || note.length > 16000)) { setError("Answer must contain 1 to 16000 characters for the pending question."); noteInput.current?.focus(); return; }
     if (selected.id === "accept" && !tested) { setError("Confirm that you tested the change locally before accepting."); return; }
     if (selected.id === "merge-remote" && !confirmedPr) { setError("Publish a pull request before merging on GitHub."); return; }
+    if (selected.id === "pr-push" && setupGithub && (!/^(?:[a-zA-Z0-9][a-zA-Z0-9-]*\/)?[a-zA-Z0-9_.][a-zA-Z0-9_.-]*$/.test(githubRepository.trim()) || [".", ".."].includes(githubRepository.trim().split("/").at(-1) ?? "") || !githubVisibility)) { setError("Enter the GitHub destination and choose private or public before publishing."); return; }
     let route: string = selected.id;
     let body: Record<string, unknown> = { note: note.trim() };
     let after: (() => Promise<unknown>) | undefined;
@@ -84,7 +90,7 @@ export function useRunActions({ detail, disabled, refresh, sandboxes }: { detail
       case "reopen": body = { discard }; break;
       case "merge": body = { confirm: true }; break;
       case "merge-remote": body = { confirm: true, ...confirmedPr, method }; break;
-      case "pr-push": route = "pr"; body = { push: true }; break;
+      case "pr-push": route = "pr"; body = { push: true, ...(setupGithub ? { githubRepository: githubRepository.trim(), githubVisibility } : {}) }; break;
       case "pr-text": route = "pr"; body = { push: false }; break;
       case "hold": route = detail.worktreePresent ? "run" : "resume"; body = { mode: "run", hold: job.round === 0 && job.status !== "planned" ? initialConsoleHolds([hold]) : [hold] }; break;
     }
@@ -92,7 +98,7 @@ export function useRunActions({ detail, disabled, refresh, sandboxes }: { detail
   };
   const description = action === "answer-planning" ? "Send your answer to the planner. The next plan will wait for your review before building." : action === "accept" ? `Accept the change you tested ${detail.localMerge ? `in ${job.repo}` : `in ${job.worktree}`}. Publishing remains a separate action.`
     : action === "merge" ? job.status === "accepted" ? `${detail.localMerge ? "Finish the local run" : `Merge ${job.branch} into ${job.base.branch} in ${job.repo}`} and remove its worktree and job branch.` : `Merge ${job.branch} into ${job.base.branch} in ${job.repo} for local testing. The worktree is kept.`
-    : action === "pr-push" ? `Push ${job.branch} and open a pull request targeting ${job.base.branch}. This publishes the branch to its GitHub remote.`
+    : action === "pr-push" ? setupGithub ? `Set up GitHub using recorded base ${job.base.commit.slice(0, 12)} on ${job.base.branch}, then publish ${job.branch} and open its PR. Locally merged work stays out of the remote base. Merging on GitHub remains a separate review decision.` : `Push ${job.branch} and open a pull request targeting ${job.base.branch}. This publishes the branch to its GitHub remote.`
     : action === "pr-text" ? "Save pr.md from the recorded evidence. The branch stays local."
     : action === "merge-remote" ? `Merge the confirmed pull request into ${job.base.branch} on GitHub. Your local checkout stays as it is.`
     : action === "stop" ? "Stop the driver and keep the branch, worktree and records for reopening."
@@ -107,6 +113,7 @@ export function useRunActions({ detail, disabled, refresh, sandboxes }: { detail
       <DialogHeader><DialogTitle>{selected?.label ?? "Run changed"}</DialogTitle><DialogDescription className="break-words">{description}</DialogDescription></DialogHeader>
       <form noValidate onSubmit={submit} className="grid gap-5">
         {action === "answer-planning" && planningQuestion ? <ol className="list-decimal space-y-3 break-words pl-5 text-sm">{planningQuestion.questions.map((question, index) => <li key={index} className="whitespace-pre-wrap">{question}</li>)}</ol> : null}
+        {action === "pr-push" && setupGithub ? <><div className="grid gap-2"><Label htmlFor="recovery-repository">GitHub repository</Label><Input id="recovery-repository" value={githubRepository} disabled={busy} onChange={(event) => setGithubRepository(event.target.value)} placeholder="owner/repository" autoComplete="off" spellCheck={false} /><p className="text-sm text-muted-foreground">Creates the destination and connects origin. Omit the owner to use your signed-in account. Existing origin and visibility are never overwritten.</p></div><div className="grid gap-2"><Label htmlFor="recovery-visibility">Visibility</Label><Select value={githubVisibility} disabled={busy} onValueChange={(value) => { if (value === "private" || value === "public") setGithubVisibility(value); }}><SelectTrigger id="recovery-visibility"><SelectValue placeholder="Choose visibility" /></SelectTrigger><SelectContent><SelectItem value="private">Private</SelectItem><SelectItem value="public">Public</SelectItem></SelectContent></Select></div></> : null}
         {action === "accept" ? <Label className="items-start leading-relaxed"><Checkbox checked={tested} onCheckedChange={(value) => setTested(value === true)} />{detail.localMerge ? `I tested the merged change in ${job.repo}.` : "I tested this worktree locally."}</Label> : null}
         {action === "reopen" ? <div className="grid gap-2"><Label className="items-start leading-relaxed"><Checkbox checked={discard} disabled={sandboxed} onCheckedChange={(value) => setDiscard(value === true)} />Discard uncommitted changes</Label>{sandboxed ? <p className="text-sm text-muted-foreground">Inspect and discard sandbox edits with sbx before reopening.</p> : discard ? <p className="text-sm text-destructive">Uncommitted edits in the worktree will be deleted.</p> : null}</div> : null}
         {action === "override" ? <div className="grid gap-2"><Label htmlFor="override-bound">Bound to raise</Label><Select value={bound} onValueChange={(value) => { if (isBound(value)) setBound(value); }}><SelectTrigger id="override-bound"><SelectValue /></SelectTrigger><SelectContent>{BOUNDS.map((value) => <SelectItem key={value} value={value}>{boundLabels[value]}</SelectItem>)}</SelectContent></Select></div> : null}
