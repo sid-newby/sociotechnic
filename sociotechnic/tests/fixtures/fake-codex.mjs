@@ -60,6 +60,15 @@ if (mode === "hang") {
     const resource = await request({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "read_file", arguments: { path: roots[3] + "/references/detail.md" } } });
     assert.ok(resource.result.content[0].text.includes("Pinned reference evidence"));
   }
+  if (process.env.SOCIOTECHNIC_CODEX_TEST_WRITING_ROOT) {
+    assert.ok(prompt.includes("Attached skill: team-writing"));
+    assert.ok(prompt.includes("Preserve facts, quantities, negation, uncertainty"));
+    const root = roots.find((path) => path.endsWith("/team-writing")); assert.ok(root);
+    const resource = await request({ jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "read_file", arguments: { path: root + "/references/technical-writing.md" } } });
+    assert.equal(resource.result.isError, undefined);
+    assert.ok(resource.result.content[0].text.includes("# Technical writing"));
+    writeFileSync(process.env.SOCIOTECHNIC_CODEX_TEST_WRITING_ROOT, root);
+  }
   mcp.stdin.end();
   console.log(JSON.stringify({ type: "item.completed", item: { type: "mcp_tool_call", tool: "read_file" } }));
   if (mode === "budget") for (let i = 0; i < 70; i++) console.log(JSON.stringify({ type: "item.completed", item: { type: "web_search" } }));

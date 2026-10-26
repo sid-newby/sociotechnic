@@ -134,14 +134,15 @@ test("worker still rejects invalid configurations and reader tool escalation", (
   }
   assert.throws(() => parseSandboxEntry({ ...entry, agent: "unknown" }));
 });
-test("worker transport preserves and validates pinned infrastructure skill resources", () => {
-  const skills = bundledSkills(["container-technologies"]);
-  const configuration = { ...roleOf("sociotechnic-builder"), baseRole: "sociotechnic-builder", version: "1.0.0", revision: null, skills: ["container-technologies"], skillResources: skills };
+test("worker transport preserves and validates pinned infrastructure and writing resources", () => {
+  const skills = bundledSkills(["container-technologies", "team-writing"]);
+  const configuration = { ...roleOf("sociotechnic-builder"), baseRole: "sociotechnic-builder", version: "1.0.0", revision: null, skills: ["container-technologies", "team-writing"], skillResources: skills };
   const request = { id: "d-skills", agent: configuration.name, model: configuration.model, effort: configuration.effort, deadlineAt: deadline(), record: "round-1/build.md", prompt: "Use pinned instructions", configuration };
   const parsed = parseSandboxEntry(JSON.parse(JSON.stringify(request)));
   assert.deepEqual(parsed.configuration?.skillResources, skills);
   const materialized = materializeSkills(parsed.configuration?.skillResources, join(root, "worker-skills"));
   assert.equal(readFileSync(join(materialized.roots[0], "references/sandboxes-v3.md"), "utf8"), skills[0].files["references/sandboxes-v3.md"]);
+  assert.equal(readFileSync(join(materialized.roots[1], "references/unslop.md"), "utf8"), skills[1].files["references/unslop.md"]);
   assert.throws(() => parseSandboxEntry({ ...request, configuration: { ...configuration, skillResources: [{ name: "unsafe", files: { "SKILL.md": "x", "../escape.md": "x" } }] } }), /Invalid packaged/);
 });
 test("missing Context7 registration blocks setup and preserves the VM for retry", async () => {

@@ -4,6 +4,14 @@ These instructions apply to development of `sid-newby/sociotechnic` (Sociotechni
 including its worktrees. They do not set policy for other repositories that
 Sociotechnic runs against.
 
+## Write for the reader
+
+Use [team-writing](sociotechnic/skills/team-writing/SKILL.md) for human-readable
+prose in this repository. Read its Unslop reference for substantial prose revisions
+and its Technical Writing reference for substantial documentation, instructions,
+proposals, PR descriptions and commit messages. Preserve facts and exact code or
+record syntax; the task, role and human gates take precedence.
+
 ## Find and reuse the existing tools
 
 The root [README](README.md) is the web-console user guide. Before adding or

@@ -1,0 +1,27 @@
+{
+  "upstream": "https://github.com/michael-denyer/pstack-claude",
+  "retrieved": "2026-10-25",
+  "license": "MIT",
+  "files": [
+    {
+      "path": "LICENSE",
+      "blob": "3ebb69c2234f26ce81fa7fb3c67d783f9228bf25"
+    },
+    {
+      "path": "NOTICE.md",
+      "blob": "23e89ffe29750345059f12d962a996b3f7efb67f"
+    },
+    {
+      "path": "plugins/pstack/skills/unslop/SKILL.md",
+      "blob": "be42292873bcf59b70f5c7c7d83e78984492e3bd"
+    },
+    {
+      "path": "plugins/pstack/skills/technical-writing/SKILL.md",
+      "blob": "289eee9af55950492174b79d8b9efd44ac936269"
+    }
+  ],
+  "localChanges": {
+    "NOTICE.md": "MIT license links target LICENSE.md; notice text otherwise unchanged."
+  },
+  "package": "pstack@0.9.102"
+}

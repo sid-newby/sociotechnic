@@ -57,6 +57,12 @@ prove that comments are true: the cleanup must also inspect code, contracts and 
 actual diff, with native AST/compiled-output comparison where available. Missing
 proof blocks readiness. Empty diffs retain the existing empty-diff gate.
 
+Nested workers inherit packaged instruction resources from the coordinator's pinned
+release through the existing SDK dispatch. A new coordinator release can append
+`team-writing` for reports and other human-readable prose without changing the
+worker's definition, permissions, report format or independent deployment policy.
+Retained coordinator pins without that resource receive no new writing guidance.
+
 Nested workers are part of the coordinator's SDK dispatch, not separate engine
 ledger entries. Their assigned staged reports and coverage records are ingested under that round
 in PostgreSQL with the coordinator completion; worker chat is not evidence. Use the console's New run

@@ -862,7 +862,7 @@ choices live in
 [`src/agent-models.ts`](../src/agent-models.ts); account access is checked by the
 provider when executing, with no automatic fallback.
 `POST` to the same path publishes
-`{ version, expectedLatest, label, purpose?, instructions?, model, effort, tools, maxTurns, timeoutMinutes, skills? }`.
+`{ version, expectedLatest, label, purpose?, instructions?, model, effort, tools, maxTurns, timeoutMinutes, skills?, addSkills? }`.
 Versions use major.minor.patch, must exceed latest and cannot be overwritten.
 Omitted instructions preserve the latest instructions; supplied Markdown
 frontmatter cannot grant hooks or permissions. A stale expectedLatest returns 409.
@@ -878,11 +878,18 @@ peer instructions are rejected. Existing origin/host and JSON-body rules apply.
 Creation does not assign the agent or start an LLM call.
 
 Explicit `skills` is an optional array of bundled IDs: `terraform-skill`,
-`container-technologies` and `azure-sme`. Each selection snapshots its instruction/reference files
-into the immutable release and dispatch configuration. Imported frontmatter
-cannot attach skills. Publication omitting `skills` preserves previous snapshots;
-supplying the array deliberately snapshots current packaged bytes (`[]` removes
-the packaged skills in the new release). Azure snapshots include inert text
+`container-technologies`, `azure-sme`, `browser-verification` and `team-writing`.
+Each selection snapshots its instruction/reference files into the immutable release
+and dispatch configuration. Imported frontmatter cannot attach skills. Publication
+omitting both selection fields preserves previous snapshots. `skills` replaces the
+packaged resources with current bundled bytes (`[]` removes them in the new release).
+Publication may instead use `addSkills: ["team-writing"]` to snapshot only those
+additions while retaining every prior resource byte and native skill name. The
+fields are mutually exclusive; duplicate resource names, names that shadow an
+existing native/configured skill and combined size/count violations are rejected. Supply the current model, effort, tools and budgets as
+with any version publication. Custom template, profiles and supersedes metadata
+remain intact unless explicitly changed through their existing fields.
+Azure snapshots include inert text
 templates and scripts as well as Markdown; materialization does not execute them.
 Limits are eight skills, 512 files per skill, 200,000 bytes per file and 2,000,000
 UTF-8 bytes total, with safe relative paths and mode 0400 materialization.
@@ -890,6 +897,12 @@ See [Azure profiles, selection and prerequisites](azure-sme.md).
 Adapters load entrypoints and provide
 reference reads without installing plugins or granting tools. See the
 [infrastructure expert](infrastructure-agent.md) for identities and assignments.
+
+`team-writing` guides human-readable prose while preserving facts, uncertainty,
+code, exact record syntax and human gates. Claude, Codex and native designer
+queries use their pinned snapshots; nested comment workers inherit the
+coordinator's resources. Old pins receive no new policy. Adding the bundle to the
+checkout does not publish it. No writing hooks, filters or extra model pass run.
 
 `POST /api/jobs` accepts optional role-keyed maps:
 `agentVersions: { "sociotechnic-planner": "1.0.0" }` and

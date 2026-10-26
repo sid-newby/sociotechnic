@@ -1,8 +1,8 @@
-import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { basename, dirname, extname, join, relative, resolve, sep } from "node:path";
 import { randomUUID } from "node:crypto";
 import { createHash } from "node:crypto";
-import { homedir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import type { Options, SessionStore, SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import type { Job } from "../src/job.ts";
@@ -17,6 +17,7 @@ import type { DesignQuestion } from "../src/design-session.ts";
 import type { DesignImage } from "../src/design-session.ts";
 import { SociotechnicError } from "../src/errors.ts";
 import { parseFrontmatter } from "../src/agents.ts";
+import { materializeSkills } from "../src/agent-skills.ts";
 import { agentEnvironment, activityLines, loadContext7, claudeConfigPath } from "./runner.ts";
 import type { SdkQuery } from "./runner.ts";
 import { tokenUsage } from "../src/token-usage.ts";
@@ -109,6 +110,7 @@ export async function runInteractiveDesign(input: { id: string; token: string; s
   const cancel = () => abort.abort();
   signal.addEventListener("abort", cancel, { once: true });
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let skillDirectory: string | undefined;
   let persistenceFailed = false;
   const failPersistence = (error: unknown): never => { persistenceFailed = true; abort.abort(); throw error; };
   const write = async (fn: (job: Job) => void) => { try { await update(fn); } catch (e) { failPersistence(e); } };
@@ -122,6 +124,8 @@ export async function runInteractiveDesign(input: { id: string; token: string; s
     if (initial.execution?.kind === "docker-sandbox") throw new Error("Interactive design currently supports Local execution only. Docker design was refused before inference.");
     const config = initial.agentConfigurations?.["sociotechnic-designer"];
     if (!config || !isClaudeEffort(config.effort) || !config.tools.includes("Skill") || !config.tools.includes("Bash")) throw new Error("This run uses the retired design adapter. Native design conversations require Claude Code's Bash and Skill tools.");
+    skillDirectory = mkdtempSync(join(tmpdir(), "sociotechnic-design-skills-"));
+    const pinnedSkills = materializeSkills(config.skillResources, skillDirectory);
     mkdirSync(workspace, { recursive: true });
     const prefix = `design/session/${d.id}/workspace/`;
     const workspaceFiles = () => readdirSync(workspace).filter((name) => ![".claude", ".sdk", ".attachments", "node_modules", ".git"].includes(name) && !name.includes(".question")).flatMap((name) => {
@@ -193,14 +197,14 @@ export async function runInteractiveDesign(input: { id: string; token: string; s
     const rawDefinition = parseFrontmatter(agentSource)?.body ?? agentSource;
     if (!rawDefinition.trim()) throw new Error("The design agent Markdown file is empty");
     const options: Options = {
-      cwd: workspace, additionalDirectories: [targetRepository, ...(starterBrief ? [join(sociotechnicHome(), "sociotechnic/scaffolds/react-nest/template")] : [])], settingSources: ["user", "project", "local"],
+      cwd: workspace, additionalDirectories: [targetRepository, ...pinnedSkills.roots, ...(starterBrief ? [join(sociotechnicHome(), "sociotechnic/scaffolds/react-nest/template")] : [])], settingSources: ["user", "project", "local"],
       tools: config.tools.filter((t) => !t.startsWith("mcp__")),
       allowedTools: config.tools.filter((t) => t !== "AskUserQuestion"),
       model: config.model, effort: config.effort, maxTurns: config.maxTurns, persistSession: true,
       ...(hasHistory ? { resume: d.id } : { sessionId: d.id }), sessionStore: store, sessionStoreFlush: "eager",
       abortController: abort, includePartialMessages: true,
       env: { ...agentEnvironment(), CLAUDE_CODE_PROJECT_DIR_NAME: `design-${d.id}` },
-      systemPrompt: { type: "preset", preset: "claude_code", append: `${rawDefinition}\n${starterBrief}\nWorkspace: ${workspace}. Target repository: ${targetRepository}.\nAssignment: ${d.reason}\nMarkdown work product: ${join(workspace, "HANDOFF.md")}\nInstalled impeccable launcher: ${skill.executable}.` },
+      systemPrompt: { type: "preset", preset: "claude_code", append: `${rawDefinition}${pinnedSkills.prompt}\n${starterBrief}\nWorkspace: ${workspace}. Target repository: ${targetRepository}.\nAssignment: ${d.reason}\nMarkdown work product: ${join(workspace, "HANDOFF.md")}\nInstalled impeccable launcher: ${skill.executable}.` },
       canUseTool: async (name, value, context) => {
         if (name !== "AskUserQuestion") return { behavior: "deny", message: "This operation is outside the design session's permitted tools" };
         const question = parseQuestion(value, context.toolUseID);
@@ -297,5 +301,5 @@ export async function runInteractiveDesign(input: { id: string; token: string; s
       s.error = error instanceof Error ? error.message : String(error);
       if (job.status === "designing") transition(job, "design-input", s.error, new Date().toISOString()); else if (job.status === "design-input") job.statusReason = s.error;
     });
-  } finally { pauseClock(); pending.delete(id); signal.removeEventListener("abort", cancel); abort.abort(); }
+  } finally { pauseClock(); pending.delete(id); signal.removeEventListener("abort", cancel); abort.abort(); if (skillDirectory) rmSync(skillDirectory, { recursive: true, force: true }); }
 }
