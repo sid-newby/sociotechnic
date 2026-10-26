@@ -855,6 +855,24 @@ Reader tools can read those exact reference roots even when the target is anothe
 repository. Skill snapshots do not grant shell, network, MCP servers or privileges.
 Catalog export/import includes the snapshots and preserves existing run pins.
 
+The bundled [team-writing skill](../skills/team-writing/SKILL.md) uses the same
+immutable packaging for human-readable prose, with original Unslop and Technical
+Writing references and licenses. New releases can append it through `addSkills`
+without reloading older saved resources. Existing `skills` selection remains an
+explicit replacement. Both fields cannot be supplied together; the combined
+resources retain the same duplicate-name and payload bounds. Additions cannot
+shadow existing native/configured skill names.
+
+Ordinary Claude and Codex adapters load pinned entrypoints and expose their
+reference roots. Nested Comment Sicko workers inherit the coordinator's snapshot.
+Native designer queries materialize their run's resources outside the design
+artifact workspace on initial invocation and resume, append them to the saved
+native agent prompt, and remove the temporary copies after every query exit.
+The native Markdown source, Impeccable, questions, transcripts and handoff gates
+remain their existing owners. A retained pin without resources receives no writing
+policy. Guidance preserves facts, uncertainty, code and exact record contracts;
+it adds no hook, output filter, extra inference or tool authority.
+
 ### Raw SDK timing evidence
 
 The Claude runner retains finite nonnegative result fields `duration_api_ms`,

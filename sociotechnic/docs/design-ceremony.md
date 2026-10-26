@@ -80,6 +80,15 @@ Claude's global directory. `SOCIOTECHNIC_DESIGN_AGENT` can select another agent
 Markdown file. A conversation saves the actual source prompt in `design/agent.md`
 with its source path and digest; continuation uses that recorded prompt.
 
+If the run's immutable designer configuration includes packaged resources, every
+query materializes those saved bytes in temporary reference directories and appends
+the entrypoints to the native prompt. This also happens on resume. The directories
+are outside the design artifact workspace and are removed when the query finishes,
+fails or is interrupted, so references cannot become returned design artifacts.
+`team-writing` can guide prose without replacing the saved agent Markdown or native
+Impeccable. Older pins without resources receive no new writing policy. Publishing
+a release does not update an existing conversation's pinned configuration.
+
 The installed Impeccable command is discovered from project/personal Claude
 installations or the installed plugin. `SOCIOTECHNIC_IMPECCABLE_SKILL` can select
 an explicit installed skill. The app links the actual installation into native
@@ -122,7 +131,9 @@ Historical packets remain readable; packet response routes are retired.
 
 `task checks` and `task test:pg` cover the engine, chat and persistence.
 `tests/design.test.ts` injects SDK events to verify native tool configuration,
-agent-file loading, image blocks, history, recovery and repeat caller assignments.
+agent-file loading, image blocks, history, recovery, repeat caller assignments,
+pinned writing resources and temporary reference cleanup on success, failure and
+interruption.
 The fixture browser journey exercises the real native preview server and image
 uploads without calling a model. These checks are distinguished from
 [native invocation evidence](evidence/native-design-chat.md).

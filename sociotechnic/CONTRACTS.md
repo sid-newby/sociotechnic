@@ -2205,15 +2205,35 @@ skill's fixed tool preparation is owned by the runner as specified above. Import
 cannot attach skills. Releases optionally include `skillResources`: named UTF-8
 text resources with safe relative paths, an entrypoint and bounded size.
 Canonical release content digests cover these bytes; pinning, catalog migration
-and restore retain them. Publication without a new skills selection preserves the
-snapshot. A deliberate selection snapshots current bundled bytes into a new
-immutable release. Runtime never substitutes a newer on-disk skill for a pin.
+and restore retain them. Publication without `skills` or `addSkills` preserves the
+snapshot. `skills` deliberately replaces packaged resources with current bundled
+bytes, including an empty selection to remove them. Publication may instead use
+`addSkills` to snapshot only the selected additions and append them to the saved
+resources. The two fields are mutually exclusive; duplicate resource names, additions that
+shadow existing native/configured skill names and combined resources outside the
+existing bounds are rejected. Additive publication
+preserves previous resource bytes, native frontmatter skill names, purpose, role
+settings and custom template/profile/supersedes metadata. Runtime never substitutes
+a newer on-disk skill for a pin.
 
 Both provider adapters materialize these snapshots in disposable directories,
 load their SKILL.md entrypoints into the prompt and allow reference reads there.
-The Codex bounded-reader roots include only the materialized skill directory in
-addition to the existing source/input roots. Cleanup removes materializations.
+Claude's nested comment workers inherit the coordinator's materialized resources
+through the existing dispatch; they do not receive independent releases. The
+Codex bounded-reader roots include only the materialized skill directory in
+addition to the existing source/input roots. Native designer queries, including
+resume, materialize their immutable run configuration outside the artifact workspace
+and append that guidance to the saved native agent prompt. They retain native
+Impeccable, questions, transcripts and handoff gates. Cleanup removes materializations
+on success, failure and cancellation. Old pins without resources receive no additions.
 Instruction skills cannot grant tools or change the assigned record format.
+
+The bundled `team-writing` entrypoint guides human-readable prose and links to
+vendored Unslop and Technical Writing references. It preserves facts, uncertainty,
+quotations, code and exact record syntax; assigned roles and schemas take precedence.
+It adds no word filter, output postprocessor, extra inference or lifecycle hook.
+Attaching the skill requires a new immutable release through the existing publication
+API; adding the bundle to the checkout does not publish it or alter retained runs.
 
 Builder commits use a scoped `commit_changes` MCP tool, because workspace-write
 protects Git metadata outside a linked worktree. The tool accepts only explicit
