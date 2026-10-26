@@ -4,7 +4,7 @@ import { Textarea } from "./ui/textarea";
 import { lazy, Suspense, useLayoutEffect, useRef, useState } from "react";
 import { ArrowRight, ExternalLink, Pause, Send } from "lucide-react";
 import type { Detail } from "../model";
-import { errorMessage } from "../model";
+import { errorMessage, statusLabels } from "../model";
 import { jobUrl, request } from "../api";
 import { Button, buttonVariants } from "./ui/button";
 import { DesignThread } from "./design-thread";
@@ -62,8 +62,10 @@ function Conversation({ detail, refresh, disabled }: { detail: Detail; refresh: 
   return <section className="min-w-0 space-y-4" aria-labelledby="design-title"><Card className="design-conversation min-w-0 gap-0 p-0">
     <div className="design-chat-header grid gap-3 border-b p-6">
     <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 id="design-title" className="text-xl font-semibold">Design conversation</h2></div><span className="text-sm leading-relaxed text-muted-foreground">{d.needsMigration ? "Designer upgrade needed" : d.skillVersion ? `Impeccable ${d.skillVersion}` : "Preparing Impeccable"}</span></div>
+    <p className="text-sm leading-relaxed text-muted-foreground">{detail.job.status === "designing" || detail.job.status === "design-input" ? "Current stage: design. Next: a plan for your review. Building starts after you approve the plan." : `Saved design conversation. Current run stage: ${statusLabels[detail.job.status].toLowerCase()}.`}</p>
     <div className="flex flex-wrap items-center gap-2">
       {d.previewUrl ? <a className={buttonVariants({ variant: "outline" })} href={d.previewUrl} target={`impeccable-${d.id}`} rel="noopener noreferrer">Open previews <ExternalLink size={16} aria-hidden="true" /></a> : null}
+      {!d.needsMigration && !active && (d.state === "failed" || d.state === "interrupted" || d.state === "ready" || d.state === "working" || !!d.question) ? <Button type="button" variant="outline" disabled={blocked} onClick={() => void action("resume", {})}>Resume session</Button> : null}
       {active ? <Button type="button" variant="outline" disabled={blocked} onClick={() => void action("interrupt", {})}><Pause size={16} /> Interrupt response</Button> : null}
       <p role="status" className="text-sm leading-relaxed text-muted-foreground">{external ? "This conversation is running in another console." : detail.job.status === "stopped" ? "This run is stopped. Reopen it to continue." : approved ? "Work returned to the caller. You can continue this conversation." : d.state === "failed" ? "The response failed. Resume the session to try again." : d.state === "interrupted" ? "Response interrupted. Continue with a message or resume the session." : d.question ? "Claude has a question for you." : d.state === "working" && active ? "Claude is working…" : active ? "Waiting for your choice in the preview window." : d.state === "working" ? "The response stopped. Resume the session to continue." : d.state === "ready" ? "Ready to start the design conversation." : "Ready for your reply."}</p>
     </div>
@@ -87,7 +89,6 @@ function Conversation({ detail, refresh, disabled }: { detail: Detail; refresh: 
         <InputGroup>
           <InputGroupTextarea className="min-h-16 resize-none text-base" ref={inputRef} id="design-message" rows={2} maxLength={24_000} value={draft} disabled={blocked} placeholder="Discuss a direction, share a reference, or ask for a revision…" onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && e.nativeEvent.keyCode !== 229) { e.preventDefault(); void send(); } }} aria-describedby="design-message-help" />
           <InputGroupAddon align="block-end" className="flex-wrap justify-end gap-2">
-            {!active && (d.state === "failed" || d.state === "interrupted" || d.state === "ready" || d.state === "working" || !!d.question) ? <Button type="button" variant="outline" disabled={blocked} onClick={() => void action("resume", {})}>Resume session</Button> : null}
             <Button type="submit" disabled={blocked || attaching || active && d.state !== "waiting" || !draft.trim() && !images.length}><Send size={16} aria-hidden="true" /> Send message</Button>
           </InputGroupAddon>
         </InputGroup>
