@@ -5,6 +5,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { initializeAgentVersions } from "../src/agent-versions.ts";
+import { compareAgentVersions } from "../src/agent-version-data.ts";
+import { readCatalogBundles } from "../src/db/catalog-migrations.ts";
 import { agentCatalogEntry } from "../src/agent-catalog.ts";
 import { agentHistory, agentSummaries, parseAgentCohort } from "../src/agent-library.ts";
 import { createJob } from "../src/job.ts";
@@ -125,7 +127,11 @@ test("library API uses canonical database history, ignores local poison and repo
   const job = createJob({ id: "20261024-library", feature: "Library integration", repo: "/example/project", worktree: "/example/worktree", branch: "example", base: { branch: "main", commit: "a".repeat(40) }, caps: { rounds: 3, dispatchesPerRound: 10, retriesPerStep: 1 }, now: "2026-10-24T10:00:00Z" });
   job.dispatches = [sample()];
   const store = createMemoryStore();
-  await initializeAgentVersions(store);
+  const bundles = readCatalogBundles();
+  const latestReleases = new Map(bundles.flatMap((bundle) => bundle.releases)
+    .sort((left, right) => compareAgentVersions(left.version, right.version))
+    .map((release) => [release.agent, release]));
+  await initializeAgentVersions(store, [], bundles);
   await store.transaction(async (tx) => { await tx.upsertJob({ ...job, dispatches: [sample()] }); await tx.upsertJob({ ...job, id: "20261024-db-only" }); });
   setStore(store);
   const { startServer } = await import("../ui/server.ts");
@@ -137,7 +143,10 @@ test("library API uses canonical database history, ignores local poison and repo
     assert.equal(library.agents.some((agent) => agent.name === "sociotechnic-azure-builder-lite"), false);
     for (const name of ["sociotechnic-infrastructure-planner", "sociotechnic-infrastructure-builder"]) {
       const expert = library.agents.find((agent) => agent.name === name); assert.ok(expert?.profile);
-      assert.equal(expert.profile.configuration.version, "1.0.0");
+      const latest = latestReleases.get(name); assert.ok(latest);
+      assert.equal(expert.profile.configuration.version, latest.version);
+      assert.ok(typeof latest.release === "object" && latest.release !== null && "digest" in latest.release);
+      assert.equal(expert.profile.configuration.revision, latest.release.digest);
       assert.equal(expert.profile.configuration.model, "gpt-6.1-sol");
       assert.deepEqual(expert.profile.configuration.skills, ["terraform-skill", "container-technologies"]);
       assert.equal(expert.metrics.deployments, 0);

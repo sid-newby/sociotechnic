@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { bundledSkills, materializeSkills, parseSkillResources } from "../src/agent-skills.ts";
-import { canonicalJson } from "../src/agent-version-data.ts";
+import { canonicalJson, compareAgentVersions } from "../src/agent-version-data.ts";
 import { initializeAgentVersions, loadAgentCatalog, pinAgentVersions } from "../src/agent-versions.ts";
 import { applyCatalogBundles, exportCatalogBundle, readCatalogBundles } from "../src/db/catalog-migrations.ts";
 import { createMemoryStore, setStore } from "../src/db/store.ts";
@@ -39,6 +39,9 @@ test("Azure family preserves its initial release and optional identity guidance 
   const store = createMemoryStore(); setStore(store);
   try {
     const bundles = readCatalogBundles();
+    const latestReleases = new Map(bundles.flatMap((bundle) => bundle.releases)
+      .sort((left, right) => compareAgentVersions(left.version, right.version))
+      .map((release) => [release.agent, release]));
     await initializeAgentVersions(store, [], bundles);
     const catalog = await loadAgentCatalog();
     const family = [
@@ -53,7 +56,9 @@ test("Azure family preserves its initial release and optional identity guidance 
       assert.equal(entry.record, record);
       assert.equal(entry.configuration.model, "gpt-6.1-sol");
       assert.equal(entry.configuration.effort, "high");
-      assert.equal(entry.configuration.version, identity === "sociotechnic-azure-builder" ? "1.1.0" : "1.0.1");
+      const latest = latestReleases.get(identity); assert.ok(latest);
+      assert.equal(entry.configuration.version, latest.version);
+      assert.equal(entry.configuration.releaseDigest, latest.contentDigest);
       assert.deepEqual(entry.configuration.skills, ["azure-sme"]);
       assert.equal(entry.configuration.tools.includes("Bash"), record === "build");
       assert.equal(pins.configurations[role].agentName, identity);
@@ -77,7 +82,11 @@ test("Azure family preserves its initial release and optional identity guidance 
     assert.equal(combined.configurations["sociotechnic-builder"].maxTurns, 250);
     assert.equal(combined.configurations["sociotechnic-builder-lite"].maxTurns, 160);
     assert.equal(combined.configurations["sociotechnic-builder-lite"].timeoutMinutes, 40);
-    assert.equal(combined.configurations["sociotechnic-builder-lite"].version, "1.1.0");
+    const latestBuilder = latestReleases.get("sociotechnic-azure-builder"); assert.ok(latestBuilder);
+    for (const role of ["sociotechnic-builder", "sociotechnic-builder-lite"]) {
+      assert.equal(combined.configurations[role].version, latestBuilder.version);
+      assert.equal(combined.configurations[role].releaseDigest, latestBuilder.contentDigest);
+    }
     assert.deepEqual(combined.configurations["sociotechnic-builder"].skillResources, pins.configurations["sociotechnic-builder"].skillResources);
     const unchanged = await pinAgentVersions();
     assert.equal(unchanged.configurations["sociotechnic-builder"].agentName, undefined);
