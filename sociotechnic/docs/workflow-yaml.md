@@ -28,7 +28,8 @@ template digest, with a digest for that complete resolved configuration.
 The loader owns only this module, default definition and reference. Runtime
 integration owns the central contracts/map, run persistence, stage scheduling,
 provider calls, actual artifact validation, human decisions and admission limits.
-No manifest, lockfile, catalog, engine or driver is modified by this slice.
+No manifest or lockfile change is required. The executable default uses the
+existing engine and driver; catalog imports remain explicit.
 
 ## Small editable surface
 
@@ -138,7 +139,10 @@ sequence; unsupported routes/ports fail before dispatch. Review ceilings are
 work-conserving and still subject to installation admission. Pause awaits launched
 siblings and leaves later readers pending. Planner research/design escapes retain
 their existing internal contracts and approval gates. One builder still receives
-the whole plan; this version does not split writable stages, choose arbitrary
+the whole plan. The lead sees the plan, frozen resource cards and configured
+node ceilings; other running jobs are not yet summarized in its phase request,
+although live installation capacity still constrains admission. This version
+does not split writable stages, choose arbitrary
 workflow templates, support sandbox leads or execute arbitrary DAGs. The lead
 can report an intent mismatch or ask about blocked work; it cannot automatically
 waive a gate, spawn a remediation framework or reset a worktree.
