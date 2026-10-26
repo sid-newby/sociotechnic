@@ -67,8 +67,8 @@ function RunScreen({ detail, disabled, stale, refresh, connection, now, subscrib
       <RunTable detail={detail} now={now} log={log} retryLog={retryLog} openRecord={openRecord} openDispatch={openDispatch} />
     </main>
     {controller.dialog}
-    <EvidenceSheet key={evidence ?? "closed"} detail={detail} open={evidence !== null} onClose={() => setEvidence(null)} openRecord={openRecord} initial={evidence ?? "evidence"} opener={evidenceOpener.current} />
-    <DispatchSheet key={dispatchId ?? "closed"} detail={detail} dispatch={dispatch} covered={record !== null} returnToRecord={recordOpener.current !== null} now={now} log={log} retryLog={retryLog} openRecord={openRecord} close={() => update({ dispatch: null, record: null })} refresh={refresh} disabled={disabled} opener={dispatchOpener.current} />
+    <EvidenceSheet key={`evidence:${evidence ?? "closed"}`} detail={detail} open={evidence !== null} onClose={() => setEvidence(null)} openRecord={openRecord} initial={evidence ?? "evidence"} opener={evidenceOpener.current} />
+    <DispatchSheet key={`dispatch:${dispatchId ?? "closed"}`} detail={detail} dispatch={dispatch} covered={record !== null} returnToRecord={recordOpener.current !== null} now={now} log={log} retryLog={retryLog} openRecord={openRecord} close={() => update({ dispatch: null, record: null })} refresh={refresh} disabled={disabled} opener={dispatchOpener.current} />
     <RecordSheet detail={detail} path={record} onClose={() => update({ record: null })} opener={recordOpener.current} />
     <MetricsSheet metric={metric} detail={detail} now={now} close={() => setMetric(null)} openDispatch={openDispatch} opener={metricOpener.current} />
     <CommandPalette opener={palette.commandOpener} open={palette.commands} close={palette.closeCommands} controller={controller} disabled={disabled} agents={palette.agents} history={palette.history} runs={palette.runs} settings={palette.settings} sandboxes={palette.sandboxes} />
