@@ -5,6 +5,7 @@ Dates on backfilled entries use America/Chicago. See the [release guide](sociote
 
 ## Unreleased
 
+- Add opt-in local GPT-6.1 Sol/high supervision for reader-wave distribution and blocked handoffs, with referenced contracts, bounded recipient-output repair, retained evidence and existing human approval gates. Preserve existing agent releases and run pins.
 - Recover missing GitHub origin or base from the accepted run’s recorded starter commit, with explicit destination and visibility, safe retry after partial setup, and separate work-branch PR publication. Refuse conflicting push URLs and remote state without overwriting local history.
 
 ## v0.7.0
